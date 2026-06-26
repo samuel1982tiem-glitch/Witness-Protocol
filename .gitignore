@@ -3,8 +3,5 @@ node_modules/
 out/
 android/.gradle/
 android/app/build/
-android/build/
-*.apk
-*.aab
 *.log
 .DS_Store
