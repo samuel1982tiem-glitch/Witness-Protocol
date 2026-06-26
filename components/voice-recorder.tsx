@@ -8,9 +8,6 @@ import VoiceRecorder from "@/plugins/voice-recorder"
 export function VoiceRecorder({
   onRecorded,
 }: {
-  // Avoid referencing DOM-only types (Blob) at the top-level to prevent server-side
-  // build errors with Turbopack when files are analyzed in a Server Component tree.
-  // Use `any` here — the runtime will still pass a Blob from the native path.
   onRecorded: (blob: any) => void
 }) {
   const [recording, setRecording] = React.useState(false)
@@ -54,9 +51,7 @@ export function VoiceRecorder({
           setError("No recording was returned from native layer.")
           return
         }
-        // convert native file path to a URL accessible by the WebView
         const src = (Capacitor as any).convertFileSrc(nativePath)
-        // fetch and convert to blob to keep the existing onRecorded API
         const resp = await fetch(src)
         if (!resp.ok) {
           setError("Failed to retrieve recorded file from native layer.")
