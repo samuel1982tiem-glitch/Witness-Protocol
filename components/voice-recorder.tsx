@@ -3,7 +3,7 @@
 import { Mic, Square } from "lucide-react"
 import * as React from "react"
 import { Capacitor } from "@capacitor/core"
-import VoiceRecorder from "@/plugins/voice-recorder"
+import VoiceRecorderPlugin from "@/plugins/voice-recorder"
 
 export function VoiceRecorder({
   onRecorded,
@@ -27,7 +27,7 @@ export function VoiceRecorder({
 
     try {
       if (Capacitor.getPlatform && Capacitor.getPlatform() === "android") {
-        await VoiceRecorder.startRecording()
+        await VoiceRecorderPlugin.startRecording()
         setRecording(true)
         setElapsed(0)
         timerRef.current = setInterval(() => setElapsed((e) => e + 1), 1000)
@@ -45,7 +45,7 @@ export function VoiceRecorder({
     setRecording(false)
     try {
       if (Capacitor.getPlatform && Capacitor.getPlatform() === "android") {
-        const res = await VoiceRecorder.stopRecording()
+        const res = await VoiceRecorderPlugin.stopRecording()
         const nativePath = res?.path
         if (!nativePath) {
           setError("No recording was returned from native layer.")
