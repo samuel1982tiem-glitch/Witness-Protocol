@@ -43,9 +43,10 @@ export function VoiceRecorder({
       setRecording(true)
       setElapsed(0)
       timerRef.current = setInterval(() => setElapsed((e) => e + 1), 1000)
-    } catch {
-      setError("Microphone access was denied or is unavailable.")
-    }
+    } catch (err) {
+  console.error(err)
+  setError(String(err))
+}
   }
 
   function stop() {
