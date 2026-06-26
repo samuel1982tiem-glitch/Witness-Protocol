@@ -2,6 +2,8 @@
 
 import { Mic, Square } from "lucide-react"
 import * as React from "react"
+import { Capacitor } from "@capacitor/core"
+import VoiceRecorder from "@/plugins/voice-recorder"
 
 export function VoiceRecorder({
   onRecorded,
@@ -11,8 +13,6 @@ export function VoiceRecorder({
   const [recording, setRecording] = React.useState(false)
   const [elapsed, setElapsed] = React.useState(0)
   const [error, setError] = React.useState<string | null>(null)
-  const recorderRef = React.useRef<MediaRecorder | null>(null)
-  const chunksRef = React.useRef<Blob[]>([])
   const timerRef = React.useRef<ReturnType<typeof setInterval> | null>(null)
 
   const stopTimer = () => {
@@ -24,35 +24,50 @@ export function VoiceRecorder({
 
   async function start() {
     setError(null)
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const recorder = new MediaRecorder(stream)
-      chunksRef.current = []
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data)
+      if (Capacitor.getPlatform && Capacitor.getPlatform() === "android") {
+        await VoiceRecorder.startRecording()
+        setRecording(true)
+        setElapsed(0)
+        timerRef.current = setInterval(() => setElapsed((e) => e + 1), 1000)
+      } else {
+        setError("Voice recording is only supported in the Android app.")
       }
-      recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, {
-          type: recorder.mimeType || "audio/webm",
-        })
-        onRecorded(blob)
-        stream.getTracks().forEach((t) => t.stop())
-      }
-      recorder.start()
-      recorderRef.current = recorder
-      setRecording(true)
-      setElapsed(0)
-      timerRef.current = setInterval(() => setElapsed((e) => e + 1), 1000)
     } catch (err) {
-  console.error(err)
-  setError(String(err))
-}
+      console.error(err)
+      setError(String(err))
+    }
   }
 
-  function stop() {
-    recorderRef.current?.stop()
-    setRecording(false)
+  async function stop() {
     stopTimer()
+    setRecording(false)
+    try {
+      if (Capacitor.getPlatform && Capacitor.getPlatform() === "android") {
+        const res = await VoiceRecorder.stopRecording()
+        const nativePath = res?.path
+        if (!nativePath) {
+          setError("No recording was returned from native layer.")
+          return
+        }
+        // convert native file path to a URL accessible by the WebView
+        const src = (Capacitor as any).convertFileSrc(nativePath)
+        // fetch and convert to blob to keep the existing onRecorded API
+        const resp = await fetch(src)
+        if (!resp.ok) {
+          setError("Failed to retrieve recorded file from native layer.")
+          return
+        }
+        const blob = await resp.blob()
+        onRecorded(blob)
+      } else {
+        setError("Voice recording is only supported in the Android app.")
+      }
+    } catch (err) {
+      console.error(err)
+      setError(String(err))
+    }
   }
 
   const mm = String(Math.floor(elapsed / 60)).padStart(2, "0")
