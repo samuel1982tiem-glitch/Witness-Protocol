@@ -8,7 +8,10 @@ import VoiceRecorder from "@/plugins/voice-recorder"
 export function VoiceRecorder({
   onRecorded,
 }: {
-  onRecorded: (blob: Blob) => void
+  // Avoid referencing DOM-only types (Blob) at the top-level to prevent server-side
+  // build errors with Turbopack when files are analyzed in a Server Component tree.
+  // Use `any` here — the runtime will still pass a Blob from the native path.
+  onRecorded: (blob: any) => void
 }) {
   const [recording, setRecording] = React.useState(false)
   const [elapsed, setElapsed] = React.useState(0)
