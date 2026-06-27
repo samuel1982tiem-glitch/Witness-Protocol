@@ -95,19 +95,9 @@ export default function DashboardPage() {
             <div>
               <p className="text-sm font-medium">No incidents yet</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Tap the + button to document your first event, or load a sample
-                log to explore the app.
+                Tap the + button to document event.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={onSeed}
-              disabled={seeding || busy}
-              className="inline-flex items-center gap-2 rounded-xl bg-muted px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-border disabled:opacity-50"
-            >
-              <Database className="size-4" aria-hidden="true" />
-              {seeding ? "Loading sample data…" : "Load sample data"}
-            </button>
           </Card>
         )}
       </section>

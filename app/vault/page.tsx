@@ -131,33 +131,11 @@ export default function VaultPage() {
       </Card>
 
       {incidents.length === 0 ? (
-        <Card>
-          <CardBody className="space-y-3">
-            <div className="text-sm">
-              <p className="font-medium text-foreground">Load sample data</p>
-              <p className="text-muted-foreground">
-                Populate the vault with example incidents to explore pattern
-                analysis. All samples are encrypted like real records.
-              </p>
-            </div>
-            <Button
-              variant="secondary"
-              className="w-full"
-              onClick={handleSample}
-              disabled={loadingSample || busy}
-            >
-              <Database className="size-4" aria-hidden="true" />
-              {loadingSample ? "Loading…" : "Add sample incidents"}
-            </Button>
-          </CardBody>
-        </Card>
+      
       ) : null}
 
-      <p className="px-1 text-xs leading-relaxed text-muted-foreground">
-        No data leaves this device. There is no cloud sync, no analytics, and no
-        third-party tracking. If you forget your passcode, encrypted records
-        cannot be recovered.
-      </p>
+      
+     
     </div>
   )
 }
