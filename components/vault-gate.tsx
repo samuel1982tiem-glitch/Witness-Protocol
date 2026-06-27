@@ -207,4 +207,81 @@ function UnlockForm() {
   const { unlock, busy, error } = useVault()
 
   const length = 6
-  const [passcode, setPass
+  const [passcode, setPasscode] = React.useState("")
+  const [localError, setLocalError] = React.useState<string | null>(null)
+  const [shake, setShake] = React.useState(false)
+
+  React.useEffect(() => {
+    if (passcode.length === length) {
+      ;(async () => {
+        const ok = await unlock(passcode)
+        if (!ok) {
+          setLocalError("Incorrect vault passcode.")
+          setShake(true)
+          setPasscode("")
+        } else {
+          setLocalError(null)
+          setPasscode("")
+        }
+      })()
+    }
+  }, [passcode, length, unlock])
+
+  return (
+    <Shell>
+      <Brand subtitle="Your vault is locked." />
+
+      <div className={shake ? "animate-shake" : ""}>
+        <Dots length={length} filled={passcode.length} />
+      </div>
+
+      {(localError || error) && (
+        <p className="text-sm text-destructive">{localError ?? error}</p>
+      )}
+
+      <DialPad
+        onPress={(d) => {
+          if (passcode.length < length) setPasscode((s) => s + d)
+        }}
+        onDelete={() => setPasscode((s) => s.slice(0, -1))}
+      />
+
+      <button
+        className="text-sm text-muted-foreground mt-4"
+        onClick={() => {
+          setPasscode("")
+          setLocalError(null)
+        }}
+      >
+        Clear
+      </button>
+    </Shell>
+  )
+}
+
+export function VaultGate({ children }: { children: React.ReactNode }) {
+  const { status } = useVault()
+  const router = useRouter()
+
+  React.useEffect(() => {
+    if (status === "ready" && window.location.pathname === "/") {
+      router.replace("/incidents")
+    }
+  }, [status, router])
+
+  if (status === "loading") {
+    return (
+      <Shell>
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <div className="size-8 animate-spin rounded-full border-2 border-border border-t-primary" />
+          <p className="text-sm">Preparing secure storage…</p>
+        </div>
+      </Shell>
+    )
+  }
+
+  if (status === "uninitialized") return <SetupForm />
+  if (status === "locked") return <UnlockForm />
+
+  return <>{children}</>
+}
