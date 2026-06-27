@@ -130,9 +130,7 @@ export default function VaultPage() {
         </CardBody>
       </Card>
 
-      {incidents.length === 0 ? (
-      
-      ) : null}
+    
 
       
      
