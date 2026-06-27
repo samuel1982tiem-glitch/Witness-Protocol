@@ -2,7 +2,6 @@
 
 import {
   Activity,
-  LayoutGrid,
   Lock,
   Plus,
   ScrollText,
@@ -17,7 +16,6 @@ import { useVault } from "@/components/vault-provider"
 import { cn } from "@/lib/utils"
 
 const NAV = [
-  { href: "/", label: "Home", icon: LayoutGrid },
   { href: "/incidents", label: "Records", icon: ScrollText },
   { href: "/patterns", label: "Patterns", icon: Activity },
   { href: "/vault", label: "Vault", icon: ShieldCheck },
@@ -37,7 +35,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-background">
       <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/80 px-5 py-3.5 backdrop-blur">
-        <Link href="/" className="flex items-center gap-2">
+        <Link href="/incidents" className="flex items-center gap-2">
           <span className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
             <ShieldCheck className="size-4.5" aria-hidden="true" />
           </span>

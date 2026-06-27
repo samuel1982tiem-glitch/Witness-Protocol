@@ -261,16 +261,23 @@ export function VaultGate({ children }: { children: React.ReactNode }) {
   const { status } = useVault()
 
   if (status === "loading") {
-    return (
-      <Shell>
-        <div className="flex flex-col items-center gap-3 text-muted-foreground">
-          <div className="size-8 animate-spin rounded-full border-2 border-border border-t-primary" />
-          <p className="text-sm">Preparing secure storage…</p>
-        </div>
-      </Shell>
-    )
-  }
-  if (status === "uninitialized") return <SetupForm />
-  if (status === "locked") return <UnlockForm />
-  return <>{children}</>
+  return (
+    <Shell>
+      <div className="flex flex-col items-center gap-3 text-muted-foreground">
+        <div className="size-8 animate-spin rounded-full border-2 border-border border-t-primary" />
+        <p className="text-sm">Preparing secure storage…</p>
+      </div>
+    </Shell>
+  )
+}
+
+if (status === "uninitialized") return <SetupForm />
+if (status === "locked") return <UnlockForm />
+
+if (typeof window !== "undefined" && window.location.pathname === "/") {
+  window.location.replace("/incidents")
+  return null
+}
+
+return <>{children}</>
 }

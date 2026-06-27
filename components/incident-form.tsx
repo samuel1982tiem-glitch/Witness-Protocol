@@ -148,7 +148,7 @@ export function IncidentForm() {
           }
         }),
       )
-      const id = await addIncident(
+      await addIncident(
         {
           title: title.trim(),
           description: description.trim(),
@@ -158,7 +158,7 @@ export function IncidentForm() {
         },
         evidence,
       )
-      router.replace(`/incident?id=${id}`)
+      router.replace("/incidents")
     } catch (err) {
       setError((err as Error).message || "Could not save the incident.")
       setSubmitting(false)

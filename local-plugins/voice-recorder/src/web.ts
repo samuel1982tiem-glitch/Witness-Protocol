@@ -1,10 +1,12 @@
 import { WebPlugin } from '@capacitor/core';
+import type { VoiceRecorderPlugin } from './definitions';
 
-import type { ExamplePlugin } from './definitions';
+export class VoiceRecorderWeb extends WebPlugin implements VoiceRecorderPlugin {
+  async startRecording(): Promise<void> {
+    throw new Error('Recording is not supported on the web.');
+  }
 
-export class ExampleWeb extends WebPlugin implements ExamplePlugin {
-  async echo(options: { value: string }): Promise<{ value: string }> {
-    console.log('ECHO', options);
-    return options;
+  async stopRecording(): Promise<{ path: string; name: string }> {
+    throw new Error('Recording is not supported on the web.');
   }
 }
