@@ -68,9 +68,11 @@ public class VoiceRecorderPlugin extends Plugin {
     }
 
     @PermissionCallback
-    private void handleRecordPermission(PluginCall call) {
-        // Called after the user responds to the permission request
-        if (hasPermission("record")) {
+private void handleRecordPermission(PluginCall call) {
+    Log.d(LOGTAG, "Permission state = " + getPermissionState("record"));
+
+    if (hasPermission("record")) {
+      
             if (pendingStartCall != null) {
                 startRecording(pendingStartCall);
                 pendingStartCall = null;
