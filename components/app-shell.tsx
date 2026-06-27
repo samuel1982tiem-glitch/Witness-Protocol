@@ -30,9 +30,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const { lock } = useVault()
-  const showFab =
-  pathname !== "/log" &&
-  pathname !== "/incident"
+  const showFab = pathname === "/incidents"
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-background">
