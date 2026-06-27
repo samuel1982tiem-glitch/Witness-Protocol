@@ -3,12 +3,11 @@
 import {
   Activity,
   Lock,
-  Plus,
   ScrollText,
   ShieldCheck,
 } from "lucide-react"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import * as React from "react"
 
 import { InstallPrompt } from "@/components/install-prompt"
@@ -28,9 +27,7 @@ function isActive(pathname: string, href: string): boolean {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const router = useRouter()
   const { lock } = useVault()
-  const showFab = pathname === "/incidents"
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-background">
@@ -57,18 +54,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <InstallPrompt />
         {children}
       </main>
-
-      {showFab ? (
-        <button
-          type="button"
-          aria-label="Log new incident"
-          onClick={() => router.push("/log")}
-          className="fixed bottom-24 left-1/2 z-30 flex size-15 -translate-x-1/2 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 transition-transform active:scale-95"
-          style={{ width: "3.5rem", height: "3.5rem" }}
-        >
-          <Plus className="size-7" aria-hidden="true" />
-        </button>
-      ) : null}
 
       <nav className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-md border-t border-border bg-background/90 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur">
         <div className="flex items-stretch justify-around">
