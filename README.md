@@ -91,9 +91,7 @@ If you or someone you know could benefit from Witness Protocol, or if you wish t
 
 Contact
 
-[Your Name]
-[Email]
-[Phone]
+samuel.tiem@proton.me
 
 ---
 
