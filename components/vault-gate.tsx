@@ -6,7 +6,7 @@ import * as React from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/primitives"
 import { useVault } from "@/components/vault-provider"
-
+import { useRouter } from "next/navigation"
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center bg-background px-5 py-10">
@@ -84,7 +84,7 @@ function SetupForm() {
   const [minutes, setMinutes] = React.useState(3)
   const [localError, setLocalError] = React.useState<string | null>(null)
   const [shake, setShake] = React.useState(false)
-
+  const router = useRouter()
   React.useEffect(() => {
     if (shake) {
       const t = setTimeout(() => setShake(false), 400)
@@ -107,6 +107,7 @@ function SetupForm() {
     }
     try {
       await setupVault(passcode, minutes)
+      router.replace("/incidents")
     } catch {
       setLocalError("Could not create the vault on this device.")
     }
