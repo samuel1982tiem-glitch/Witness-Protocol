@@ -264,7 +264,7 @@ export function VaultGate({ children }: { children: React.ReactNode }) {
   const router = useRouter()
 
   React.useEffect(() => {
-    if (status === "ready" && window.location.pathname === "/") {
+    if (status === "unlocked" && window.location.pathname === "/") {
       router.replace("/incidents")
     }
   }, [status, router])
