@@ -29,7 +29,16 @@ export default function VaultPage() {
   const evidenceCount = incidents.reduce((n, i) => n + i.evidence.length, 0)
   const autoLockMin = Math.round(autoLockMs / 60000)
 
-
+async function handleExport() {
+  try {
+    alert("1. Starting export...")
+    const fileName = await exportBackup()
+    alert(`Backup saved successfully:\n${fileName}`)
+  } catch (err) {
+    console.error(err)
+    alert(String(err))
+  }
+}
 
 
   async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
