@@ -31,14 +31,24 @@ export default function VaultPage() {
 
 
   async function handleExport() {
+  try {
+    alert("1. Starting export...")
     const blob = await exportBackup()
+    alert(`2. Blob created: ${blob.size} bytes`)
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
     a.download = `witness-protocol-${Date.now()}.wpb`
+    document.body.appendChild(a)
     a.click()
+    a.remove()
     URL.revokeObjectURL(url)
+    alert("3. Download triggered")
+  } catch (err) {
+    console.error(err)
+    alert(String(err))
   }
+}
 
   async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
