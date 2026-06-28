@@ -146,12 +146,22 @@ export default function VaultPage() {
       <Card>
         <CardBody className="space-y-3">
           <Button className="w-full" onClick={handleExport}>Export Backup</Button>
-          <label className="block">
-            <input type="file" accept=".wpb" className="hidden" onChange={handleImport}/>
-            <Button className="w-full" variant="outline" asChild>
-              <span>Import Backup</span>
-            </Button>
-          </label>
+          <input
+            id="backup-import"
+            type="file"
+            accept=".wpb"
+            className="hidden"
+            onChange={handleImport}
+          />
+          <Button
+            className="w-full"
+            variant="outline"
+            onClick={() =>
+              document.getElementById("backup-import")?.click()
+            }
+          >
+            Import Backup
+          </Button>
         </CardBody>
       </Card>
 
