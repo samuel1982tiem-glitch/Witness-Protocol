@@ -212,7 +212,7 @@ const ms = Math.max(1, minutes) * 60 * 1000
         await putRecord(STORES.users, record)
         keyRef.current = key
         setAutoLockMs(ms)
-        setStatus("unlocked")
+        setStatus("unlocked"
         await refreshIncidents()
       } catch (err) {
         setError((err as Error).message)
@@ -247,8 +247,10 @@ keyRef.current = key
 setAutoLockMs(vault.autoLockMs ?? DEFAULT_AUTOLOCK_MS)
 
 await refreshIncidents()
+await loadStoredAlerts()
 
 setStatus("unlocked")
+
 return true
 
       } catch (err) {
