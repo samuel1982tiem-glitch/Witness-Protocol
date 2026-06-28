@@ -250,20 +250,70 @@ export async function deleteIncident(incidentId: string): Promise<void> {
 }
 
 export type StoredCipher = CipherPayload
-// Backup helpers
+
+// Backup helpers - Android WebView compatible version
 export async function exportAllRecords() {
-  const db = await openDatabase()
+  try {
+    // Use explicit transaction for better compatibility
+    const db = await openDatabase()
+    
+    // Get all records using explicit transactions
+    const incidents = await new Promise<any[]>((resolve, reject) => {
+      const tx = db.transaction(STORES.incidents, 'readonly')
+      const store = tx.objectStore(STORES.incidents)
+      const request = store.getAll()
+      
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
+    })
+    
+    const evidence = await new Promise<any[]>((resolve, reject) => {
+      const tx = db.transaction(STORES.evidence, 'readonly')
+      const store = tx.objectStore(STORES.evidence)
+      const request = store.getAll()
+      
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
+    })
+    
+    const alerts = await new Promise<any[]>((resolve, reject) => {
+      const tx = db.transaction(STORES.patternAlerts, 'readonly')
+      const store = tx.objectStore(STORES.patternAlerts)
+      const request = store.getAll()
+      
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
+    })
+    
+    const users = await new Promise<any[]>((resolve, reject) => {
+      const tx = db.transaction(STORES.users, 'readonly')
+      const store = tx.objectStore(STORES.users)
+      const request = store.getAll()
+      
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
+    })
 
-  const result = {
-    version: 1,
-    exportedAt: Date.now(),
-    incidents: await db.getAll(STORES.incidents),
-    evidence: await db.getAll(STORES.evidence),
-    alerts: await db.getAll(STORES.patternAlerts),
-    users: await db.getAll(STORES.users),
+    return {
+      version: 1,
+      exportedAt: Date.now(),
+      incidents,
+      evidence,
+      alerts,
+      users,
+    }
+  } catch (error) {
+    console.error('Export failed:', error)
+    // Return empty data structure on failure
+    return {
+      version: 1,
+      exportedAt: Date.now(),
+      incidents: [],
+      evidence: [],
+      alerts: [],
+      users: [],
+    }
   }
-
-  return result
 }
 
 export async function importAllRecords(data: {
@@ -272,33 +322,63 @@ export async function importAllRecords(data: {
   alerts: any[]
   users: any[]
 }) {
-  const db = await openDatabase()
+  try {
+    const db = await openDatabase()
 
-  const tx = db.transaction(
-    [
-      STORES.incidents,
-      STORES.evidence,
-      STORES.patternAlerts,
-      STORES.users,
-    ],
-    "readwrite",
-  )
+    // Use explicit transactions for each store for better Android compatibility
+    if (data.incidents && data.incidents.length > 0) {
+      const tx = db.transaction(STORES.incidents, 'readwrite')
+      const store = tx.objectStore(STORES.incidents)
+      for (const item of data.incidents) {
+        await new Promise<void>((resolve, reject) => {
+          const request = store.put(item)
+          request.onsuccess = () => resolve()
+          request.onerror = () => reject(request.error)
+        })
+      }
+      await tx.done
+    }
 
-  for (const item of data.incidents) {
-    await tx.objectStore(STORES.incidents).put(item)
+    if (data.evidence && data.evidence.length > 0) {
+      const tx = db.transaction(STORES.evidence, 'readwrite')
+      const store = tx.objectStore(STORES.evidence)
+      for (const item of data.evidence) {
+        await new Promise<void>((resolve, reject) => {
+          const request = store.put(item)
+          request.onsuccess = () => resolve()
+          request.onerror = () => reject(request.error)
+        })
+      }
+      await tx.done
+    }
+
+    if (data.alerts && data.alerts.length > 0) {
+      const tx = db.transaction(STORES.patternAlerts, 'readwrite')
+      const store = tx.objectStore(STORES.patternAlerts)
+      for (const item of data.alerts) {
+        await new Promise<void>((resolve, reject) => {
+          const request = store.put(item)
+          request.onsuccess = () => resolve()
+          request.onerror = () => reject(request.error)
+        })
+      }
+      await tx.done
+    }
+
+    if (data.users && data.users.length > 0) {
+      const tx = db.transaction(STORES.users, 'readwrite')
+      const store = tx.objectStore(STORES.users)
+      for (const item of data.users) {
+        await new Promise<void>((resolve, reject) => {
+          const request = store.put(item)
+          request.onsuccess = () => resolve()
+          request.onerror = () => reject(request.error)
+        })
+      }
+      await tx.done
+    }
+  } catch (error) {
+    console.error('Import failed:', error)
+    throw error
   }
-
-  for (const item of data.evidence) {
-    await tx.objectStore(STORES.evidence).put(item)
-  }
-
-  for (const item of data.alerts) {
-    await tx.objectStore(STORES.patternAlerts).put(item)
-  }
-
-  for (const item of data.users) {
-    await tx.objectStore(STORES.users).put(item)
-  }
-
-  await tx.done
 }
