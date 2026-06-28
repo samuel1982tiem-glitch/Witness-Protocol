@@ -270,7 +270,7 @@ return true
         setBusy(false)
       }
     },
-    [refreshIncidents, loadStoredAlerts],
+    [refreshIncidents,],
   )
 
   const addIncident = React.useCallback(
@@ -378,7 +378,14 @@ await refreshIncidents()
 await loadStoredAlerts()
 
 setStatus("unlocked")
+
+// force UI re-render + decrypt refresh cycle
+clearMemory()
+await refreshIncidents()
+await loadStoredAlerts()
+
 registerActivity()
+
     },
     [refreshIncidents, loadStoredAlerts],
   )
