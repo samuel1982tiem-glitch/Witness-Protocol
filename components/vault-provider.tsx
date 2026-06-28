@@ -49,7 +49,7 @@ interface VaultContextValue {
   autoLockMs: number
   error: string | null
   busy: boolean
-  setupVault: (passcode: string, autoLockMinutes: number) => Promise<void>
+  setupVault: (passcode: string, autoLockMinutes?: number) => Promise<void>
   unlock: (passcode: string) => Promise<boolean>
   lock: () => void
   addIncident: (
@@ -189,14 +189,18 @@ React.useEffect(() => {
   }, [])
 
   const setupVault = React.useCallback(
-    async (passcode: string, autoLockMinutes: number) => {
+    async (
+  passcode: string,
+  autoLockMinutes = 3,
+) => {
       setBusy(true)
       setError(null)
       try {
         const salt = generateSalt()
         const key = await deriveKey(passcode, salt)
         const verifier = await createVerifier(key)
-        const ms = Math.max(1, autoLockMinutes) * 60 * 1000
+        const minutes = autoLockMinutes ?? 3
+const ms = Math.max(1, minutes) * 60 * 1000
         const record: VaultRecord = {
           id: "vault",
           salt,
@@ -239,10 +243,14 @@ React.useEffect(() => {
           setError("Incorrect vault passcode.")
           return false
         }
-      keyRef.current = key
+keyRef.current = key
 setAutoLockMs(vault.autoLockMs ?? DEFAULT_AUTOLOCK_MS)
+
+await refreshIncidents()
+
 setStatus("unlocked")
 return true
+
       } catch (err) {
         setError((err as Error).message)
         return false
