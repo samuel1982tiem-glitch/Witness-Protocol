@@ -372,9 +372,13 @@ return true
     async (file: File) => {
       const key = keyRef.current
       if (!key) throw new Error("Vault is locked.")
-      await importVaultBackup(file, key)
-      await refreshIncidents()
-      await loadStoredAlerts()
+await importVaultBackup(file, key)
+
+await refreshIncidents()
+await loadStoredAlerts()
+
+setStatus("unlocked")
+registerActivity()
     },
     [refreshIncidents, loadStoredAlerts],
   )
