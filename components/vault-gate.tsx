@@ -1,10 +1,7 @@
 "use client"
 
-import { KeyRound, Lock, ShieldCheck } from "lucide-react"
+import { ShieldCheck } from "lucide-react"
 import * as React from "react"
-
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/primitives"
 import { useVault } from "@/components/vault-provider"
 import { useRouter } from "next/navigation"
 
@@ -87,13 +84,12 @@ function DialPad({
 
 function SetupForm() {
   const { setupVault, busy } = useVault()
-  const router = useRouter()
 
   const length = 6
   const [passcode, setPasscode] = React.useState("")
-  const [confirm, setConfirm] = React.useState("")
-  const [activeField, setActiveField] = React.useState<"pass" | "confirm">("pass")
-  const [minutes, setMinutes] = React.useState(3)
+  const [firstEntry, setFirstEntry] = React.useState("")
+  const [confirming, setConfirming] = React.useState(false)
+  
   const [localError, setLocalError] = React.useState<string | null>(null)
   const [shake, setShake] = React.useState(false)
 
@@ -104,100 +100,80 @@ function SetupForm() {
     }
   }, [shake])
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setLocalError(null)
-
-    if (passcode.length < length) {
-      setLocalError(`Passcode must be at least ${length} digits.`)
-      setShake(true)
-      return
-    }
-
-    if (passcode !== confirm) {
-      setLocalError("Passcodes do not match.")
-      setShake(true)
-      return
-    }
-
-    try {
-      await setupVault(passcode, minutes)
-
-      // IMPORTANT: do NOT navigate manually here
-      // VaultGate will react to updated status
-    } catch {
-      setLocalError("Could not create the vault on this device.")
-    }
-  }
 
   const onPress = (d: string) => {
-    if (activeField === "pass") {
-      if (passcode.length >= length) return
-      setPasscode((s) => s + d)
-    } else {
-      if (confirm.length >= length) return
-      setConfirm((s) => s + d)
-    }
+  if (passcode.length >= length) return
+
+  const next = passcode + d
+  setPasscode(next)
+
+  if (next.length !== length) return
+
+  if (!confirming) {
+  setLocalError(null)
+    setTimeout(() => {
+      setFirstEntry(next)
+      setPasscode("")
+      setConfirming(true)
+    }, 180)
+    return
   }
 
-  const onDelete = () => {
-    if (activeField === "pass") setPasscode((s) => s.slice(0, -1))
-    else setConfirm((s) => s.slice(0, -1))
+  if (next !== firstEntry) {
+    setLocalError("Passcodes do not match.")
+    setShake(true)
+
+    setTimeout(() => {
+  setPasscode("")
+  setFirstEntry("")
+  setConfirming(false)
+  setLocalError(null)
+}, 1000)
+
+    return
   }
+
+  ;(async () => {
+  try {
+    setLocalError(null)
+    setPasscode("")
+    await setupVault(next)
+  } catch {
+    setLocalError("Could not create the vault.")
+    setPasscode("")
+    setFirstEntry("")
+    setConfirming(false)
+  }
+})()
+}
+
+  const onDelete = () => {
+  setPasscode((s) => s.slice(0, -1))
+}
 
   return (
     <Shell>
       <Brand subtitle="Create a private vault passcode." />
 
-      <form onSubmit={onSubmit} className="space-y-4">
-        <div>
-          <Label>Auto-lock after inactivity</Label>
-          <div className="flex gap-2 mt-2">
-            {[1, 3, 5, 10].map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setMinutes(m)}
-                className={`flex-1 rounded-xl border px-2 py-2 text-sm ${
-                  minutes === m
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border text-muted-foreground"
-                }`}
-              >
-                {m}m
-              </button>
-            ))}
-          </div>
-        </div>
+      <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+     
+        
 
-        <div>
-          <div className="flex justify-between mb-2">
-            <span>Enter passcode</span>
-            <button type="button" onClick={() => setActiveField("pass")}>
-              Edit
-            </button>
-          </div>
-          <Dots length={length} filled={passcode.length} />
-        </div>
+       <div className={shake ? "animate-shake" : ""}>
+  <p className="mb-3 text-center text-sm font-medium text-muted-foreground">
+    {confirming ? "Confirm your passcode" : "Create your passcode"}
+  </p>
 
-        <div>
-          <div className="flex justify-between mb-2">
-            <span>Confirm passcode</span>
-            <button type="button" onClick={() => setActiveField("confirm")}>
-              Edit
-            </button>
-          </div>
-          <Dots length={length} filled={confirm.length} />
-        </div>
+  <Dots
+    length={length}
+    filled={passcode.length}
+  />
+</div>
 
         {localError && <p className="text-sm text-destructive">{localError}</p>}
 
         <DialPad onPress={onPress} onDelete={onDelete} />
 
-        <Button type="submit" disabled={busy} className="w-full">
-          <KeyRound className="size-4" />
-          {busy ? "Creating vault…" : "Create secure vault"}
-        </Button>
       </form>
     </Shell>
   )
@@ -260,6 +236,7 @@ function UnlockForm() {
 }
 
 export function VaultGate({ children }: { children: React.ReactNode }) {
+  export function VaultGate({ children }: { children: React.ReactNode }) {
   const { status } = useVault()
   const router = useRouter()
 
