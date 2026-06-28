@@ -249,20 +249,47 @@ export async function deleteIncident(incidentId: string): Promise<void> {
 }
 
 export type StoredCipher = CipherPayload
-// Backup helpers
-export async function exportAllRecords() {
-  const db = await openDatabase()
 
-  const result = {
+
+export async function exportAllRecords() {
+  const [incidents, evidence, alerts, users] = await Promise.all([
+    getAll(STORES.incidents),
+    getAll(STORES.evidenceFiles),
+    getAll(STORES.patternAlerts),
+    getAll(STORES.users),
+  ])
+
+  return {
     version: 1,
     exportedAt: Date.now(),
-    incidents: await db.getAll(STORES.incidents),
-    evidence: await db.getAll(STORES.evidence),
-    alerts: await db.getAll(STORES.patternAlerts),
-    users: await db.getAll(STORES.users),
+    incidents,
+    evidence,
+    alerts,
+    users,
+  }
+}
+
+export async function importAllRecords(data: {
+  incidents: any[]
+  evidence: any[]
+  alerts: any[]
+  users: any[]
+}) {
+  for (const item of data.incidents ?? []) {
+    await putRecord(STORES.incidents, item)
   }
 
-  return result
+  for (const item of data.evidence ?? []) {
+    await putRecord(STORES.evidenceFiles, item)
+  }
+
+  for (const item of data.alerts ?? []) {
+    await putRecord(STORES.patternAlerts, item)
+  }
+
+  for (const item of data.users ?? []) {
+    await putRecord(STORES.users, item)
+  }
 }
 
 export async function importAllRecords(data: {
