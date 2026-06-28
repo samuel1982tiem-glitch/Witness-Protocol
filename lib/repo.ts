@@ -249,3 +249,55 @@ export async function deleteIncident(incidentId: string): Promise<void> {
 }
 
 export type StoredCipher = CipherPayload
+// Backup helpers
+export async function exportAllRecords() {
+  const db = await openDatabase()
+
+  const result = {
+    version: 1,
+    exportedAt: Date.now(),
+    incidents: await db.getAll(STORES.incidents),
+    evidence: await db.getAll(STORES.evidence),
+    alerts: await db.getAll(STORES.patternAlerts),
+    users: await db.getAll(STORES.users),
+  }
+
+  return result
+}
+
+export async function importAllRecords(data: {
+  incidents: any[]
+  evidence: any[]
+  alerts: any[]
+  users: any[]
+}) {
+  const db = await openDatabase()
+
+  const tx = db.transaction(
+    [
+      STORES.incidents,
+      STORES.evidence,
+      STORES.patternAlerts,
+      STORES.users,
+    ],
+    "readwrite",
+  )
+
+  for (const item of data.incidents) {
+    await tx.objectStore(STORES.incidents).put(item)
+  }
+
+  for (const item of data.evidence) {
+    await tx.objectStore(STORES.evidence).put(item)
+  }
+
+  for (const item of data.alerts) {
+    await tx.objectStore(STORES.patternAlerts).put(item)
+  }
+
+  for (const item of data.users) {
+    await tx.objectStore(STORES.users).put(item)
+  }
+
+  await tx.done
+}

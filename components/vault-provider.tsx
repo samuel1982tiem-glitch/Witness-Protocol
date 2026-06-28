@@ -2,7 +2,10 @@
 
 import { createContext } from "react"
 import * as React from "react"
-
+import {
+  exportVaultBackup,
+  importVaultBackup,
+} from "@/lib/backup"
 import {
   checkVerifier,
   createVerifier,
@@ -63,7 +66,29 @@ interface VaultContextValue {
   loadEvidenceUrl: (record: EvidenceRecord) => Promise<string>
   loadSampleData: () => Promise<void>
   registerActivity: () => void
+exportBackup: () => Promise<Blob>
+importBackup: (file: File) => Promise<void>
 }
+
+const exportBackup = React.useCallback(async (): Promise<Blob> => {
+  const key = keyRef.current
+  if (!key) throw new Error("Vault is locked.")
+
+  return exportVaultBackup(key)
+}, [])
+
+const importBackup = React.useCallback(
+  async (file: File) => {
+    const key = keyRef.current
+    if (!key) throw new Error("Vault is locked.")
+
+    await importVaultBackup(file, key)
+
+    await refreshIncidents()
+    await loadStoredAlerts()
+  },
+  [refreshIncidents, loadStoredAlerts],
+)
 
 const VaultContext = createContext<VaultContextValue | null>(null)
 
@@ -369,6 +394,9 @@ return true
     loadEvidenceUrl,
     loadSampleData,
     registerActivity,
+exportBackup,
+importBackup,
+
   }
 
   return <VaultContext.Provider value={value}>{children}</VaultContext.Provider>
