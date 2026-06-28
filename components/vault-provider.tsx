@@ -239,12 +239,10 @@ React.useEffect(() => {
           setError("Incorrect vault passcode.")
           return false
         }
-        keyRef.current = key
-        setAutoLockMs(vault.autoLockMs ?? DEFAULT_AUTOLOCK_MS)
-        setStatus("unlocked")
-        await refreshIncidents()
-        await loadStoredAlerts()
-        return true
+      keyRef.current = key
+setAutoLockMs(vault.autoLockMs ?? DEFAULT_AUTOLOCK_MS)
+setStatus("unlocked")
+return true
       } catch (err) {
         setError((err as Error).message)
         return false
