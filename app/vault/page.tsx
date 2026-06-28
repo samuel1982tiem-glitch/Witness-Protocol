@@ -20,22 +20,31 @@ export default function VaultPage() {
     incidents,
     autoLockMs,
     lock,
-    loadSampleData,
+    exportBackup,
+  importBackup,
     busy,
   } = useVault()
-  const [loadingSample, setLoadingSample] = React.useState(false)
 
   const sealedCount = incidents.filter((i) => i.sealed).length
   const evidenceCount = incidents.reduce((n, i) => n + i.evidence.length, 0)
   const autoLockMin = Math.round(autoLockMs / 60000)
 
-  async function handleSample() {
-    setLoadingSample(true)
-    try {
-      await loadSampleData()
-    } finally {
-      setLoadingSample(false)
-    }
+
+  async function handleExport() {
+    const blob = await exportBackup()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `witness-protocol-${Date.now()}.wpb`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (!file) return
+    await importBackup(file)
+    event.target.value = ""
   }
 
   return (
@@ -134,6 +143,19 @@ export default function VaultPage() {
 
       
      
+      <Card>
+        <CardBody className="space-y-3">
+          <Button className="w-full" onClick={handleExport}>Export Backup</Button>
+          <label className="block">
+            <input type="file" accept=".wpb" className="hidden" onChange={handleImport}/>
+            <Button className="w-full" variant="outline" asChild>
+              <span>Import Backup</span>
+            </Button>
+          </label>
+        </CardBody>
+      </Card>
+
+
     </div>
   )
 }
