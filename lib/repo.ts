@@ -290,6 +290,8 @@ export async function exportAllRecords(): Promise<VaultBackup> {
 }
 
 export async function importAllRecords(data: VaultBackup) {
+  console.log("[IMPORT] Starting restore")
+
   const stores = [
     STORES.users,
     STORES.incidents,
@@ -298,31 +300,50 @@ export async function importAllRecords(data: VaultBackup) {
     STORES.evidenceSeals,
   ]
 
+  // Clear existing data
   for (const store of stores) {
-    const records = await getAll(store)
+    console.log("[IMPORT] Clearing", store)
 
-    for (const record of records as any[]) {
+    const records = await getAll<any>(store)
+
+    for (const record of records) {
       await deleteRecord(store, record.id)
     }
   }
 
+  console.log("[IMPORT] Writing users:", data.users?.length ?? 0)
   for (const item of data.users ?? []) {
     await putRecord(STORES.users, item)
   }
 
+  console.log("[IMPORT] Writing incidents:", data.incidents?.length ?? 0)
   for (const item of data.incidents ?? []) {
     await putRecord(STORES.incidents, item)
   }
 
+  console.log("[IMPORT] Writing evidence:", data.evidence?.length ?? 0)
   for (const item of data.evidence ?? []) {
     await putRecord(STORES.evidenceFiles, item)
   }
 
+  console.log("[IMPORT] Writing alerts:", data.alerts?.length ?? 0)
   for (const item of data.alerts ?? []) {
     await putRecord(STORES.patternAlerts, item)
   }
 
+  console.log("[IMPORT] Writing seals:", data.seals?.length ?? 0)
   for (const item of data.seals ?? []) {
     await putRecord(STORES.evidenceSeals, item)
   }
+
+  console.log("[IMPORT] Restore finished")
+
+  console.log("[IMPORT] Verify incidents:",
+    (await getAll(STORES.incidents)).length)
+
+  console.log("[IMPORT] Verify evidence:",
+    (await getAll(STORES.evidenceFiles)).length)
+
+  console.log("[IMPORT] Verify users:",
+    (await getAll(STORES.users)).length)
 }
