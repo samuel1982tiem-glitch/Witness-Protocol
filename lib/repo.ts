@@ -8,6 +8,7 @@ import {
   type CipherPayload,
 } from "./crypto"
 import {
+  openDatabase,
   deleteRecord,
   getAll,
   getAllByIndex,
@@ -18,7 +19,6 @@ import {
   type IncidentRecord,
   type SealRecord,
 } from "./db"
-import type {
   CategoryId,
   EvidenceMeta,
   GeoLocation,
