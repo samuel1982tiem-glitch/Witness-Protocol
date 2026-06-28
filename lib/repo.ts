@@ -119,13 +119,91 @@ export async function loadEvidenceBlobUrl(
   key: CryptoKey,
   record: EvidenceRecord,
 ): Promise<string> {
-  const plaintext = await decryptJSON<EvidencePlaintext>(
-    key,
-    toCipherPayload(record),
-  )
-  const bytes = new Uint8Array(plaintext.bytes)
-  const blob = new Blob([bytes], { type: record.mimeType })
-  return URL.createObjectURL(blob)
+  try {
+    const plaintext = await decryptJSON<EvidencePlaintext>(
+      key,
+      toCipherPayload(record),
+    )
+    
+    // Validate we have data
+    if (!plaintext.bytes || plaintext.bytes.length === 0) {
+      console.warn('Evidence has no bytes data, returning placeholder for:', record.id)
+      return getPlaceholderURL(record.mimeType)
+    }
+    
+    // Create Uint8Array from the bytes
+    const bytes = new Uint8Array(plaintext.bytes)
+    
+    // Validate mime type
+    const mimeType = record.mimeType || 'application/octet-stream'
+    
+    // Create blob
+    const blob = new Blob([bytes], { type: mimeType })
+    
+    // Verify blob has data
+    if (blob.size === 0) {
+      console.warn('Created blob is empty for evidence:', record.id)
+      return getPlaceholderURL(record.mimeType)
+    }
+    
+    // Create object URL with try-catch for Android WebView compatibility
+    try {
+      return URL.createObjectURL(blob)
+    } catch (urlError) {
+      console.error('Failed to create object URL for evidence:', record.id, urlError)
+      // Try fallback approach for Android
+      return await createFallbackURL(blob, record.mimeType)
+    }
+  } catch (error) {
+    console.error('Failed to load evidence blob for:', record.id, error)
+    // Return placeholder on any error
+    return getPlaceholderURL(record.mimeType)
+  }
+}
+
+/**
+ * Fallback for creating URL when createObjectURL fails (Android WebView)
+ */
+async function createFallbackURL(blob: Blob, mimeType?: string): Promise<string> {
+  try {
+    // Try reading as data URL
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          resolve(reader.result)
+        } else {
+          reject(new Error('Failed to convert blob to data URL'))
+        }
+      }
+      reader.onerror = () => reject(reader.error)
+      reader.readAsDataURL(blob)
+    })
+    return dataUrl
+  } catch (fallbackError) {
+    console.error('Fallback also failed:', fallbackError)
+    return getPlaceholderURL(mimeType)
+  }
+}
+
+/**
+ * Get a placeholder URL for when evidence can't be loaded
+ */
+function getPlaceholderURL(mimeType?: string): string {
+  if (mimeType?.startsWith('image/')) {
+    // Transparent 1x1 pixel GIF
+    return 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+  }
+  if (mimeType?.startsWith('video/')) {
+    // Small placeholder for video
+    return 'data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAAQxtZGF0AAAAMgAAACh3cnZrbG9n'
+  }
+  if (mimeType?.startsWith('audio/')) {
+    // Silent audio placeholder (1 second of silence)
+    return 'data:audio/wav;base64,U1NDUwAAAAAADQ0AAAAA'
+  }
+  // Generic placeholder for other types
+  return 'data:text/plain;base64,'
 }
 
 export async function getEvidenceRecords(
