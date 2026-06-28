@@ -372,14 +372,6 @@ return true
   return fileName
 }, [])
 
-  return new Blob(
-    [JSON.stringify(backup, null, 2)],
-    {
-      type: "application/json",
-    },
-  )
-}, [])
-
   const importBackup = React.useCallback(
     async (file: File) => {
       const key = keyRef.current
