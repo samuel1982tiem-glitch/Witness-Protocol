@@ -290,6 +290,22 @@ export async function exportAllRecords(): Promise<VaultBackup> {
 }
 
 export async function importAllRecords(data: VaultBackup) {
+  const stores = [
+    STORES.users,
+    STORES.incidents,
+    STORES.evidenceFiles,
+    STORES.patternAlerts,
+    STORES.evidenceSeals,
+  ]
+
+  for (const store of stores) {
+    const records = await getAll(store)
+
+    for (const record of records as any[]) {
+      await deleteRecord(store, record.id)
+    }
+  }
+
   for (const item of data.users ?? []) {
     await putRecord(STORES.users, item)
   }
