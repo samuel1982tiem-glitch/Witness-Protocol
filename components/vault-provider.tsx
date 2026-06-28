@@ -362,10 +362,18 @@ return true
   }, [refreshIncidents, runAnalysis])
 
   const exportBackup = React.useCallback(async (): Promise<Blob> => {
-    const key = keyRef.current
-    if (!key) throw new Error("Vault is locked.")
-    return exportVaultBackup(key)
-  }, [])
+  const key = keyRef.current
+  if (!key) throw new Error("Vault is locked.")
+
+  const backup = await exportVaultBackup(key)
+
+  return new Blob(
+    [JSON.stringify(backup, null, 2)],
+    {
+      type: "application/json",
+    },
+  )
+}, [])
 
   const importBackup = React.useCallback(
     async (file: File) => {
