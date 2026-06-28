@@ -5,10 +5,49 @@ import {
   type VaultBackup,
 } from "./repo"
 
+function reviveBuffers(backup: VaultBackup): VaultBackup {
+  for (const incident of backup.incidents ?? []) {
+    incident.iv = new Uint8Array(incident.iv as any)
+
+    incident.data =
+      incident.data instanceof ArrayBuffer
+        ? incident.data
+        : new Uint8Array(incident.data as any).buffer
+  }
+
+  for (const evidence of backup.evidence ?? []) {
+    evidence.iv = new Uint8Array(evidence.iv as any)
+
+    evidence.data =
+      evidence.data instanceof ArrayBuffer
+        ? evidence.data
+        : new Uint8Array(evidence.data as any).buffer
+  }
+
+  for (const user of backup.users ?? []) {
+    if ("salt" in user) {
+      user.salt = new Uint8Array(user.salt as any)
+    }
+
+    if ("verifierIv" in user) {
+      user.verifierIv = new Uint8Array(user.verifierIv as any)
+    }
+
+    if ("verifierData" in user) {
+      user.verifierData =
+        user.verifierData instanceof ArrayBuffer
+          ? user.verifierData
+          : new Uint8Array(user.verifierData as any).buffer
+    }
+  }
+
+  return backup
+}
+
 export async function exportVaultBackup() {
   const backup = await exportAllRecords()
 
-  const json = JSON.stringify(backup, null, 2)
+  const json = JSON.stringify(backup)
 
   const fileName =
     "WitnessProtocolBackup-" +
@@ -25,10 +64,15 @@ export async function exportVaultBackup() {
   return fileName
 }
 
-export async function importVaultBackup(file: File) {
+export async function importVaultBackup(
+  file: File,
+  _key?: CryptoKey,
+) {
   const text = await file.text()
 
-  const backup: VaultBackup = JSON.parse(text)
+  const parsed = JSON.parse(text) as VaultBackup
+
+  const backup = reviveBuffers(parsed)
 
   await importAllRecords(backup)
 }
