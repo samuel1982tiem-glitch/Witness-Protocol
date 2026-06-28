@@ -235,7 +235,6 @@ function UnlockForm() {
   )
 }
 
-export function VaultGate({ children }: { children: React.ReactNode }) {
   export function VaultGate({ children }: { children: React.ReactNode }) {
   const { status } = useVault()
   const router = useRouter()
