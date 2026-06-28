@@ -66,7 +66,7 @@ interface VaultContextValue {
   loadEvidenceUrl: (record: EvidenceRecord) => Promise<string>
   loadSampleData: () => Promise<void>
   registerActivity: () => void
-exportBackup: () => Promise<Blob>
+exportBackup: () => Promise<string>
 importBackup: (file: File) => Promise<void>
 }
 
@@ -361,11 +361,16 @@ return true
     await runAnalysis()
   }, [refreshIncidents, runAnalysis])
 
-  const exportBackup = React.useCallback(async (): Promise<Blob> => {
+  const exportBackup = React.useCallback(async (): Promise<string> => {
   const key = keyRef.current
   if (!key) throw new Error("Vault is locked.")
 
-  const backup = await exportVaultBackup(key)
+  const fileName = await exportVaultBackup(key)
+
+  alert(`Backup saved:\n${fileName}`)
+
+  return fileName
+}, [])
 
   return new Blob(
     [JSON.stringify(backup, null, 2)],
