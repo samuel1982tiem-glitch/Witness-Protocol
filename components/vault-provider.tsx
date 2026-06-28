@@ -90,7 +90,13 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = React.useState<string | null>(null)
   const [busy, setBusy] = React.useState(false)
 const exportBackup = React.useCallback(async (): Promise<Blob> => {
-  const importBackup = React.useCallback(
+  const key = keyRef.current
+  if (!key) throw new Error("Vault is locked.")
+
+  return exportVaultBackup(key)
+}, [])
+
+const importBackup = React.useCallback(
   async (file: File) => {
     const key = keyRef.current
     if (!key) throw new Error("Vault is locked.")
@@ -102,11 +108,6 @@ const exportBackup = React.useCallback(async (): Promise<Blob> => {
   },
   [refreshIncidents, loadStoredAlerts],
 )
-const key = keyRef.current
-  if (!key) throw new Error("Vault is locked.")
-
-  return exportVaultBackup(key)
-}, [])
   const keyRef = React.useRef<CryptoKey | null>(null)
   const lockTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 
