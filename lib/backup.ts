@@ -1,25 +1,34 @@
-import { Filesystem, Directory, Encoding } from "@capacitor/filesystem"
-import { exportAllRecords, importAllRecords } from "./repo"
+import { Filesystem, Directory } from "@capacitor/filesystem"
+import {
+  exportAllRecords,
+  importAllRecords,
+  type VaultBackup,
+} from "./repo"
 
 export async function exportVaultBackup() {
-  const json = await exportAllRecords()
+  const backup = await exportAllRecords()
+
+  const json = JSON.stringify(backup, null, 2)
 
   const fileName =
     "WitnessProtocolBackup-" +
     new Date().toISOString().replace(/[:.]/g, "-") +
-    ".json"
+    ".wpb"
 
-await Filesystem.writeFile({
-  path: fileName,
-  data: String(json),
-  directory: Directory.Documents,
-  recursive: true,
-})
+  await Filesystem.writeFile({
+    path: fileName,
+    data: json,
+    directory: Directory.Documents,
+    recursive: true,
+  })
 
   return fileName
 }
 
-export async function importVaultBackup(contents: string) {
-  return importAllRecords(contents)
-}
+export async function importVaultBackup(file: File) {
+  const text = await file.text()
 
+  const backup: VaultBackup = JSON.parse(text)
+
+  await importAllRecords(backup)
+}
