@@ -9,13 +9,12 @@ export async function exportVaultBackup() {
     new Date().toISOString().replace(/[:.]/g, "-") +
     ".json"
 
-  await Filesystem.writeFile({
-    path: fileName,
-    data: json,
-    directory: Directory.Documents,
-    encoding: Encoding.UTF8,
-    recursive: true,
-  })
+await Filesystem.writeFile({
+  path: fileName,
+  data: String(json),
+  directory: Directory.Documents,
+  recursive: true,
+})
 
   return fileName
 }
