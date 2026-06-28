@@ -89,25 +89,8 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
   const [autoLockMs, setAutoLockMs] = React.useState(DEFAULT_AUTOLOCK_MS)
   const [error, setError] = React.useState<string | null>(null)
   const [busy, setBusy] = React.useState(false)
-const exportBackup = React.useCallback(async (): Promise<Blob> => {
-  const key = keyRef.current
-  if (!key) throw new Error("Vault is locked.")
 
-  return exportVaultBackup(key)
-}, [])
 
-const importBackup = React.useCallback(
-  async (file: File) => {
-    const key = keyRef.current
-    if (!key) throw new Error("Vault is locked.")
-
-    await importVaultBackup(file, key)
-
-    await refreshIncidents()
-    await loadStoredAlerts()
-  },
-  [refreshIncidents, loadStoredAlerts],
-)
   const keyRef = React.useRef<CryptoKey | null>(null)
   const lockTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -378,6 +361,22 @@ return true
     await runAnalysis()
   }, [refreshIncidents, runAnalysis])
 
+  const exportBackup = React.useCallback(async (): Promise<Blob> => {
+    const key = keyRef.current
+    if (!key) throw new Error("Vault is locked.")
+    return exportVaultBackup(key)
+  }, [])
+
+  const importBackup = React.useCallback(
+    async (file: File) => {
+      const key = keyRef.current
+      if (!key) throw new Error("Vault is locked.")
+      await importVaultBackup(file, key)
+      await refreshIncidents()
+      await loadStoredAlerts()
+    },
+    [refreshIncidents, loadStoredAlerts],
+  )
   const value: VaultContextValue = {
     status,
     incidents,
