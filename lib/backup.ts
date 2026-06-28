@@ -1,18 +1,26 @@
+import { Filesystem, Directory, Encoding } from "@capacitor/filesystem"
 import { exportAllRecords, importAllRecords } from "./repo"
 
 export async function exportVaultBackup() {
-  const data = await exportAllRecords()
+  const json = await exportAllRecords()
 
-  console.log("[BACKUP] exportAllRecords returned:", data)
+  const fileName =
+    "WitnessProtocolBackup-" +
+    new Date().toISOString().replace(/[:.]/g, "-") +
+    ".json"
 
-  if (!data) {
-    throw new Error("exportAllRecords returned undefined")
-  }
+  await Filesystem.writeFile({
+    path: fileName,
+    data: json,
+    directory: Directory.Documents,
+    encoding: Encoding.UTF8,
+    recursive: true,
+  })
 
-  return data
+  return fileName
 }
 
-
-export async function importVaultBackup(data: string) {
-  return await importAllRecords(data)
+export async function importVaultBackup(contents: string) {
+  return importAllRecords(contents)
 }
+

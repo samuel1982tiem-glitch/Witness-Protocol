@@ -365,11 +365,7 @@ return true
   const key = keyRef.current
   if (!key) throw new Error("Vault is locked.")
 
-  const fileName = await exportVaultBackup(key)
-
-  alert(`Backup saved:\n${fileName}`)
-
-  return fileName
+  return await exportVaultBackup(key)
 }, [])
 
   const importBackup = React.useCallback(
