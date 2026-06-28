@@ -249,32 +249,51 @@ export async function deleteIncident(incidentId: string): Promise<void> {
 }
 
 export type StoredCipher = CipherPayload
+// Ba
+
 // Backup helpers
 
-export async function exportAllRecords() {
-  const [incidents, evidence, alerts, users] = await Promise.all([
-    getAll(STORES.incidents),
-    getAll(STORES.evidenceFiles),
+export interface VaultBackup {
+  version: number
+  exportedAt: number
+  incidents: IncidentRecord[]
+  evidence: EvidenceRecord[]
+  alerts: any[]
+  users: any[]
+  seals: SealRecord[]
+}
+
+export async function exportAllRecords(): Promise<VaultBackup> {
+  const [
+    incidents,
+    evidence,
+    alerts,
+    users,
+    seals,
+  ] = await Promise.all([
+    getAll<IncidentRecord>(STORES.incidents),
+    getAll<EvidenceRecord>(STORES.evidenceFiles),
     getAll(STORES.patternAlerts),
     getAll(STORES.users),
+    getAll<SealRecord>(STORES.evidenceSeals),
   ])
 
   return {
-    version: 1,
+    version: 2,
     exportedAt: Date.now(),
     incidents,
     evidence,
     alerts,
     users,
+    seals,
   }
 }
 
-export async function importAllRecords(data: {
-  incidents: any[]
-  evidence: any[]
-  alerts: any[]
-  users: any[]
-}) {
+export async function importAllRecords(data: VaultBackup) {
+  for (const item of data.users ?? []) {
+    await putRecord(STORES.users, item)
+  }
+
   for (const item of data.incidents ?? []) {
     await putRecord(STORES.incidents, item)
   }
@@ -287,7 +306,7 @@ export async function importAllRecords(data: {
     await putRecord(STORES.patternAlerts, item)
   }
 
-  for (const item of data.users ?? []) {
-    await putRecord(STORES.users, item)
+  for (const item of data.seals ?? []) {
+    await putRecord(STORES.evidenceSeals, item)
   }
 }
