@@ -139,7 +139,12 @@ export async function getRecord<T>(
 
 export async function getAll<T>(store: string): Promise<T[]> {
   const db = await openDatabase()
-  return promisify<T[]>(tx(db, store, "readonly").getAll() as IDBRequest<T[]>)
+  return new Promise((resolve, reject) => {
+    const req = tx(db, store, "readonly").openCursor()
+    const results: T[] = []
+    req.onsuccess = () => { const c=req.result; if(c){ results.push(c.value as T); c.continue(); } else resolve(results)}
+    req.onerror = () => reject(req.error)
+  })
 }
 
 export async function getAllByIndex<T>(
