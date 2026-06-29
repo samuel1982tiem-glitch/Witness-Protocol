@@ -132,7 +132,14 @@ export async function importVaultBackupFresh(
     })
   } catch (err) {
     // OperationError here = wrong passcode or corrupted file
-    throw new Error("Incorrect passcode or corrupted backup file.")
+    const msg = [
+      "Decrypt failed:",
+      String(err),
+      "iv length:", iv.length,
+      "data length:", dataBytes.length,
+      "salt length:", salt.length,
+    ].join(" | ")
+    throw new Error(msg)
   }
 
   const revived = reviveBuffers(backup)
