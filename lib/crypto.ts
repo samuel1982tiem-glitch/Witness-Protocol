@@ -87,7 +87,7 @@ export async function decryptBytes(
     iv: payload.iv,
   },
   key,
-  new Uint8Array(payload.data),
+  payload.data,
 )
 }
 
