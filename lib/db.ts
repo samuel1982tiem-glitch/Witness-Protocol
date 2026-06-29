@@ -186,17 +186,25 @@ export function toCipherPayload(record: {
   iv: Uint8Array | any
   data: ArrayBuffer | any
 }): CipherPayload {
-  // Records from IndexedDB may deserialize typed arrays as plain objects.
-  // Always coerce to the correct types before passing to Web Crypto.
-  const iv =
-    record.iv instanceof Uint8Array
-      ? record.iv
-      : new Uint8Array(Object.values(record.iv as any))
-  const data =
-    record.data instanceof ArrayBuffer
-      ? record.data
-      : record.data instanceof Uint8Array
-        ? record.data.buffer
-        : new Uint8Array(Object.values(record.data as any)).buffer
+  let iv: Uint8Array
+  if (record.iv instanceof Uint8Array) {
+    iv = record.iv
+  } else if (Array.isArray(record.iv)) {
+    iv = new Uint8Array(record.iv)
+  } else {
+    iv = new Uint8Array(Object.values(record.iv))
+  }
+
+  let data: ArrayBuffer
+  if (record.data instanceof ArrayBuffer) {
+    data = record.data
+  } else if (record.data instanceof Uint8Array) {
+    data = record.data.slice(0).buffer
+  } else if (Array.isArray(record.data)) {
+    data = new Uint8Array(record.data).buffer
+  } else {
+    data = new Uint8Array(Object.values(record.data)).buffer
+  }
+
   return { iv, data }
 }

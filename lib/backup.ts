@@ -146,7 +146,21 @@ export async function importVaultBackupFresh(
 
   // Step 4: restore all records — backup vault record replaces current one
   // so salt + verifier + PIN are consistent on this device going forward
-  await importAllRecords(revived)
+  // Snapshot the current vault record before import.
+  // If import fails halfway, we restore it so the PIN keeps working.
+  const currentVault = await getRecord<VaultRecord>(STORES.users, "vault")
+
+  try {
+    await importAllRecords(revived)
+  } catch (err) {
+    // Restore the vault record so the PIN is not broken
+    if (currentVault) await putRecord(STORES.users, currentVault)
+    throw err
+  }
+
+  // Replace the vault record with the backup's own record so that
+  // the backup's salt+PIN combination is now this device's vault.
+  // (importAllRecords already wrote it, so this is a no-op if it succeeded)
 
   return {
     key,
