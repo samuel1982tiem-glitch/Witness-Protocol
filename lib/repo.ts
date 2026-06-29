@@ -289,61 +289,35 @@ export async function exportAllRecords(): Promise<VaultBackup> {
   }
 }
 
-export async function importAllRecords(data: VaultBackup) {
-  alert("[IMPORT] Starting restore")
+export async function importAllRecords(data: {
+  incidents: any[]
+  evidence: any[]
+  alerts: any[]
+  users: any[]
+}) {
+  alert("Restore incidents")
 
-  const stores = [
-    STORES.users,
-    STORES.incidents,
-    STORES.evidenceFiles,
-    STORES.patternAlerts,
-    STORES.evidenceSeals,
-  ]
-
-  // Clear existing data
-  for (const store of stores) {
-    alert("[IMPORT] Clearing", store)
-
-    const records = await getAll<any>(store)
-
-    for (const record of records) {
-      await deleteRecord(store, record.id)
-    }
-  }
-
-  alert("[IMPORT] Writing users:", data.users?.length ?? 0)
-  for (const item of data.users ?? []) {
-    await putRecord(STORES.users, item)
-  }
-
-  alert("[IMPORT] Writing incidents:", data.incidents?.length ?? 0)
   for (const item of data.incidents ?? []) {
     await putRecord(STORES.incidents, item)
   }
 
-  alert("[IMPORT] Writing evidence:", data.evidence?.length ?? 0)
+  alert("Restore evidence")
+
   for (const item of data.evidence ?? []) {
     await putRecord(STORES.evidenceFiles, item)
   }
 
-  alert("[IMPORT] Writing alerts:", data.alerts?.length ?? 0)
+  alert("Restore alerts")
+
   for (const item of data.alerts ?? []) {
     await putRecord(STORES.patternAlerts, item)
   }
 
-  alert("[IMPORT] Writing seals:", data.seals?.length ?? 0)
-  for (const item of data.seals ?? []) {
-    await putRecord(STORES.evidenceSeals, item)
+  alert("Restore users")
+
+  for (const item of data.users ?? []) {
+    await putRecord(STORES.users, item)
   }
 
-  alert("[IMPORT] Restore finished")
-
-  alert("[IMPORT] Verify incidents:",
-    (await getAll(STORES.incidents)).length)
-
-  alert("[IMPORT] Verify evidence:",
-    (await getAll(STORES.evidenceFiles)).length)
-
-  alert("[IMPORT] Verify users:",
-    (await getAll(STORES.users)).length)
+  alert("Restore finished")
 }
