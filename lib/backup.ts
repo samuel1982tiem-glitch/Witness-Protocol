@@ -79,21 +79,23 @@ export async function importVaultBackup(
   const text = await file.text()
 
   const payload = JSON.parse(text)
+const iv = Uint8Array.from(payload.iv)
+const data = Uint8Array.from(payload.data)
 
-  const iv = Uint8Array.from(payload.iv)
+alert("IV length: " + iv.length)
+alert("Cipher length: " + data.length)
+alert(
+  "Last 16 bytes: " +
+    Array.from(data.slice(data.length - 16)).join(","),
+)
 
-  const data = Uint8Array.from(payload.data)
-
-  const backup = await decryptJSON<VaultBackup>(
-    key,
-    {
-      iv,
-      data: data.buffer.slice(
-        data.byteOffset,
-        data.byteOffset + data.byteLength,
-      ),
-    },
-  )
+const backup = await decryptJSON<VaultBackup>(
+  key,
+  {
+    iv,
+    data: data,
+  },
+)
 
   await importAllRecords(reviveBuffers(backup))
 }
