@@ -1,4 +1,4 @@
-import { encryptJSON, decryptJSON } from "./crypto"
+78import { encryptJSON, decryptJSON } from "./crypto"
 import { Filesystem, Directory } from "@capacitor/filesystem"
 import {
   exportAllRecords,
@@ -80,13 +80,20 @@ export async function importVaultBackup(
 
   const payload = JSON.parse(text)
 
+  const iv = Uint8Array.from(payload.iv)
+
+  const data = Uint8Array.from(payload.data)
+
   const backup = await decryptJSON<VaultBackup>(
     key,
     {
-      iv: new Uint8Array(payload.iv),
-      data: new Uint8Array(payload.data).buffer,
+      iv,
+      data: data.buffer.slice(
+        data.byteOffset,
+        data.byteOffset + data.byteLength,
+      ),
     },
   )
 
-  await importAllRecords(backup)
+  await importAllRecords(reviveBuffers(backup))
 }
