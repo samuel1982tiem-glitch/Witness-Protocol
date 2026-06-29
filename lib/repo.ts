@@ -9,6 +9,7 @@ import {
 } from "./crypto"
 import {
   deleteRecord,
+  getRecord,
   getAll,
   getAllByIndex,
   putRecord,
