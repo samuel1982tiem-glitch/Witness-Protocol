@@ -82,18 +82,11 @@ export async function importVaultBackup(
 const iv = Uint8Array.from(payload.iv)
 const data = Uint8Array.from(payload.data)
 
-alert("IV length: " + iv.length)
-alert("Cipher length: " + data.length)
-alert(
-  "Last 16 bytes: " +
-    Array.from(data.slice(data.length - 16)).join(","),
-)
-
 const backup = await decryptJSON<VaultBackup>(
   key,
   {
     iv,
-    data: data,
+    data: data.buffer,
   },
 )
 

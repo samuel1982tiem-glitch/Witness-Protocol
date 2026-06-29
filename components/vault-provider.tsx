@@ -180,13 +180,6 @@ React.useEffect(() => {
 
   const loadStoredAlerts = React.useCallback(async () => {
     const key = keyRef.current
-if (!key) throw new Error("Vault is locked.")
-
-const test = await encryptJSON(key, "backup-test")
-const verify = await decryptJSON<string>(key, test)
-alert("Key test: " + verify)
-
-await importVaultBackup(file, key)
     if (!key) return
     try {
       const record = await getRecord<AlertRecord>(
@@ -277,7 +270,7 @@ return true
         setBusy(false)
       }
     },
-    [refreshIncidents,],
+    [refreshIncidents, loadStoredAlerts],
   )
 
   const addIncident = React.useCallback(
@@ -377,35 +370,16 @@ return true
 
 const importBackup = React.useCallback(
   async (file: File) => {
-    alert("IMPORT 1")
-
     const key = keyRef.current
-    if (!key) {
-      alert("Vault locked")
-      throw new Error("Vault is locked.")
-    }
-
-    alert("IMPORT 2")
+    if (!key) throw new Error("Vault is locked.")
 
     try {
       await importVaultBackup(file, key)
-
-      alert("IMPORT 3")
-
       await refreshIncidents()
-
-      alert("IMPORT 4")
-
       await loadStoredAlerts()
-
-      alert("IMPORT 5")
-
       setStatus("unlocked")
       registerActivity()
-
-      alert("IMPORT COMPLETE")
     } catch (err) {
-      alert("IMPORT ERROR: " + String(err))
       throw err
     }
   },
