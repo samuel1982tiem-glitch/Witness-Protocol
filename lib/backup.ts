@@ -128,7 +128,7 @@ export async function importVaultBackupFresh(
   try {
     backup = await decryptJSON<VaultBackup>(key, {
       iv,
-      data: dataBytes.buffer,
+      data: dataBytes,
     })
   } catch (err) {
     // OperationError here = wrong passcode or corrupted file
