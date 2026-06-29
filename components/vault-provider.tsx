@@ -367,50 +367,39 @@ return true
 
   return await exportVaultBackup(key)
 }, [])
+const importBackup = React.useCallback(
+  async (file: File) => {
+    alert("IMPORT 1")
 
-  const importBackup = React.useCallback(
-    async (file: File) => {
-      const key = keyRef.current
-      if (!key) throw new Error("Vault is locked.")
-await importVaultBackup(file, key)
+    const key = keyRef.current
+    if (!key) {
+      alert("Vault locked")
+      throw new Error("Vault is locked.")
+    }
 
-await refreshIncidents()
-await loadStoredAlerts()
+    alert("IMPORT 2")
 
-setStatus("unlocked")
+    try {
+      await importVaultBackup(file, key)
 
-// force UI re-render + decrypt refresh cycle
-clearMemory()
-await refreshIncidents()
-await loadStoredAlerts()
+      alert("IMPORT 3")
 
-registerActivity()
+      await refreshIncidents()
 
-    },
-    [refreshIncidents, loadStoredAlerts],
-  )
-  const value: VaultContextValue = {
-    status,
-    incidents,
-    alerts,
-    autoLockMs,
-    error,
-    busy,
-    setupVault,
-    unlock,
-    lock,
-    addIncident,
-    removeIncident,
-    sealIncident,
-    runAnalysis,
-    getEvidenceRecords,
-    loadEvidenceUrl,
-    loadSampleData,
-    registerActivity,
-exportBackup,
-importBackup,
+      alert("IMPORT 4")
 
-  }
+      await loadStoredAlerts()
 
-  return <VaultContext.Provider value={value}>{children}</VaultContext.Provider>
-}
+      alert("IMPORT 5")
+
+      setStatus("unlocked")
+      registerActivity()
+
+      alert("IMPORT COMPLETE")
+    } catch (err) {
+      alert("IMPORT ERROR: " + String(err))
+      throw err
+    }
+  },
+  [refreshIncidents, loadStoredAlerts, registerActivity],
+)
