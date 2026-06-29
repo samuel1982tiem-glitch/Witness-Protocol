@@ -1,4 +1,4 @@
-78import { encryptJSON, decryptJSON } from "./crypto"
+import { encryptJSON, decryptJSON } from "./crypto"
 import { Filesystem, Directory } from "@capacitor/filesystem"
 import {
   exportAllRecords,
