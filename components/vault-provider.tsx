@@ -373,15 +373,22 @@ const importBackup = React.useCallback(
     const key = keyRef.current
     if (!key) throw new Error("Vault is locked.")
 
-    try {
-      await importVaultBackup(file, key)
-      await refreshIncidents()
-      await loadStoredAlerts()
-      setStatus("unlocked")
-      registerActivity()
-    } catch (err) {
-      throw err
+    // Snapshot the current vault record BEFORE importing, so we can
+    // restore it afterwards. importAllRecords overwrites the users store
+    // (including salt + verifier), which would break the current PIN.
+    const currentVault = await getRecord<VaultRecord>(STORES.users, "vault")
+
+    await importVaultBackup(file, key)
+
+    // Restore this device's own vault record so the PIN keeps working.
+    if (currentVault) {
+      await putRecord(STORES.users, currentVault)
     }
+
+    await refreshIncidents()
+    await loadStoredAlerts()
+    setStatus("unlocked")
+    registerActivity()
   },
   [refreshIncidents, loadStoredAlerts, registerActivity],
 )
