@@ -7,52 +7,49 @@ import {
 } from "./repo"
 import { getRecord, putRecord, STORES, type VaultRecord } from "./db"
 
+// Converts any array-like or plain-object representation back to the
+// correct typed array. Handles: real typed array, JS Array, and plain
+// object {0: x, 1: y} which some JSON parsers or IDB engines produce.
+function toUint8Array(val: any): Uint8Array {
+  if (val instanceof Uint8Array) return val
+  if (Array.isArray(val)) return new Uint8Array(val)
+  if (val && typeof val === "object") return new Uint8Array(Object.values(val))
+  return new Uint8Array(0)
+}
+
+function toArrayBuffer(val: any): ArrayBuffer {
+  if (val instanceof ArrayBuffer) return val
+  if (val instanceof Uint8Array) return val.slice(0).buffer
+  if (Array.isArray(val)) return new Uint8Array(val).buffer
+  if (val && typeof val === "object") return new Uint8Array(Object.values(val)).buffer
+  return new ArrayBuffer(0)
+}
+
 function reviveBuffers(backup: VaultBackup): VaultBackup {
   for (const incident of backup.incidents ?? []) {
-    incident.iv = new Uint8Array(incident.iv as any)
-    incident.data =
-      incident.data instanceof ArrayBuffer
-        ? incident.data
-        : new Uint8Array(incident.data as any).buffer
+    incident.iv = toUint8Array(incident.iv)
+    incident.data = toArrayBuffer(incident.data)
   }
 
   for (const evidence of backup.evidence ?? []) {
-    evidence.iv = new Uint8Array(evidence.iv as any)
-    evidence.data =
-      evidence.data instanceof ArrayBuffer
-        ? evidence.data
-        : new Uint8Array(evidence.data as any).buffer
+    evidence.iv = toUint8Array(evidence.iv)
+    evidence.data = toArrayBuffer(evidence.data)
   }
 
   for (const alert of backup.alerts ?? []) {
-    if (alert.iv) alert.iv = new Uint8Array(alert.iv as any)
-    if (alert.data != null) {
-      alert.data =
-        alert.data instanceof ArrayBuffer
-          ? alert.data
-          : new Uint8Array(alert.data as any).buffer
-    }
+    if (alert.iv != null) alert.iv = toUint8Array(alert.iv)
+    if (alert.data != null) alert.data = toArrayBuffer(alert.data)
   }
 
   for (const user of backup.users ?? []) {
-    if ("salt" in user) user.salt = new Uint8Array(user.salt as any)
-    if ("verifierIv" in user) user.verifierIv = new Uint8Array(user.verifierIv as any)
-    if ("verifierData" in user) {
-      user.verifierData =
-        user.verifierData instanceof ArrayBuffer
-          ? user.verifierData
-          : new Uint8Array(user.verifierData as any).buffer
-    }
+    if ("salt" in user) user.salt = toUint8Array(user.salt)
+    if ("verifierIv" in user) user.verifierIv = toUint8Array(user.verifierIv)
+    if ("verifierData" in user) user.verifierData = toArrayBuffer(user.verifierData)
   }
 
   for (const profile of backup.userProfile ?? []) {
-    if (profile.iv) profile.iv = new Uint8Array(profile.iv as any)
-    if (profile.data != null) {
-      profile.data =
-        profile.data instanceof ArrayBuffer
-          ? profile.data
-          : new Uint8Array(profile.data as any).buffer
-    }
+    if (profile.iv != null) profile.iv = toUint8Array(profile.iv)
+    if (profile.data != null) profile.data = toArrayBuffer(profile.data)
   }
 
   return backup
