@@ -367,6 +367,7 @@ return true
 
   return await exportVaultBackup(key)
 }, [])
+
 const importBackup = React.useCallback(
   async (file: File) => {
     alert("IMPORT 1")
@@ -403,3 +404,28 @@ const importBackup = React.useCallback(
   },
   [refreshIncidents, loadStoredAlerts, registerActivity],
 )
+  const value: VaultContextValue = {
+    status,
+    incidents,
+    alerts,
+    autoLockMs,
+    error,
+    busy,
+    setupVault,
+    unlock,
+    lock,
+    addIncident,
+    removeIncident,
+    sealIncident,
+    runAnalysis,
+    getEvidenceRecords,
+    loadEvidenceUrl,
+    loadSampleData,
+    registerActivity,
+exportBackup,
+importBackup,
+
+  }
+
+  return <VaultContext.Provider value={value}>{children}</VaultContext.Provider>
+}
