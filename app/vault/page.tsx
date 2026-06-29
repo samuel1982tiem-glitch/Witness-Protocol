@@ -2,7 +2,6 @@
 
 import {
   Lock,
-  ShieldCheck,
   Timer,
   User,
   IdCard,
@@ -23,17 +22,27 @@ export default function VaultPage() {
     lock,
     exportBackup,
     importBackup,
+    profile: vaultProfile,
+    saveProfile,
   } = useVault()
 
   const autoLockMin = Math.round(autoLockMs / 60000)
 
-  const [profile, setProfile] = React.useState({
+  // Local editable draft state (UI only)
+  const [draft, setDraft] = React.useState({
     name: "",
     governmentId: "",
     organization: "",
     phone: "",
     email: "",
   })
+
+  // Sync from vault → UI
+  React.useEffect(() => {
+    if (vaultProfile) {
+      setDraft(vaultProfile)
+    }
+  }, [vaultProfile])
 
   async function handleExport() {
     try {
@@ -62,59 +71,61 @@ export default function VaultPage() {
 
           <div className="flex items-center gap-2">
             <User className="size-5 text-primary" />
-            <h2 className="text-lg font-semibold">Identity</h2>
+            <h2 className="text-lg font-semibold">
+              Investigator Identity
+            </h2>
           </div>
 
           <Field
             icon={<User className="size-4" />}
             placeholder="Full name"
-            value={profile.name}
+            value={draft.name}
             onChange={(v) =>
-              setProfile((p) => ({ ...p, name: v }))
+              setDraft((p) => ({ ...p, name: v }))
             }
           />
 
           <Field
             icon={<IdCard className="size-4" />}
             placeholder="Government ID"
-            value={profile.governmentId}
+            value={draft.governmentId}
             onChange={(v) =>
-              setProfile((p) => ({ ...p, governmentId: v }))
+              setDraft((p) => ({ ...p, governmentId: v }))
             }
           />
 
           <Field
             icon={<Building2 className="size-4" />}
             placeholder="Organization"
-            value={profile.organization}
+            value={draft.organization}
             onChange={(v) =>
-              setProfile((p) => ({ ...p, organization: v }))
+              setDraft((p) => ({ ...p, organization: v }))
             }
           />
 
           <Field
             icon={<Phone className="size-4" />}
             placeholder="Phone"
-            value={profile.phone}
+            value={draft.phone}
             onChange={(v) =>
-              setProfile((p) => ({ ...p, phone: v }))
+              setDraft((p) => ({ ...p, phone: v }))
             }
           />
 
           <Field
             icon={<Mail className="size-4" />}
             placeholder="Email"
-            value={profile.email}
+            value={draft.email}
             onChange={(v) =>
-              setProfile((p) => ({ ...p, email: v }))
+              setDraft((p) => ({ ...p, email: v }))
             }
           />
 
           <Button
             className="w-full"
-            disabled
+            onClick={() => saveProfile(draft)}
           >
-            Save Identity (coming soon)
+            Save Identity
           </Button>
 
         </CardBody>
