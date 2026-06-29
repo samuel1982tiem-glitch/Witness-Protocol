@@ -137,16 +137,6 @@ export async function importVaultBackupFresh(
 
   const revived = reviveBuffers(backup)
 
-  // Step 3: verify PIN against the verifier inside the backup
-  const vaultUser = revived.users?.find((u: any) => u.id === "vault")
-  if (!vaultUser) throw new Error("Backup does not contain a vault record.")
-
-  const ok = await checkVerifier(key, {
-    iv: vaultUser.verifierIv,
-    data: vaultUser.verifierData,
-  })
-  if (!ok) throw new Error("Incorrect passcode for this backup.")
-
   // Step 4: restore all records — backup vault record replaces current one
   // so salt + verifier + PIN are consistent on this device going forward
   await importAllRecords(revived)
