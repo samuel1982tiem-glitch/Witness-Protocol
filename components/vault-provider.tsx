@@ -4,7 +4,6 @@ import { createContext } from "react"
 import * as React from "react"
 import {
   exportVaultBackup,
-  importVaultBackup,
   importVaultBackupFresh,
 } from "@/lib/backup"
 import {
@@ -70,7 +69,7 @@ interface VaultContextValue {
   loadSampleData: () => Promise<void>
   registerActivity: () => void
   exportBackup: () => Promise<string>
-  importBackup: (file: File, passcode?: string) => Promise<void>
+  importBackup: (file: File, passcode: string) => Promise<void>
   profile: any
   saveProfile: (profile:any)=>Promise<void>
   loadProfile: ()=>Promise<void>
@@ -394,34 +393,13 @@ return true
 }, [])
 
 const importBackup = React.useCallback(
-  async (file: File, passcode?: string) => {
-    const key = keyRef.current
-
-    if (!key) {
-      // Fresh install: vault exists (user just set it up) but it was
-      // keyed with a new random salt — the backup was encrypted with a
-      // different salt derived from the same PIN.
-      // Use importVaultBackupFresh to re-derive the correct key from
-      // the salt embedded in the backup file + the user's PIN.
-      if (!passcode) throw new Error("Passcode required for fresh install import.")
-
-      const { key: restoredKey, autoLockMs: restoredMs } =
-        await importVaultBackupFresh(file, passcode)
-
-      keyRef.current = restoredKey
-      setAutoLockMs(restoredMs)
-      await refreshIncidents()
-      await loadStoredAlerts()
-      await loadProfile()
-      setStatus("unlocked")
-      registerActivity()
-      return
-    }
-
-    // Normal import: vault is already unlocked, key is in memory.
-    // importVaultBackup preserves the current vault record after restoring,
-    // so the existing PIN keeps working.
-    await importVaultBackup(file, key)
+  async (file: File, passcode: string) => {
+    const { key, autoLockMs: restoredMs } = await importVaultBackupFresh(
+      file,
+      passcode,
+    )
+    keyRef.current = key
+    setAutoLockMs(restoredMs)
     await refreshIncidents()
     await loadStoredAlerts()
     await loadProfile()

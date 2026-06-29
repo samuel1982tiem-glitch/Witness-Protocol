@@ -44,18 +44,17 @@ function reviveBuffers(backup: VaultBackup): VaultBackup {
           : new Uint8Array(user.verifierData as any).buffer
     }
   }
-for (const profile of backup.userProfile ?? []) {
-  if (profile.iv) {
-    profile.iv = new Uint8Array(profile.iv as any)
+
+  for (const profile of backup.userProfile ?? []) {
+    if (profile.iv) profile.iv = new Uint8Array(profile.iv as any)
+    if (profile.data != null) {
+      profile.data =
+        profile.data instanceof ArrayBuffer
+          ? profile.data
+          : new Uint8Array(profile.data as any).buffer
+    }
   }
 
-  if (profile.data != null) {
-    profile.data =
-      profile.data instanceof ArrayBuffer
-        ? profile.data
-        : new Uint8Array(profile.data as any).buffer
-  }
-}
   return backup
 }
 
@@ -63,9 +62,8 @@ export async function exportVaultBackup(key: CryptoKey) {
   const backup = await exportAllRecords()
   const encrypted = await encryptJSON(key, backup)
 
-  // Embed the salt in the outer (unencrypted) payload so a fresh device
-  // can re-derive the key from PIN + salt without a chicken-and-egg problem.
-  // The salt is not secret — it is a PBKDF2 parameter, not the key itself.
+  // Salt stored unencrypted so a fresh device can re-derive the key
+  // from PIN + salt before decrypting. Salt is not secret (PBKDF2 param).
   const vault = await getRecord<VaultRecord>(STORES.users, "vault")
 
   const payload = {
@@ -93,48 +91,16 @@ export async function exportVaultBackup(key: CryptoKey) {
 }
 
 /**
- * Normal import (vault already exists and is unlocked).
- * The caller passes the current in-memory key.
- * We preserve the current device's vault record after import so
- * the PIN keeps working.
- */
-export async function importVaultBackup(
-  file: File,
-  key: CryptoKey,
-) {
-  const text = await file.text()
-  const payload = JSON.parse(text)
-
-  const iv = Uint8Array.from(payload.iv)
-  const data = Uint8Array.from(payload.data)
-
-  const backup = await decryptJSON<VaultBackup>(key, {
-    iv,
-    data: data.buffer,
-  })
-
-  // Snapshot current vault record before import overwrites the users store
-  const currentVault = await getRecord<VaultRecord>(STORES.users, "vault")
-
-  await importAllRecords(reviveBuffers(backup))
-
-  // Restore this device's own vault record so the PIN keeps working
-  if (currentVault) {
-    await putRecord(STORES.users, currentVault)
-  }
-}
-
-/**
- * Fresh-install import — vault doesn't exist yet, or was just set up
- * with a new random salt that doesn't match the backup.
+ * Single import path — works for both normal and fresh-install restore.
  *
- * Flow:
- * 1. Read the salt from the outer payload (written at export time)
- * 2. Re-derive the key from PIN + backup salt
- * 3. Decrypt and restore all records (including the backup's vault record)
+ * Always re-derives the key from the salt embedded in the backup file
+ * + the user's passcode. This is the only approach that works in all cases:
  *
- * After this the vault record in DB is the one from the backup,
- * keyed to the same salt+PIN as the original device — so PIN works.
+ *   - Normal (vault already exists): backup salt = current salt → same key
+ *   - Fresh install (new random salt): backup salt differs but same PIN
+ *     → correct original key derived from backup salt + PIN
+ *
+ * Never uses keyRef / the current device key for decryption.
  */
 export async function importVaultBackupFresh(
   file: File,
@@ -145,30 +111,33 @@ export async function importVaultBackupFresh(
 
   if (!raw.salt) {
     throw new Error(
-      "This backup was exported with an older version of the app. " +
-      "Please export a new backup from your previous device, then try again.",
+      "This backup was created with an older version of the app. " +
+        "Please export a new backup from your previous device first.",
     )
   }
 
-  // Re-derive the key the backup was originally encrypted with
-  const salt = Uint8Array.from(raw.salt)
+  // Step 1: re-derive the key the backup was originally encrypted with
+  const salt = Uint8Array.from(raw.salt as number[])
   const key = await deriveKey(passcode, salt)
 
-  // Decrypt the backup envelope
-  const iv = Uint8Array.from(raw.iv)
-  const data = Uint8Array.from(raw.data)
+  // Step 2: decrypt the outer envelope
+  const iv = Uint8Array.from(raw.iv as number[])
+  const dataBytes = Uint8Array.from(raw.data as number[])
 
   let backup: VaultBackup
   try {
-    backup = await decryptJSON<VaultBackup>(key, { iv, data: data.buffer })
- } catch (err) {
-  alert("Decrypt error: " + String(err))
-  throw err
-}
+    backup = await decryptJSON<VaultBackup>(key, {
+      iv,
+      data: dataBytes.buffer,
+    })
+  } catch (err) {
+    // OperationError here = wrong passcode or corrupted file
+    throw new Error("Incorrect passcode or corrupted backup file.")
+  }
 
   const revived = reviveBuffers(backup)
 
-  // Verify PIN using the verifier stored inside the backup
+  // Step 3: verify PIN against the verifier inside the backup
   const vaultUser = revived.users?.find((u: any) => u.id === "vault")
   if (!vaultUser) throw new Error("Backup does not contain a vault record.")
 
@@ -178,13 +147,9 @@ export async function importVaultBackupFresh(
   })
   if (!ok) throw new Error("Incorrect passcode for this backup.")
 
-  // Restore everything — the backup's vault record becomes this device's vault
-  try {
+  // Step 4: restore all records — backup vault record replaces current one
+  // so salt + verifier + PIN are consistent on this device going forward
   await importAllRecords(revived)
-} catch (err) {
-  alert("Import error: " + String(err))
-  throw err
-}
 
   return {
     key,
