@@ -82,10 +82,13 @@ export async function decryptBytes(
 ): Promise<ArrayBuffer> {
   const crypto = getCrypto()
   return crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: payload.iv as BufferSource },
-    key,
-    payload.data,
-  )
+  {
+    name: "AES-GCM",
+    iv: payload.iv,
+  },
+  key,
+  new Uint8Array(payload.data),
+)
 }
 
 export async function encryptJSON(
