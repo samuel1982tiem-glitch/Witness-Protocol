@@ -183,8 +183,20 @@ export async function clearStore(store: string): Promise<void> {
 }
 
 export function toCipherPayload(record: {
-  iv: Uint8Array
-  data: ArrayBuffer
+  iv: Uint8Array | any
+  data: ArrayBuffer | any
 }): CipherPayload {
-  return { iv: record.iv, data: record.data }
+  // Records from IndexedDB may deserialize typed arrays as plain objects.
+  // Always coerce to the correct types before passing to Web Crypto.
+  const iv =
+    record.iv instanceof Uint8Array
+      ? record.iv
+      : new Uint8Array(Object.values(record.iv as any))
+  const data =
+    record.data instanceof ArrayBuffer
+      ? record.data
+      : record.data instanceof Uint8Array
+        ? record.data.buffer
+        : new Uint8Array(Object.values(record.data as any)).buffer
+  return { iv, data }
 }
