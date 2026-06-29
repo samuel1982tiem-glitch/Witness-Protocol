@@ -1,129 +1,138 @@
 "use client"
 
 import {
-  Database,
-  FileLock2,
   Lock,
-  LockKeyhole,
   ShieldCheck,
   Timer,
+  User,
+  IdCard,
+  Building2,
+  Phone,
+  Mail,
 } from "lucide-react"
 import * as React from "react"
 
 import { Button } from "@/components/ui/button"
-import { Badge, Card, CardBody } from "@/components/ui/primitives"
+import { Card, CardBody } from "@/components/ui/primitives"
 import { useVault } from "@/components/vault-provider"
 
 export default function VaultPage() {
   const {
     status,
-    incidents,
     autoLockMs,
     lock,
     exportBackup,
-  importBackup,
-    busy,
+    importBackup,
   } = useVault()
 
-  const sealedCount = incidents.filter((i) => i.sealed).length
-  const evidenceCount = incidents.reduce((n, i) => n + i.evidence.length, 0)
   const autoLockMin = Math.round(autoLockMs / 60000)
 
-async function handleExport() {
-  try {
-    alert("1. Starting export...")
-    const fileName = await exportBackup()
-    alert(`Backup saved successfully:\n${fileName}`)
-  } catch (err) {
-    console.error(err)
-    alert(String(err))
-  }
-}
+  const [profile, setProfile] = React.useState({
+    name: "",
+    governmentId: "",
+    organization: "",
+    phone: "",
+    email: "",
+  })
 
+  async function handleExport() {
+    try {
+      const fileName = await exportBackup()
+      alert(`Backup saved:\n${fileName}`)
+    } catch (err) {
+      console.error(err)
+      alert(String(err))
+    }
+  }
 
   async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     if (!file) return
+
     await importBackup(file)
+
     event.target.value = ""
   }
 
   return (
     <div className="space-y-5">
-      <Card
-        className={
-          status === "unlocked"
-            ? "border-emerald-200 bg-emerald-50/60"
-            : "bg-muted"
-        }
-      >
-        <CardBody className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <span
-              className={
-                status === "unlocked"
-                  ? "grid size-11 place-items-center rounded-2xl bg-emerald-100 text-emerald-700"
-                  : "grid size-11 place-items-center rounded-2xl bg-foreground/5 text-muted-foreground"
-              }
-            >
-              {status === "unlocked" ? (
-                <ShieldCheck className="size-5" aria-hidden="true" />
-              ) : (
-                <LockKeyhole className="size-5" aria-hidden="true" />
-              )}
-            </span>
-            <div>
-              <p className="font-medium text-foreground">
-                Vault {status === "unlocked" ? "unlocked" : "locked"}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {status === "unlocked"
-                  ? "Records are decrypted in memory."
-                  : "Enter your passcode to access records."}
-              </p>
-            </div>
+
+      <Card>
+        <CardBody className="space-y-5">
+
+          <div className="flex items-center gap-2">
+            <User className="size-5 text-primary" />
+            <h2 className="text-lg font-semibold">Identity</h2>
           </div>
-          <Badge tone={status === "unlocked" ? "green" : "gray"}>
-            {status === "unlocked" ? "Active" : "Sealed"}
-          </Badge>
+
+          <Field
+            icon={<User className="size-4" />}
+            placeholder="Full name"
+            value={profile.name}
+            onChange={(v) =>
+              setProfile((p) => ({ ...p, name: v }))
+            }
+          />
+
+          <Field
+            icon={<IdCard className="size-4" />}
+            placeholder="Government ID"
+            value={profile.governmentId}
+            onChange={(v) =>
+              setProfile((p) => ({ ...p, governmentId: v }))
+            }
+          />
+
+          <Field
+            icon={<Building2 className="size-4" />}
+            placeholder="Organization"
+            value={profile.organization}
+            onChange={(v) =>
+              setProfile((p) => ({ ...p, organization: v }))
+            }
+          />
+
+          <Field
+            icon={<Phone className="size-4" />}
+            placeholder="Phone"
+            value={profile.phone}
+            onChange={(v) =>
+              setProfile((p) => ({ ...p, phone: v }))
+            }
+          />
+
+          <Field
+            icon={<Mail className="size-4" />}
+            placeholder="Email"
+            value={profile.email}
+            onChange={(v) =>
+              setProfile((p) => ({ ...p, email: v }))
+            }
+          />
+
+          <Button
+            className="w-full"
+            disabled
+          >
+            Save Identity (coming soon)
+          </Button>
+
         </CardBody>
       </Card>
 
-      <div className="grid grid-cols-2 gap-3">
-        <StatCard
-          icon={<Database className="size-4" />}
-          label="Encrypted records"
-          value={incidents.length}
-        />
-        <StatCard
-          icon={<FileLock2 className="size-4" />}
-          label="Evidence files"
-          value={evidenceCount}
-        />
-        <StatCard
-          icon={<ShieldCheck className="size-4" />}
-          label="Sealed"
-          value={sealedCount}
-        />
-        <StatCard
-          icon={<Timer className="size-4" />}
-          label="Auto-lock"
-          value={`${autoLockMin}m`}
-        />
-      </div>
-
       <Card>
         <CardBody className="space-y-4">
+
           <div className="flex items-start gap-3">
-            <Timer className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
-            <div className="text-sm">
-              <p className="font-medium text-foreground">
+            <Timer className="mt-1 size-4 text-primary" />
+            <div>
+              <p className="font-medium">
                 Inactivity auto-lock
               </p>
-              <p className="text-muted-foreground">
-                The vault automatically locks after {autoLockMin} minute
-                {autoLockMin === 1 ? "" : "s"} of inactivity, clearing the
-                encryption key from memory.
+
+              <p className="text-sm text-muted-foreground">
+                Vault locks automatically after {autoLockMin} minute
+                {autoLockMin === 1 ? "" : "s"}.
               </p>
             </div>
           </div>
@@ -131,22 +140,26 @@ async function handleExport() {
           <Button
             variant="outline"
             className="w-full"
-            onClick={lock}
             disabled={status !== "unlocked"}
+            onClick={lock}
           >
-            <Lock className="size-4" aria-hidden="true" />
+            <Lock className="size-4" />
             Lock vault now
           </Button>
+
         </CardBody>
       </Card>
 
-    
-
-      
-     
       <Card>
         <CardBody className="space-y-3">
-          <Button className="w-full" onClick={handleExport}>Export Backup</Button>
+
+          <Button
+            className="w-full"
+            onClick={handleExport}
+          >
+            Export Backup
+          </Button>
+
           <input
             id="backup-import"
             type="file"
@@ -154,43 +167,47 @@ async function handleExport() {
             className="hidden"
             onChange={handleImport}
           />
+
           <Button
-            className="w-full"
             variant="outline"
+            className="w-full"
             onClick={() =>
               document.getElementById("backup-import")?.click()
             }
           >
             Import Backup
           </Button>
+
         </CardBody>
       </Card>
-
 
     </div>
   )
 }
 
-function StatCard({
+function Field({
   icon,
-  label,
+  placeholder,
   value,
+  onChange,
 }: {
   icon: React.ReactNode
-  label: string
-  value: React.ReactNode
+  placeholder: string
+  value: string
+  onChange: (v: string) => void
 }) {
   return (
-    <Card>
-      <CardBody className="space-y-1 p-4">
-        <span className="inline-flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          {icon}
-        </span>
-        <p className="text-2xl font-semibold tabular-nums text-foreground">
-          {value}
-        </p>
-        <p className="text-xs text-muted-foreground">{label}</p>
-      </CardBody>
-    </Card>
+    <div className="flex items-center gap-3 rounded-xl border px-3 py-2">
+      <span className="text-muted-foreground">
+        {icon}
+      </span>
+
+      <input
+        className="w-full bg-transparent outline-none"
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
   )
 }
