@@ -180,6 +180,13 @@ React.useEffect(() => {
 
   const loadStoredAlerts = React.useCallback(async () => {
     const key = keyRef.current
+if (!key) throw new Error("Vault is locked.")
+
+const test = await encryptJSON(key, "backup-test")
+const verify = await decryptJSON<string>(key, test)
+alert("Key test: " + verify)
+
+await importVaultBackup(file, key)
     if (!key) return
     try {
       const record = await getRecord<AlertRecord>(
