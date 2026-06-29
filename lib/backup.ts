@@ -161,9 +161,10 @@ export async function importVaultBackupFresh(
   let backup: VaultBackup
   try {
     backup = await decryptJSON<VaultBackup>(key, { iv, data: data.buffer })
-  } catch {
-    throw new Error("Incorrect passcode or corrupted backup file.")
-  }
+ } catch (err) {
+  alert("Decrypt error: " + String(err))
+  throw err
+}
 
   const revived = reviveBuffers(backup)
 
@@ -178,7 +179,12 @@ export async function importVaultBackupFresh(
   if (!ok) throw new Error("Incorrect passcode for this backup.")
 
   // Restore everything — the backup's vault record becomes this device's vault
+  try {
   await importAllRecords(revived)
+} catch (err) {
+  alert("Import error: " + String(err))
+  throw err
+}
 
   return {
     key,
