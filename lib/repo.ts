@@ -261,7 +261,7 @@ export interface VaultBackup {
   evidence: EvidenceRecord[]
   alerts: any[]
   users: any[]
-  userProfile?: any[]
+  userProfile: any[]
   seals: SealRecord[]
 }
 
@@ -299,6 +299,7 @@ export async function importAllRecords(data: {
   evidence: any[]
   alerts: any[]
   users: any[]
+  userProfile?: any[]
   seals: any[]
 }) {
   for (const item of data.incidents ?? []) {
@@ -313,6 +314,9 @@ export async function importAllRecords(data: {
   for (const item of data.users ?? []) {
     await putRecord(STORES.users, item)
   }
+for (const item of data.userProfile ?? []) {
+  await putRecord(STORES.userProfile, item)
+}
   for (const item of data.seals ?? []) {
     await putRecord(STORES.evidenceSeals, item)
   }
