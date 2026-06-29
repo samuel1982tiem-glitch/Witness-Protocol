@@ -143,6 +143,6 @@ export async function importVaultBackupFresh(
 
   return {
     key,
-    autoLockMs: vaultUser.autoLockMs ?? 3 * 60 * 1000,
+    autoLockMs: 3 * 60 * 1000,
   }
 }
