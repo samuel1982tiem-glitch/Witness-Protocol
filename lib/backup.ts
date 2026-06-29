@@ -1,3 +1,4 @@
+import { encryptJSON, decryptJSON } from "./crypto"
 import { Filesystem, Directory } from "@capacitor/filesystem"
 import {
   exportAllRecords,
@@ -44,10 +45,17 @@ function reviveBuffers(backup: VaultBackup): VaultBackup {
   return backup
 }
 
-export async function exportVaultBackup() {
+export async function exportVaultBackup(key: CryptoKey) {
   const backup = await exportAllRecords()
 
-  const json = JSON.stringify(backup)
+  const encrypted = await encryptJSON(key, backup)
+
+  const payload = {
+    version: 3,
+    exportedAt: Date.now(),
+    iv: Array.from(encrypted.iv),
+    data: Array.from(new Uint8Array(encrypted.data)),
+  }
 
   const fileName =
     "WitnessProtocolBackup-" +
@@ -56,7 +64,7 @@ export async function exportVaultBackup() {
 
   await Filesystem.writeFile({
     path: fileName,
-    data: json,
+    data: JSON.stringify(payload),
     directory: Directory.Documents,
     recursive: true,
   })
@@ -66,13 +74,19 @@ export async function exportVaultBackup() {
 
 export async function importVaultBackup(
   file: File,
-  _key?: CryptoKey,
+  key: CryptoKey,
 ) {
   const text = await file.text()
 
-  const parsed = JSON.parse(text) as VaultBackup
+  const payload = JSON.parse(text)
 
-  const backup = reviveBuffers(parsed)
+  const backup = await decryptJSON<VaultBackup>(
+    key,
+    {
+      iv: new Uint8Array(payload.iv),
+      data: new Uint8Array(payload.data).buffer,
+    },
+  )
 
   await importAllRecords(backup)
 }
