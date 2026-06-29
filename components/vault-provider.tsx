@@ -5,6 +5,7 @@ import * as React from "react"
 import {
   exportVaultBackup,
   importVaultBackup,
+  importVaultBackupFresh,
 } from "@/lib/backup"
 import {
   checkVerifier,
@@ -67,7 +68,7 @@ interface VaultContextValue {
   loadSampleData: () => Promise<void>
   registerActivity: () => void
 exportBackup: () => Promise<string>
-importBackup: (file: File) => Promise<void>
+importBackup: (file: File, passcode?: string) => Promise<void>
 }
 
 
@@ -369,22 +370,33 @@ return true
 }, [])
 
 const importBackup = React.useCallback(
-  async (file: File) => {
+  async (file: File, passcode?: string) => {
     const key = keyRef.current
-    if (!key) throw new Error("Vault is locked.")
 
-    // Snapshot the current vault record BEFORE importing, so we can
-    // restore it afterwards. importAllRecords overwrites the users store
-    // (including salt + verifier), which would break the current PIN.
-    const currentVault = await getRecord<VaultRecord>(STORES.users, "vault")
+    if (!key) {
+      // Fresh install: vault exists (user just set it up) but it was
+      // keyed with a new random salt — the backup was encrypted with a
+      // different salt derived from the same PIN.
+      // Use importVaultBackupFresh to re-derive the correct key from
+      // the salt embedded in the backup file + the user's PIN.
+      if (!passcode) throw new Error("Passcode required for fresh install import.")
 
-    await importVaultBackup(file, key)
+      const { key: restoredKey, autoLockMs: restoredMs } =
+        await importVaultBackupFresh(file, passcode)
 
-    // Restore this device's own vault record so the PIN keeps working.
-    if (currentVault) {
-      await putRecord(STORES.users, currentVault)
+      keyRef.current = restoredKey
+      setAutoLockMs(restoredMs)
+      await refreshIncidents()
+      await loadStoredAlerts()
+      setStatus("unlocked")
+      registerActivity()
+      return
     }
 
+    // Normal import: vault is already unlocked, key is in memory.
+    // importVaultBackup preserves the current vault record after restoring,
+    // so the existing PIN keeps working.
+    await importVaultBackup(file, key)
     await refreshIncidents()
     await loadStoredAlerts()
     setStatus("unlocked")

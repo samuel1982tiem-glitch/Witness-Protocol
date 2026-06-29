@@ -296,35 +296,19 @@ export async function importAllRecords(data: {
   users: any[]
   seals: any[]
 }) {
-  alert("Restore incidents")
-
   for (const item of data.incidents ?? []) {
     await putRecord(STORES.incidents, item)
   }
-
-  alert("Restore evidence")
-
   for (const item of data.evidence ?? []) {
     await putRecord(STORES.evidenceFiles, item)
   }
-
-  alert("Restore alerts")
-
   for (const item of data.alerts ?? []) {
     await putRecord(STORES.patternAlerts, item)
   }
-
-  alert("Restore users")
-
   for (const item of data.users ?? []) {
     await putRecord(STORES.users, item)
   }
-
-  alert("Restore seals")
-
   for (const item of data.seals ?? []) {
     await putRecord(STORES.evidenceSeals, item)
   }
-
-  alert("Restore finished")
 }
