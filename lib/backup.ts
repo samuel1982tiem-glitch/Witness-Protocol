@@ -61,13 +61,13 @@ export async function exportVaultBackup(key: CryptoKey) {
     "WitnessProtocolBackup-" +
     new Date().toISOString().replace(/[:.]/g, "-") +
     ".wpb"
-
-  await Filesystem.writeFile({
-    path: fileName,
-    data: JSON.stringify(payload),
-    directory: Directory.Documents,
-    recursive: true,
-  })
+await Filesystem.writeFile({
+  path: fileName,
+  data: JSON.stringify(payload),
+  directory: Directory.Documents,
+  encoding: "utf8",
+  recursive: true,
+})
 
   return fileName
 }
