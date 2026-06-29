@@ -294,6 +294,7 @@ export async function importAllRecords(data: {
   evidence: any[]
   alerts: any[]
   users: any[]
+  seals: any[]
 }) {
   alert("Restore incidents")
 
@@ -317,6 +318,12 @@ export async function importAllRecords(data: {
 
   for (const item of data.users ?? []) {
     await putRecord(STORES.users, item)
+  }
+
+  alert("Restore seals")
+
+  for (const item of data.seals ?? []) {
+    await putRecord(STORES.evidenceSeals, item)
   }
 
   alert("Restore finished")
