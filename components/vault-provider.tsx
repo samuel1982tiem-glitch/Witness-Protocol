@@ -31,6 +31,8 @@ import {
   getEvidenceRecords as repoGetEvidenceRecords,
   loadAllIncidents,
   loadEvidenceBlobUrl,
+  loadUserProfile,
+  saveUserProfile,
   saveEvidence,
   saveIncident,
   sealIncident as repoSealIncident,
@@ -67,8 +69,8 @@ interface VaultContextValue {
   loadEvidenceUrl: (record: EvidenceRecord) => Promise<string>
   loadSampleData: () => Promise<void>
   registerActivity: () => void
-exportBackup: () => Promise<string>
-importBackup: (file: File, passcode?: string) => Promise<void>
+  exportBackup: () => Promise<string>
+  importBackup: (file: File, passcode?: string) => Promise<void>
   profile: any
   saveProfile: (profile:any)=>Promise<void>
   loadProfile: ()=>Promise<void>
@@ -93,7 +95,7 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
   const [autoLockMs, setAutoLockMs] = React.useState(DEFAULT_AUTOLOCK_MS)
   const [error, setError] = React.useState<string | null>(null)
   const [busy, setBusy] = React.useState(false)
-
+  const [profile, setProfile] = React.useState<any>(null)
 
   const keyRef = React.useRef<CryptoKey | null>(null)
   const lockTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -202,6 +204,25 @@ React.useEffect(() => {
     }
   }, [])
 
+const loadProfile = React.useCallback(async () => {
+  const key = keyRef.current
+  if (!key) return
+
+  const stored = await loadUserProfile<any>(key)
+  setProfile(stored ?? null)
+}, [])
+
+const saveProfile = React.useCallback(
+  async (value: any) => {
+    const key = keyRef.current
+    if (!key) throw new Error("Vault is locked.")
+
+    await saveUserProfile(key, value)
+    setProfile(value)
+  },
+  [],
+)
+
   const setupVault = React.useCallback(
     async (
   passcode: string,
@@ -262,7 +283,7 @@ setAutoLockMs(vault.autoLockMs ?? DEFAULT_AUTOLOCK_MS)
 
 await refreshIncidents()
 await loadStoredAlerts()
-
+await loadProfile()
 setStatus("unlocked")
 
 return true
@@ -274,7 +295,7 @@ return true
         setBusy(false)
       }
     },
-    [refreshIncidents, loadStoredAlerts],
+    [refreshIncidents, loadStoredAlerts, loadProfile],
   )
 
   const addIncident = React.useCallback(
@@ -391,6 +412,7 @@ const importBackup = React.useCallback(
       setAutoLockMs(restoredMs)
       await refreshIncidents()
       await loadStoredAlerts()
+      await loadProfile()
       setStatus("unlocked")
       registerActivity()
       return
@@ -402,10 +424,11 @@ const importBackup = React.useCallback(
     await importVaultBackup(file, key)
     await refreshIncidents()
     await loadStoredAlerts()
+    await loadProfile()
     setStatus("unlocked")
     registerActivity()
   },
-  [refreshIncidents, loadStoredAlerts, registerActivity],
+  [refreshIncidents, loadStoredAlerts, loadProfile, registerActivity],
 )
   const value: VaultContextValue = {
     status,
@@ -425,9 +448,11 @@ const importBackup = React.useCallback(
     loadEvidenceUrl,
     loadSampleData,
     registerActivity,
-exportBackup,
-importBackup,
-
+    exportBackup,
+    importBackup,
+    profile,
+    saveProfile,
+    loadProfile,
   }
 
   return <VaultContext.Provider value={value}>{children}</VaultContext.Provider>
