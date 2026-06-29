@@ -54,14 +54,29 @@ export default function VaultPage() {
     }
   }
 
-  async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0]
-    if (!file) return
+async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
+  const file = event.target.files?.[0]
+  if (!file) return
 
-    await importBackup(file)
+  const passcode = window.prompt(
+    "Enter the vault PIN used to create this backup:"
+  )
 
+  if (!passcode) {
     event.target.value = ""
+    return
   }
+
+  try {
+    await importBackup(file, passcode)
+    alert("Backup imported successfully.")
+  } catch (err) {
+    console.error(err)
+    alert(String(err))
+  }
+
+  event.target.value = ""
+}
 
   return (
     <div className="space-y-5">
