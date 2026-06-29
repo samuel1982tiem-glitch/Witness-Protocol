@@ -69,6 +69,9 @@ interface VaultContextValue {
   registerActivity: () => void
 exportBackup: () => Promise<string>
 importBackup: (file: File, passcode?: string) => Promise<void>
+  profile: any
+  saveProfile: (profile:any)=>Promise<void>
+  loadProfile: ()=>Promise<void>
 }
 
 
