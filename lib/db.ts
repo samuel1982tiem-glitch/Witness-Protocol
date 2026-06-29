@@ -4,10 +4,11 @@
 import type { CipherPayload } from "./crypto"
 
 const DB_NAME = "witness-protocol"
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 export const STORES = {
   users: "users",
+  userProfile: "userProfile",
   categories: "categories",
   incidents: "incidents",
   evidenceFiles: "evidenceFiles",
@@ -24,6 +25,14 @@ export interface VaultRecord {
   autoLockMs: number
   createdAt: number
 }
+
+export interface UserProfileRecord {
+  id: "profile"
+  iv: Uint8Array
+  data: ArrayBuffer
+  updatedAt: number
+}
+
 
 /** Encrypted incident record (store: incidents). */
 export interface IncidentRecord {
@@ -78,6 +87,9 @@ export function openDatabase(): Promise<IDBDatabase> {
       const db = request.result
       if (!db.objectStoreNames.contains(STORES.users)) {
         db.createObjectStore(STORES.users, { keyPath: "id" })
+  }
+  if (!db.objectStoreNames.contains(STORES.userProfile)) {
+    db.createObjectStore(STORES.userProfile, { keyPath: "id" })
       }
       if (!db.objectStoreNames.contains(STORES.categories)) {
         db.createObjectStore(STORES.categories, { keyPath: "id" })

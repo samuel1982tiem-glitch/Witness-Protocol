@@ -260,6 +260,7 @@ export interface VaultBackup {
   evidence: EvidenceRecord[]
   alerts: any[]
   users: any[]
+  userProfile?: any[]
   seals: SealRecord[]
 }
 
@@ -269,12 +270,14 @@ export async function exportAllRecords(): Promise<VaultBackup> {
     evidence,
     alerts,
     users,
+    userProfile,
     seals,
   ] = await Promise.all([
     getAll<IncidentRecord>(STORES.incidents),
     getAll<EvidenceRecord>(STORES.evidenceFiles),
     getAll(STORES.patternAlerts),
     getAll(STORES.users),
+    getAll(STORES.userProfile),
     getAll<SealRecord>(STORES.evidenceSeals),
   ])
 
@@ -286,6 +289,7 @@ export async function exportAllRecords(): Promise<VaultBackup> {
     alerts,
     users,
     seals,
+    userProfile,
   }
 }
 
@@ -311,4 +315,20 @@ export async function importAllRecords(data: {
   for (const item of data.seals ?? []) {
     await putRecord(STORES.evidenceSeals, item)
   }
+}
+
+export async function saveUserProfile(key: CryptoKey, profile: unknown) {
+  const payload = await encryptJSON(key, profile)
+  await putRecord(STORES.userProfile, {
+    id: "profile",
+    iv: payload.iv,
+    data: payload.data,
+    updatedAt: Date.now(),
+  })
+}
+
+export async function loadUserProfile<T>(key: CryptoKey): Promise<T | null> {
+  const record = await getRecord<any>(STORES.userProfile, "profile")
+  if (!record) return null
+  return decryptJSON<T>(key, toCipherPayload(record))
 }
