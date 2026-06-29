@@ -1,4 +1,4 @@
-import { encryptJSON, decryptJSON, deriveKey, checkVerifier } from "./crypto"
+import { encryptJSON, decryptJSON, deriveKey } from "./crypto"
 import { Filesystem, Directory } from "@capacitor/filesystem"
 import {
   exportAllRecords,
@@ -7,51 +7,42 @@ import {
 } from "./repo"
 import { getRecord, putRecord, STORES, type VaultRecord } from "./db"
 
-// Converts any array-like or plain-object representation back to the
-// correct typed array. Handles: real typed array, JS Array, and plain
-// object {0: x, 1: y} which some JSON parsers or IDB engines produce.
-function toUint8Array(val: any): Uint8Array {
+// Safely convert any value coming out of JSON.parse to a Uint8Array.
+// Handles: real Uint8Array, plain JS Array [255,12,...],
+// and plain object {0:255, 1:12} which Android WebView IDB can produce.
+function toUint8(val: any): Uint8Array {
   if (val instanceof Uint8Array) return val
   if (Array.isArray(val)) return new Uint8Array(val)
   if (val && typeof val === "object") return new Uint8Array(Object.values(val))
   return new Uint8Array(0)
 }
 
-function toArrayBuffer(val: any): ArrayBuffer {
-  if (val instanceof ArrayBuffer) return val
-  if (val instanceof Uint8Array) return val.slice(0).buffer
-  if (Array.isArray(val)) return new Uint8Array(val).buffer
-  if (val && typeof val === "object") return new Uint8Array(Object.values(val)).buffer
-  return new ArrayBuffer(0)
-}
-
 function reviveBuffers(backup: VaultBackup): VaultBackup {
+  // Store EVERYTHING as Uint8Array, never ArrayBuffer.
+  // Android WebView IndexedDB stores and retrieves Uint8Array correctly,
+  // but silently mangles ArrayBuffer on read-back, causing "data too small".
+  // toCipherPayload in db.ts converts Uint8Array → ArrayBuffer for Web Crypto.
   for (const incident of backup.incidents ?? []) {
-    incident.iv = toUint8Array(incident.iv)
-    incident.data = toArrayBuffer(incident.data)
+    incident.iv = toUint8(incident.iv)
+    incident.data = toUint8(incident.data) as any
   }
-
   for (const evidence of backup.evidence ?? []) {
-    evidence.iv = toUint8Array(evidence.iv)
-    evidence.data = toArrayBuffer(evidence.data)
+    evidence.iv = toUint8(evidence.iv)
+    evidence.data = toUint8(evidence.data) as any
   }
-
   for (const alert of backup.alerts ?? []) {
-    if (alert.iv != null) alert.iv = toUint8Array(alert.iv)
-    if (alert.data != null) alert.data = toArrayBuffer(alert.data)
+    if (alert.iv != null) alert.iv = toUint8(alert.iv)
+    if (alert.data != null) alert.data = toUint8(alert.data)
   }
-
   for (const user of backup.users ?? []) {
-    if ("salt" in user) user.salt = toUint8Array(user.salt)
-    if ("verifierIv" in user) user.verifierIv = toUint8Array(user.verifierIv)
-    if ("verifierData" in user) user.verifierData = toArrayBuffer(user.verifierData)
+    if ("salt" in user) user.salt = toUint8(user.salt)
+    if ("verifierIv" in user) user.verifierIv = toUint8(user.verifierIv)
+    if ("verifierData" in user) user.verifierData = toUint8(user.verifierData) as any
   }
-
   for (const profile of backup.userProfile ?? []) {
-    if (profile.iv != null) profile.iv = toUint8Array(profile.iv)
-    if (profile.data != null) profile.data = toArrayBuffer(profile.data)
+    if (profile.iv != null) profile.iv = toUint8(profile.iv)
+    if (profile.data != null) profile.data = toUint8(profile.data)
   }
-
   return backup
 }
 
@@ -59,8 +50,8 @@ export async function exportVaultBackup(key: CryptoKey) {
   const backup = await exportAllRecords()
   const encrypted = await encryptJSON(key, backup)
 
-  // Salt stored unencrypted so a fresh device can re-derive the key
-  // from PIN + salt before decrypting. Salt is not secret (PBKDF2 param).
+  // Salt stored unencrypted in outer payload so a fresh device can
+  // re-derive the key from PIN + salt. Salt is not secret (PBKDF2 param).
   const vault = await getRecord<VaultRecord>(STORES.users, "vault")
 
   const payload = {
@@ -68,7 +59,7 @@ export async function exportVaultBackup(key: CryptoKey) {
     exportedAt: Date.now(),
     salt: vault ? Array.from(vault.salt) : undefined,
     iv: Array.from(encrypted.iv),
-    data: Array.from(new Uint8Array(encrypted.data)),
+    data: Array.from(new Uint8Array(encrypted.data as ArrayBuffer)),
   }
 
   const fileName =
@@ -88,16 +79,13 @@ export async function exportVaultBackup(key: CryptoKey) {
 }
 
 /**
- * Single import path — works for both normal and fresh-install restore.
+ * Single import path for both normal and fresh-install restore.
  *
- * Always re-derives the key from the salt embedded in the backup file
- * + the user's passcode. This is the only approach that works in all cases:
+ * Always re-derives the key from the salt in the backup's outer payload
+ * + the user's passcode — never uses the current device key.
  *
- *   - Normal (vault already exists): backup salt = current salt → same key
- *   - Fresh install (new random salt): backup salt differs but same PIN
- *     → correct original key derived from backup salt + PIN
- *
- * Never uses keyRef / the current device key for decryption.
+ *   Normal import:    backup salt = current salt → same key derived ✓
+ *   Fresh install:    different salt, same PIN → correct old key derived ✓
  */
 export async function importVaultBackupFresh(
   file: File,
@@ -113,51 +101,34 @@ export async function importVaultBackupFresh(
     )
   }
 
-  // Step 1: re-derive the key the backup was originally encrypted with
-  const salt = Uint8Array.from(raw.salt as number[])
+  // Re-derive the exact key the backup was encrypted with
+  const salt = new Uint8Array(raw.salt as number[])
   const key = await deriveKey(passcode, salt)
 
-  // Step 2: decrypt the outer envelope
-  const iv = Uint8Array.from(raw.iv as number[])
-  const dataBytes = Uint8Array.from(raw.data as number[])
+  // Decrypt the outer envelope
+  const iv = new Uint8Array(raw.iv as number[])
+  const dataBytes = new Uint8Array(raw.data as number[])
 
   let backup: VaultBackup
   try {
-    backup = await decryptJSON<VaultBackup>(key, {
-      iv,
-      data: dataBytes,
-    })
+    backup = await decryptJSON<VaultBackup>(key, { iv, data: dataBytes })
   } catch (err) {
-    // OperationError here = wrong passcode or corrupted file
-    const msg = [
-      "Decrypt failed:",
-      String(err),
-      "iv length:", iv.length,
-      "data length:", dataBytes.length,
-      "salt length:", salt.length,
-    ].join(" | ")
-    throw new Error(msg)
+    throw new Error(
+      "Incorrect passcode or corrupted backup file. (" + String(err) + ")",
+    )
   }
 
   const revived = reviveBuffers(backup)
 
-  // Step 4: restore all records — backup vault record replaces current one
-  // so salt + verifier + PIN are consistent on this device going forward
-  // Snapshot the current vault record before import.
-  // If import fails halfway, we restore it so the PIN keeps working.
+  // Protect the current vault record — restore it if import fails
+  // so the PIN keeps working even after a partial write
   const currentVault = await getRecord<VaultRecord>(STORES.users, "vault")
-
   try {
     await importAllRecords(revived)
   } catch (err) {
-    // Restore the vault record so the PIN is not broken
     if (currentVault) await putRecord(STORES.users, currentVault)
     throw err
   }
-
-  // Replace the vault record with the backup's own record so that
-  // the backup's salt+PIN combination is now this device's vault.
-  // (importAllRecords already wrote it, so this is a no-op if it succeeded)
 
   return {
     key,
