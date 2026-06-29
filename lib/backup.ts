@@ -44,7 +44,18 @@ function reviveBuffers(backup: VaultBackup): VaultBackup {
           : new Uint8Array(user.verifierData as any).buffer
     }
   }
+for (const profile of backup.userProfile ?? []) {
+  if (profile.iv) {
+    profile.iv = new Uint8Array(profile.iv as any)
+  }
 
+  if (profile.data != null) {
+    profile.data =
+      profile.data instanceof ArrayBuffer
+        ? profile.data
+        : new Uint8Array(profile.data as any).buffer
+  }
+}
   return backup
 }
 
