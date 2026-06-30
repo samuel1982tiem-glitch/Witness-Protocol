@@ -61,6 +61,7 @@ interface VaultContextValue {
     input: IncidentInput,
     evidence: EvidenceInput[],
   ) => Promise<string>
+  updateIncident: (incidentId: string, input: IncidentInput) => Promise<void>
   removeIncident: (incidentId: string) => Promise<void>
   sealIncident: (incidentId: string) => Promise<void>
   runAnalysis: () => Promise<PatternAlert[]>
@@ -311,6 +312,23 @@ return true
     [refreshIncidents],
   )
 
+  const updateIncident = React.useCallback(
+    async (incidentId: string, input: IncidentInput) => {
+      const key = keyRef.current
+      if (!key) throw new Error("Vault is locked.")
+      const target = incidents.find((i) => i.id === incidentId)
+      if (!target) throw new Error("Incident not found.")
+      if (target.sealed) throw new Error("Sealed incidents cannot be edited.")
+      await saveIncident(key, input, {
+        id: target.id,
+        createdAt: target.createdAt,
+        sealed: false,
+      })
+      await refreshIncidents()
+    },
+    [incidents, refreshIncidents],
+  )
+
   const removeIncident = React.useCallback(
     async (incidentId: string) => {
       const target = incidents.find((i) => i.id === incidentId)
@@ -419,6 +437,7 @@ const importBackup = React.useCallback(
     unlock,
     lock,
     addIncident,
+    updateIncident,
     removeIncident,
     sealIncident,
     runAnalysis,
