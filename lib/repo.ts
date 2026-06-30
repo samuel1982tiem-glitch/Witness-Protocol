@@ -3,6 +3,7 @@
 
 import {
   decryptJSON,
+  decryptBytes,
   encryptJSON,
   sha256Hex,
   type CipherPayload,
@@ -138,9 +139,7 @@ export async function getEvidenceRecords(
   )
 }
 
-async function evidenceMetaFor(
-  incidentId: string,
-): Promise<EvidenceMeta[]> {
+async function evidenceMetaFor(incidentId: string): Promise<EvidenceMeta[]> {
   const records = await getEvidenceRecords(incidentId)
   return records
     .map((r) => ({
@@ -226,7 +225,6 @@ export async function sealIncident(
     sealedAt: Date.now(),
   }
   await putRecord(STORES.evidenceSeals, seal)
-  // Re-persist the incident with sealed=true (deletion disabled).
   await saveIncident(
     key,
     {
@@ -250,9 +248,10 @@ export async function deleteIncident(incidentId: string): Promise<void> {
 }
 
 export type StoredCipher = CipherPayload
-// Ba
 
+// ---------------------------------------------------------------------------
 // Backup helpers
+// ---------------------------------------------------------------------------
 
 export interface VaultBackup {
   version: number
@@ -265,11 +264,23 @@ export interface VaultBackup {
   seals: SealRecord[]
 }
 
+/**
+ * Evidence blob returned by exportEvidenceBlobs.
+ * raw contains the decrypted file bytes ready for re-encryption
+ * under the backup key in the v4 pipeline.
+ */
+export interface EvidenceBlob {
+  record: EvidenceRecord  // metadata (id, incidentId, mimeType, etc.)
+  name: string            // decrypted filename
+  raw: Uint8Array         // decrypted file bytes
+}
+
 function serializeBinary(val: any): number[] {
   if (val instanceof Uint8Array) return Array.from(val)
   if (val instanceof ArrayBuffer) return Array.from(new Uint8Array(val))
   if (Array.isArray(val)) return val
-  if (val && typeof val === "object") return Array.from(new Uint8Array(Object.values(val)))
+  if (val && typeof val === "object")
+    return Array.from(new Uint8Array(Object.values(val)))
   return []
 }
 
@@ -283,25 +294,23 @@ function serializeRecord(record: any): any {
   return out
 }
 
+/**
+ * Export all records as a serialization-safe VaultBackup.
+ * All binary fields are converted to plain number arrays so that
+ * JSON.stringify produces correct output (ArrayBuffer serializes as {}).
+ * Used by both v3 and v4 export for the metadata section.
+ */
 export async function exportAllRecords(): Promise<VaultBackup> {
-  const [
-    incidents,
-    evidence,
-    alerts,
-    users,
-    userProfile,
-    seals,
-  ] = await Promise.all([
-    getAll<IncidentRecord>(STORES.incidents),
-    getAll<EvidenceRecord>(STORES.evidenceFiles),
-    getAll(STORES.patternAlerts),
-    getAll(STORES.users),
-    getAll(STORES.userProfile),
-    getAll<SealRecord>(STORES.evidenceSeals),
-  ])
+  const [incidents, evidence, alerts, users, userProfile, seals] =
+    await Promise.all([
+      getAll<IncidentRecord>(STORES.incidents),
+      getAll<EvidenceRecord>(STORES.evidenceFiles),
+      getAll(STORES.patternAlerts),
+      getAll(STORES.users),
+      getAll(STORES.userProfile),
+      getAll<SealRecord>(STORES.evidenceSeals),
+    ])
 
-  // Serialize all binary fields to plain number arrays before JSON.stringify.
-  // ArrayBuffer serializes as {} in JSON — all binary must be arrays first.
   return {
     version: 2,
     exportedAt: Date.now(),
@@ -312,6 +321,31 @@ export async function exportAllRecords(): Promise<VaultBackup> {
     seals,
     userProfile: userProfile.map(serializeRecord),
   }
+}
+
+/**
+ * Decrypt all evidence files from IndexedDB and return raw bytes.
+ * Used exclusively by the v4 export pipeline — evidence is stored
+ * as raw binary in the ZIP rather than base64-encoded JSON.
+ */
+export async function exportEvidenceBlobs(
+  key: CryptoKey,
+): Promise<EvidenceBlob[]> {
+  const records = await getAll<EvidenceRecord>(STORES.evidenceFiles)
+
+  return Promise.all(
+    records.map(async (record) => {
+      const plaintext = await decryptJSON<EvidencePlaintext>(
+        key,
+        toCipherPayload(record),
+      )
+      return {
+        record,
+        name: plaintext.name,
+        raw: new Uint8Array(plaintext.bytes),
+      }
+    }),
+  )
 }
 
 export async function importAllRecords(data: {
@@ -334,9 +368,9 @@ export async function importAllRecords(data: {
   for (const item of data.users ?? []) {
     await putRecord(STORES.users, item)
   }
-for (const item of data.userProfile ?? []) {
-  await putRecord(STORES.userProfile, item)
-}
+  for (const item of data.userProfile ?? []) {
+    await putRecord(STORES.userProfile, item)
+  }
   for (const item of data.seals ?? []) {
     await putRecord(STORES.evidenceSeals, item)
   }

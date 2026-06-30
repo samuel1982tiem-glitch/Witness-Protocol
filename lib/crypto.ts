@@ -82,13 +82,10 @@ export async function decryptBytes(
 ): Promise<ArrayBuffer> {
   const crypto = getCrypto()
   return crypto.subtle.decrypt(
-  {
-    name: "AES-GCM",
-    iv: payload.iv,
-  },
-  key,
-  payload.data,
-)
+    { name: "AES-GCM", iv: payload.iv },
+    key,
+    payload.data,
+  )
 }
 
 export async function encryptJSON(
@@ -104,6 +101,102 @@ export async function decryptJSON<T>(
 ): Promise<T> {
   const buffer = await decryptBytes(key, payload)
   return JSON.parse(decoder.decode(buffer)) as T
+}
+
+/**
+ * Encrypt raw bytes for v4 backup evidence storage.
+ * Output format: [12 bytes IV][N bytes AES-GCM ciphertext]
+ * This is a self-contained blob — no separate IV field needed.
+ */
+export async function encryptRaw(
+  key: CryptoKey,
+  data: Uint8Array,
+): Promise<Uint8Array> {
+  const crypto = getCrypto()
+  const iv = randomBytes(IV_BYTES)
+  const cipher = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv },
+    key,
+    data,
+  )
+  // Prepend IV to ciphertext: [IV(12)][ciphertext(N)]
+  const result = new Uint8Array(IV_BYTES + cipher.byteLength)
+  result.set(iv, 0)
+  result.set(new Uint8Array(cipher), IV_BYTES)
+  return result
+}
+
+/**
+ * Decrypt raw bytes produced by encryptRaw.
+ * Reads the 12-byte IV prefix then decrypts the remainder.
+ */
+export async function decryptRaw(
+  key: CryptoKey,
+  blob: Uint8Array,
+): Promise<Uint8Array> {
+  if (blob.byteLength < IV_BYTES + 1) {
+    throw new Error("Encrypted blob is too small to be valid.")
+  }
+  const crypto = getCrypto()
+  const iv = blob.slice(0, IV_BYTES)
+  const ciphertext = blob.slice(IV_BYTES)
+  const plain = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv },
+    key,
+    ciphertext,
+  )
+  return new Uint8Array(plain)
+}
+
+/**
+ * Compress a Uint8Array using deflate-raw (RFC 1951).
+ * Available in all modern Android WebViews (Chrome 80+).
+ */
+export async function compress(data: Uint8Array): Promise<Uint8Array> {
+  const stream = new CompressionStream("deflate-raw")
+  const writer = stream.writable.getWriter()
+  const reader = stream.readable.getReader()
+  writer.write(data)
+  writer.close()
+  const chunks: Uint8Array[] = []
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    chunks.push(value)
+  }
+  const total = chunks.reduce((n, c) => n + c.byteLength, 0)
+  const out = new Uint8Array(total)
+  let offset = 0
+  for (const chunk of chunks) {
+    out.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return out
+}
+
+/**
+ * Decompress a Uint8Array produced by compress().
+ */
+export async function decompress(data: Uint8Array): Promise<Uint8Array> {
+  const stream = new DecompressionStream("deflate-raw")
+  const writer = stream.writable.getWriter()
+  const reader = stream.readable.getReader()
+  writer.write(data)
+  writer.close()
+  const chunks: Uint8Array[] = []
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    chunks.push(value)
+  }
+  const total = chunks.reduce((n, c) => n + c.byteLength, 0)
+  const out = new Uint8Array(total)
+  let offset = 0
+  for (const chunk of chunks) {
+    out.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return out
 }
 
 /** SHA-256 digest as a lowercase hex string. */

@@ -189,7 +189,7 @@ async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
           <input
             id="backup-import"
             type="file"
-            accept=".wpb"
+            accept=".wpb,.wpbz"
             className="hidden"
             onChange={handleImport}
           />
