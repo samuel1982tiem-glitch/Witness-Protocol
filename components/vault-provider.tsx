@@ -5,6 +5,9 @@ import * as React from "react"
 import {
   exportVaultBackup,
   importVaultBackupFresh,
+  mergeVaultBackup,
+  type MergeProgress,
+  type MergeResult,
 } from "@/lib/backup"
 import {
   checkVerifier,
@@ -71,6 +74,12 @@ interface VaultContextValue {
   registerActivity: () => void
   exportBackup: () => Promise<string>
   importBackup: (file: File, passcode: string) => Promise<void>
+  /** Live progress during a merge import (null when not merging). */
+  mergeProgress: MergeProgress | null
+  /** Summary counts from the most recently completed merge import. */
+  mergeResult: MergeResult | null
+  /** Clears mergeResult, e.g. when the user dismisses the summary. */
+  clearMergeResult: () => void
   profile: any
   saveProfile: (profile:any)=>Promise<void>
   loadProfile: ()=>Promise<void>
@@ -410,8 +419,42 @@ return true
   return await exportVaultBackup(key)
 }, [])
 
+const [mergeProgress, setMergeProgress] = React.useState<MergeProgress | null>(
+  null,
+)
+const [mergeResult, setMergeResult] = React.useState<MergeResult | null>(null)
+
+const clearMergeResult = React.useCallback(() => {
+  setMergeResult(null)
+}, [])
+
 const importBackup = React.useCallback(
   async (file: File, passcode: string) => {
+    const existingKey = keyRef.current
+
+    if (existingKey) {
+      // Vault is already unlocked and has data — merge the incoming
+      // backup's incidents into the current vault instead of replacing it.
+      // The source file's own salt+PIN may differ from the current vault's,
+      // so passcode here is the SOURCE FILE's passcode, not the vault's.
+      setMergeProgress({ processed: 0, total: 0, currentTitle: "" })
+      setMergeResult(null)
+      try {
+        const result = await mergeVaultBackup(
+          file,
+          passcode,
+          existingKey,
+          (progress) => setMergeProgress(progress),
+        )
+        setMergeResult(result)
+        await refreshIncidents()
+      } finally {
+        setMergeProgress(null)
+      }
+      return
+    }
+
+    // No vault unlocked yet — fresh install / restore flow, unchanged.
     const { key, autoLockMs: restoredMs } = await importVaultBackupFresh(
       file,
       passcode,
@@ -447,6 +490,9 @@ const importBackup = React.useCallback(
     registerActivity,
     exportBackup,
     importBackup,
+    mergeProgress,
+    mergeResult,
+    clearMergeResult,
     profile,
     saveProfile,
     loadProfile,

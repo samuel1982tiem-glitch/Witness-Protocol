@@ -391,3 +391,216 @@ export async function loadUserProfile<T>(key: CryptoKey): Promise<T | null> {
   if (!record) return null
   return decryptJSON<T>(key, toCipherPayload(record))
 }
+
+// ---------------------------------------------------------------------------
+// Merge import — combine a second backup's incidents into the currently
+// unlocked vault, rather than replacing it. Used when the vault already
+// has data and the user imports another backup file (e.g. from a second
+// device) to consolidate records.
+// ---------------------------------------------------------------------------
+
+export type MergeOutcome = "added" | "duplicate" | "diverged"
+
+export interface MergeProgress {
+  /** Number of incidents processed so far, including the current one. */
+  processed: number
+  /** Total incidents in the source file. */
+  total: number
+  /** Title of the incident currently being processed, for display. */
+  currentTitle: string
+}
+
+export interface MergeResult {
+  added: number
+  duplicates: number
+  diverged: number
+  totalEvidenceAdded: number
+}
+
+/**
+ * Decrypt one IncidentRecord (from either the current vault or a source
+ * backup) into a comparable Incident-shaped object, without touching seals
+ * or evidence content lookups beyond what's needed for content hashing.
+ */
+async function decryptIncidentForCompare(
+  key: CryptoKey,
+  record: IncidentRecord,
+  evidenceRecords: EvidenceRecord[],
+): Promise<Incident> {
+  const plaintext = await decryptJSON<IncidentPlaintext>(
+    key,
+    toCipherPayload(record),
+  )
+  const evidence: EvidenceMeta[] = evidenceRecords
+    .filter((e) => e.incidentId === record.id)
+    .map((e) => ({
+      id: e.id,
+      incidentId: e.incidentId,
+      kind: e.kind as EvidenceMeta["kind"],
+      name: "",
+      mimeType: e.mimeType,
+      size: e.size,
+      sha256: e.sha256,
+      createdAt: e.createdAt,
+    }))
+  return {
+    id: record.id,
+    title: plaintext.title,
+    description: plaintext.description,
+    category: plaintext.category,
+    occurredAt: plaintext.occurredAt,
+    createdAt: record.createdAt,
+    location: plaintext.location,
+    sealed: record.sealed,
+    seal: null,
+    evidence,
+  }
+}
+
+/**
+ * Same as computeSealHash but without createdAt — used for merge-import
+ * content comparison, where two incidents with the same logical content
+ * may have been saved at different times across devices.
+ */
+async function computeContentHash(incident: Incident): Promise<string> {
+  const canonical = JSON.stringify({
+    title: incident.title,
+    description: incident.description,
+    category: incident.category,
+    occurredAt: incident.occurredAt,
+    location: incident.location,
+    evidence: incident.evidence
+      .map((e) => `${e.kind}:${e.sha256}:${e.size}`)
+      .sort(),
+  })
+  return sha256Hex(canonical)
+}
+
+/**
+ * Merge a decrypted source backup's incidents + evidence into the
+ * currently unlocked vault (encrypted under currentKey).
+ *
+ * For each source incident:
+ *   - No existing incident with the same ID  -> import as-is (re-encrypted
+ *     under currentKey), outcome "added"
+ *   - Existing incident with same ID, identical content (via content hash)
+ *     -> skip, outcome "duplicate"
+ *   - Existing incident with same ID, different content
+ *     -> import as a new incident with a freshly generated ID,
+ *        outcome "diverged" (never silently overwrites)
+ *
+ * Evidence files belonging to imported incidents are decrypted with
+ * sourceKey and re-encrypted under currentKey via saveEvidence, so the
+ * existing read path needs no changes.
+ *
+ * onProgress is called once per source incident processed, so the UI
+ * can render a live progress bar and running counts.
+ */
+export async function mergeIncidentRecords(
+  sourceKey: CryptoKey,
+  currentKey: CryptoKey,
+  sourceIncidents: IncidentRecord[],
+  sourceEvidence: EvidenceRecord[],
+  onProgress?: (progress: MergeProgress) => void,
+): Promise<MergeResult> {
+  const result: MergeResult = {
+    added: 0,
+    duplicates: 0,
+    diverged: 0,
+    totalEvidenceAdded: 0,
+  }
+
+  // Load current vault's incidents once, keyed by ID, for fast lookup.
+  const currentRecords = await getAll<IncidentRecord>(STORES.incidents)
+  const currentEvidenceAll = await getAll<EvidenceRecord>(STORES.evidenceFiles)
+  const currentById = new Map(currentRecords.map((r) => [r.id, r]))
+
+  const total = sourceIncidents.length
+
+  for (let i = 0; i < sourceIncidents.length; i++) {
+    const sourceRecord = sourceIncidents[i]
+    const sourceEvidenceForThis = sourceEvidence.filter(
+      (e) => e.incidentId === sourceRecord.id,
+    )
+
+    const sourceIncident = await decryptIncidentForCompare(
+      sourceKey,
+      sourceRecord,
+      sourceEvidence,
+    )
+
+    onProgress?.({
+      processed: i + 1,
+      total,
+      currentTitle: sourceIncident.title,
+    })
+
+    const existingRecord = currentById.get(sourceRecord.id)
+
+    let targetId = sourceRecord.id
+    let outcome: MergeOutcome = "added"
+
+    if (existingRecord) {
+      const existingIncident = await decryptIncidentForCompare(
+        currentKey,
+        existingRecord,
+        currentEvidenceAll,
+      )
+      const [sourceHash, existingHash] = await Promise.all([
+        computeContentHash(sourceIncident),
+        computeContentHash(existingIncident),
+      ])
+
+      if (sourceHash === existingHash) {
+        outcome = "duplicate"
+      } else {
+        outcome = "diverged"
+        targetId = genId("inc") // fresh ID — never overwrite
+      }
+    }
+
+    if (outcome === "duplicate") {
+      result.duplicates++
+      continue
+    }
+
+    // Re-encrypt the incident under the current vault's key
+    const newId = await saveIncident(
+      currentKey,
+      {
+        title: sourceIncident.title,
+        description: sourceIncident.description,
+        category: sourceIncident.category,
+        occurredAt: sourceIncident.occurredAt,
+        location: sourceIncident.location,
+      },
+      {
+        id: targetId,
+        createdAt: sourceRecord.createdAt,
+        sealed: false, // merged incidents always land unsealed; user can re-seal
+      },
+    )
+
+    // Re-encrypt each evidence file under the current vault's key
+    for (const evRecord of sourceEvidenceForThis) {
+      const evPlaintext = await decryptJSON<EvidencePlaintext>(
+        sourceKey,
+        toCipherPayload(evRecord),
+      )
+      await saveEvidence(currentKey, newId, {
+        kind: evRecord.kind as EvidenceMeta["kind"],
+        name: evPlaintext.name,
+        mimeType: evRecord.mimeType,
+        size: evRecord.size,
+        sha256: evRecord.sha256,
+        bytes: new Uint8Array(evPlaintext.bytes).buffer,
+      })
+      result.totalEvidenceAdded++
+    }
+
+    if (outcome === "added") result.added++
+    else result.diverged++
+  }
+
+  return result
+}

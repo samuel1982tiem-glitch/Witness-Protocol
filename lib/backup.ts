@@ -14,11 +14,21 @@ import {
   exportAllRecords,
   exportEvidenceBlobs,
   importAllRecords,
+  mergeIncidentRecords,
   saveEvidence,
   type VaultBackup,
   type EvidenceInput,
+  type MergeProgress,
+  type MergeResult,
 } from "./repo"
-import { getRecord, putRecord, STORES, type VaultRecord } from "./db"
+import {
+  getRecord,
+  putRecord,
+  STORES,
+  type VaultRecord,
+  type IncidentRecord,
+  type EvidenceRecord,
+} from "./db"
 
 // ---------------------------------------------------------------------------
 // Shared binary coercion helpers
@@ -409,4 +419,196 @@ function uint8ToBase64(bytes: Uint8Array): string {
     binary += String.fromCharCode(...chunk)
   }
   return btoa(binary)
+}
+
+// ---------------------------------------------------------------------------
+// Merge import — decrypt a second backup file and merge its incidents
+// into the currently unlocked vault, rather than replacing it.
+// Unlike importVaultBackupFresh, this never touches the users/vault
+// store — only incidents and their evidence are merged.
+// ---------------------------------------------------------------------------
+
+interface ParsedBackup {
+  sourceKey: CryptoKey
+  incidents: IncidentRecord[]
+  evidence: EvidenceRecord[]
+}
+
+/**
+ * Decrypt a v3 (.wpb) backup file into its raw incident/evidence arrays,
+ * without writing anything to IndexedDB. Used by mergeVaultBackup.
+ */
+async function parseVaultBackupV3(
+  raw: any,
+  passcode: string,
+): Promise<ParsedBackup> {
+  if (!raw.salt) {
+    throw new Error(
+      "This backup was created with an older version of the app. " +
+        "Please export a new backup from your previous device first.",
+    )
+  }
+
+  const salt = new Uint8Array(raw.salt as number[])
+  const sourceKey = await deriveKey(passcode, salt)
+
+  const iv = new Uint8Array(raw.iv as number[])
+  const dataBytes = new Uint8Array(raw.data as number[])
+
+  let backup: VaultBackup
+  try {
+    backup = await decryptJSON<VaultBackup>(sourceKey, { iv, data: dataBytes })
+  } catch (err) {
+    throw new Error(
+      "Incorrect passcode or corrupted backup file. (" + String(err) + ")",
+    )
+  }
+
+  const revived = reviveBuffers(backup)
+
+  return {
+    sourceKey,
+    incidents: revived.incidents as unknown as IncidentRecord[],
+    evidence: revived.evidence as unknown as EvidenceRecord[],
+  }
+}
+
+/**
+ * Decrypt a v4 (.wpbz) backup file into its raw incident/evidence arrays,
+ * without writing anything to IndexedDB. Used by mergeVaultBackup.
+ */
+async function parseVaultBackupV4(
+  zipBytes: Uint8Array,
+  passcode: string,
+): Promise<ParsedBackup> {
+  const files = unzipSync(zipBytes)
+
+  const manifestBytes = files["manifest.json"]
+  if (!manifestBytes) {
+    throw new Error("Backup file is missing manifest.json — file may be corrupted.")
+  }
+  const manifest: ManifestV4 = JSON.parse(
+    new TextDecoder().decode(manifestBytes),
+  )
+
+  if (manifest.version !== 4) {
+    throw new Error(`Unsupported backup version: ${manifest.version}`)
+  }
+
+  const salt = new Uint8Array(manifest.salt)
+  const sourceKey = await deriveKey(passcode, salt)
+
+  const metaEncrypted = files["meta.json.enc"]
+  if (!metaEncrypted) {
+    throw new Error("Backup file is missing meta.json.enc — file may be corrupted.")
+  }
+
+  let metaPlain: Uint8Array
+  try {
+    const metaCompressed = await decryptRaw(sourceKey, metaEncrypted)
+    metaPlain = await decompress(metaCompressed)
+  } catch (err) {
+    throw new Error(
+      "Incorrect passcode or corrupted backup file. (" + String(err) + ")",
+    )
+  }
+
+  const meta = JSON.parse(new TextDecoder().decode(metaPlain)) as Omit<
+    VaultBackup,
+    "evidence"
+  >
+
+  // Evidence stays encrypted under sourceKey here — mergeIncidentRecords
+  // decrypts each file lazily with sourceKey as it processes incidents,
+  // so we reconstruct EvidenceRecord-shaped entries pointing at the
+  // raw encrypted .enc bytes via a synthetic iv+data pair compatible
+  // with toCipherPayload (encryptRaw's [iv][ciphertext] format needs
+  // splitting back into the two-field shape first).
+  const evidenceRecords: EvidenceRecord[] = []
+  const evidencePaths = Object.keys(files).filter(
+    (p) => p.startsWith("evidence/") && p.endsWith(".enc"),
+  )
+
+  for (const path of evidencePaths) {
+    const id = path.slice("evidence/".length, -".enc".length)
+    const sidecarPath = `evidence/${id}.json`
+    const sidecarBytes = files[sidecarPath]
+    if (!sidecarBytes) continue
+
+    const sidecar: EvidenceSidecar = JSON.parse(
+      new TextDecoder().decode(sidecarBytes),
+    )
+
+    const blob = files[path]
+    // encryptRaw format: [12-byte IV][ciphertext]. Split it back into
+    // the iv/data shape that toCipherPayload (and thus decryptJSON in
+    // repo.ts's saveEvidence/decrypt path) expects, but since merge's
+    // evidence decryption goes through decryptRaw directly inside
+    // mergeIncidentRecords, we instead stash the whole .enc blob and
+    // decrypt it with decryptRaw at merge time. To keep EvidenceRecord's
+    // shape (iv: Uint8Array, data: ArrayBuffer) usable by the standard
+    // toCipherPayload/decryptJSON path mergeIncidentRecords relies on,
+    // we split the blob here once.
+    const iv = blob.slice(0, 12)
+    const ciphertext = blob.slice(12)
+
+    evidenceRecords.push({
+      id: sidecar.id,
+      incidentId: sidecar.incidentId,
+      kind: sidecar.kind,
+      mimeType: sidecar.mimeType,
+      size: sidecar.size,
+      sha256: sidecar.sha256,
+      createdAt: sidecar.createdAt,
+      iv,
+      data: ciphertext.buffer.slice(
+        ciphertext.byteOffset,
+        ciphertext.byteOffset + ciphertext.byteLength,
+      ),
+    } as EvidenceRecord)
+  }
+
+  return {
+    sourceKey,
+    incidents: meta.incidents as unknown as IncidentRecord[],
+    evidence: evidenceRecords,
+  }
+}
+
+/**
+ * Merge a backup file's incidents into the currently unlocked vault.
+ * Auto-detects v3 (.wpb) vs v4 (.wpbz) the same way importVaultBackupFresh
+ * does. The vault's own salt/PIN/users store is never touched — only
+ * incidents and their evidence are merged in, deduplicated by content hash.
+ *
+ * currentKey must be the already-unlocked vault's key (keyRef.current).
+ * passcode is the PASSCODE OF THE SOURCE FILE being merged in, which may
+ * differ from the current vault's PIN if it came from another device.
+ */
+export async function mergeVaultBackup(
+  file: File,
+  passcode: string,
+  currentKey: CryptoKey,
+  onProgress?: (progress: MergeProgress) => void,
+): Promise<MergeResult> {
+  const buffer = await file.arrayBuffer()
+  const bytes = new Uint8Array(buffer)
+  const isZip = bytes.length > 2 && bytes[0] === 0x50 && bytes[1] === 0x4b
+
+  let parsed: ParsedBackup
+  if (isZip || file.name.endsWith(".wpbz")) {
+    parsed = await parseVaultBackupV4(bytes, passcode)
+  } else {
+    const text = new TextDecoder().decode(bytes)
+    const raw = JSON.parse(text)
+    parsed = await parseVaultBackupV3(raw, passcode)
+  }
+
+  return mergeIncidentRecords(
+    parsed.sourceKey,
+    currentKey,
+    parsed.incidents,
+    parsed.evidence,
+    onProgress,
+  )
 }

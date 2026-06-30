@@ -22,6 +22,9 @@ export default function VaultPage() {
     lock,
     exportBackup,
     importBackup,
+    mergeProgress,
+    mergeResult,
+    clearMergeResult,
     profile: vaultProfile,
     saveProfile,
   } = useVault()
@@ -75,8 +78,14 @@ async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
   const file = event.target.files?.[0]
   if (!file) return
 
+  // When the vault is already unlocked, importing a second backup merges
+  // its incidents into the current vault rather than replacing it.
+  const isMerge = status === "unlocked"
+
   const passcode = window.prompt(
-    "Enter the vault PIN used to create this backup:"
+    isMerge
+      ? "Enter the PIN that was used to create the backup file you're merging in:"
+      : "Enter the vault PIN used to create this backup:",
   )
 
   if (!passcode) {
@@ -86,7 +95,10 @@ async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
 
   try {
     await importBackup(file, passcode)
-    alert("Backup imported successfully.")
+    if (!isMerge) {
+      alert("Backup restored successfully.")
+    }
+    // On merge, the result summary card renders inline instead of an alert.
   } catch (err) {
     console.error(err)
     alert(String(err))
@@ -218,9 +230,55 @@ async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
             onClick={() =>
               document.getElementById("backup-import")?.click()
             }
+            disabled={mergeProgress !== null}
           >
-            Import Backup
+            {mergeProgress !== null ? "Merging…" : "Import Backup"}
           </Button>
+
+          {mergeProgress !== null ? (
+            <div className="space-y-1.5 rounded-xl border border-border p-3">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{
+                    width:
+                      mergeProgress.total > 0
+                        ? `${Math.round(
+                            (mergeProgress.processed / mergeProgress.total) * 100,
+                          )}%`
+                        : "8%",
+                  }}
+                />
+              </div>
+              <p className="truncate text-xs text-muted-foreground">
+                {mergeProgress.total > 0
+                  ? `Processing ${mergeProgress.processed} of ${mergeProgress.total} — ${mergeProgress.currentTitle}`
+                  : "Reading backup file…"}
+              </p>
+            </div>
+          ) : null}
+
+          {mergeResult !== null ? (
+            <div className="space-y-2 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3">
+              <p className="text-sm font-medium text-emerald-900">
+                Merge complete
+              </p>
+              <ul className="space-y-0.5 text-xs text-emerald-800/90">
+                <li>{mergeResult.added} new record{mergeResult.added === 1 ? "" : "s"} added</li>
+                <li>{mergeResult.diverged} record{mergeResult.diverged === 1 ? "" : "s"} added as new (matching ID but different content)</li>
+                <li>{mergeResult.duplicates} duplicate{mergeResult.duplicates === 1 ? "" : "s"} skipped</li>
+                <li>{mergeResult.totalEvidenceAdded} evidence file{mergeResult.totalEvidenceAdded === 1 ? "" : "s"} imported</li>
+              </ul>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={clearMergeResult}
+              >
+                Dismiss
+              </Button>
+            </div>
+          ) : null}
 
         </CardBody>
       </Card>
