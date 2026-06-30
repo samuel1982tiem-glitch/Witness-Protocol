@@ -166,9 +166,14 @@ export async function loadAllIncidents(key: CryptoKey): Promise<Incident[]> {
 
   const incidents = await Promise.all(
     records.map(async (record) => {
+      const cp = toCipherPayload(record)
+      console.log("[diag] record.iv type:", Object.prototype.toString.call(record.iv), "len:", record.iv?.length ?? record.iv?.byteLength)
+      console.log("[diag] record.data type:", Object.prototype.toString.call(record.data), "len:", record.data?.length ?? record.data?.byteLength)
+      console.log("[diag] cp.iv type:", Object.prototype.toString.call(cp.iv), "len:", cp.iv?.length)
+      console.log("[diag] cp.data type:", Object.prototype.toString.call(cp.data), "len:", cp.data?.byteLength)
       const plaintext = await decryptJSON<IncidentPlaintext>(
         key,
-        toCipherPayload(record),
+        cp,
       )
       const seal = sealByIncident.get(record.id) ?? null
       const evidence = await evidenceMetaFor(record.id)
