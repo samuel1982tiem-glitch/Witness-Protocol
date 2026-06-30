@@ -167,10 +167,12 @@ export async function loadAllIncidents(key: CryptoKey): Promise<Incident[]> {
   const incidents = await Promise.all(
     records.map(async (record) => {
       const cp = toCipherPayload(record)
-      console.log("[diag] record.iv type:", Object.prototype.toString.call(record.iv), "len:", record.iv?.length ?? record.iv?.byteLength)
-      console.log("[diag] record.data type:", Object.prototype.toString.call(record.data), "len:", record.data?.length ?? record.data?.byteLength)
-      console.log("[diag] cp.iv type:", Object.prototype.toString.call(cp.iv), "len:", cp.iv?.length)
-      console.log("[diag] cp.data type:", Object.prototype.toString.call(cp.data), "len:", cp.data?.byteLength)
+      const _ivType = Object.prototype.toString.call(record.iv)
+      const _dataType = Object.prototype.toString.call(record.data)
+      const _ivLen = record.iv?.byteLength ?? record.iv?.length ?? 'undef'
+      const _dataLen = record.data?.byteLength ?? record.data?.length ?? 'undef'
+      const _cpDataLen = cp.data?.byteLength ?? 'undef'
+      alert("IDB types\niv:" + _ivType + "[" + _ivLen + "]\ndata:" + _dataType + "[" + _dataLen + "]\ncp.data bytes:" + _cpDataLen)
       const plaintext = await decryptJSON<IncidentPlaintext>(
         key,
         cp,
