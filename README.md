@@ -6,7 +6,7 @@ Witness Protocol is a mobile application designed to help individuals document a
 
 What Witness Protocol Does
 
-Witness Protocol allows users to create a secure, chronological record of suspicious activities on their devices - such as unexpected battery drain, network downgrades, file disappearances, or unusual sensor activity. All data is stored locally with strong encryption and does not require internet access, minimizing exposure to remote surveillance.
+Witness Protocol allows users to create a secure, chronological record of suspicious activities on their devices. All data is stored locally with strong encryption and does not require internet access, minimizing exposure to remote surveillance.
 
 ---
 
