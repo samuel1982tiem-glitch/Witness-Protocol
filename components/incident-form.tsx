@@ -65,6 +65,34 @@ export function IncidentForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Auto-fill GPS coordinates on mount if permission has already been
+  // granted. Uses the Permissions API to check first so we never trigger
+  // an unexpected browser permission prompt — that stays an explicit
+  // action via the Capture button.
+  React.useEffect(() => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) return
+    if (!navigator.permissions?.query) return
+
+    let cancelled = false
+    navigator.permissions
+      .query({ name: "geolocation" as PermissionName })
+      .then((status) => {
+        if (cancelled) return
+        if (status.state === "granted") {
+          captureLocation()
+        }
+      })
+      .catch(() => {
+        // Permissions API not supported for geolocation on this device —
+        // silently skip auto-fill, user can still tap Capture manually.
+      })
+
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   function addFiles(files: FileList | null, kind: EvidenceKind) {
     if (!files) return
     const next: PendingAttachment[] = []
@@ -119,6 +147,12 @@ export function IncidentForm() {
       () => setGeoStatus("Location permission denied or unavailable."),
       { enableHighAccuracy: true, timeout: 10000 },
     )
+  }
+
+  function openInMaps() {
+    if (!location) return
+    const url = `https://maps.google.com/?q=${location.latitude},${location.longitude}`
+    window.open(url, "_blank")
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -217,53 +251,63 @@ export function IncidentForm() {
         />
       </div>
 
-      <div>
-        <Label htmlFor="occurredAt">Date and time</Label>
-        <Input
-          id="occurredAt"
-          type="datetime-local"
-          value={occurredAt}
-          onChange={(e) => setOccurredAt(e.target.value)}
-        />
-      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label htmlFor="occurredAt">Date and time</Label>
+          <Input
+            id="occurredAt"
+            type="datetime-local"
+            value={occurredAt}
+            onChange={(e) => setOccurredAt(e.target.value)}
+          />
+        </div>
 
-      <div>
-        <Label>GPS coordinates</Label>
-        <Card className="flex items-center justify-between gap-3 p-3">
-          <div className="min-w-0 text-sm">
+        <div>
+          <Label>GPS coordinates</Label>
+          <Card className="flex h-full flex-col justify-between gap-2 p-3">
             {location ? (
-              <>
-                <p className="font-medium text-foreground">
+              <button
+                type="button"
+                onClick={openInMaps}
+                className="min-w-0 flex-1 text-left text-sm"
+                aria-label="Open location in maps"
+              >
+                <p className="truncate font-medium text-primary underline-offset-2 hover:underline">
                   {location.latitude.toFixed(5)},{" "}
                   {location.longitude.toFixed(5)}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   Accuracy ±{Math.round(location.accuracy ?? 0)}m
                 </p>
-              </>
+              </button>
             ) : (
-              <p className="text-muted-foreground">
+              <p className="flex-1 text-sm text-muted-foreground">
                 {geoStatus ?? "No location attached."}
               </p>
             )}
-          </div>
-          <div className="flex items-center gap-2">
-            {location ? (
-              <button
+            <div className="flex items-center justify-end gap-2">
+              {location ? (
+                <button
+                  type="button"
+                  onClick={() => setLocation(null)}
+                  className="rounded-lg p-2 text-muted-foreground hover:bg-muted"
+                  aria-label="Remove location"
+                >
+                  <X className="size-4" aria-hidden="true" />
+                </button>
+              ) : null}
+              <Button
                 type="button"
-                onClick={() => setLocation(null)}
-                className="rounded-lg p-2 text-muted-foreground hover:bg-muted"
-                aria-label="Remove location"
+                variant="outline"
+                size="sm"
+                onClick={captureLocation}
               >
-                <X className="size-4" aria-hidden="true" />
-              </button>
-            ) : null}
-            <Button type="button" variant="outline" onClick={captureLocation}>
-              <Crosshair className="size-4" aria-hidden="true" />
-              Capture
-            </Button>
-          </div>
-        </Card>
+                <Crosshair className="size-4" aria-hidden="true" />
+                Capture
+              </Button>
+            </div>
+          </Card>
+        </div>
       </div>
 
       <div className="space-y-3">
