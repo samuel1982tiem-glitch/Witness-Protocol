@@ -166,16 +166,9 @@ export async function loadAllIncidents(key: CryptoKey): Promise<Incident[]> {
 
   const incidents = await Promise.all(
     records.map(async (record) => {
-      const cp = toCipherPayload(record)
-      const _ivType = Object.prototype.toString.call(record.iv)
-      const _dataType = Object.prototype.toString.call(record.data)
-      const _ivLen = record.iv?.byteLength ?? record.iv?.length ?? 'undef'
-      const _dataLen = record.data?.byteLength ?? record.data?.length ?? 'undef'
-      const _cpDataLen = cp.data?.byteLength ?? 'undef'
-      alert("IDB types\niv:" + _ivType + "[" + _ivLen + "]\ndata:" + _dataType + "[" + _dataLen + "]\ncp.data bytes:" + _cpDataLen)
       const plaintext = await decryptJSON<IncidentPlaintext>(
         key,
-        cp,
+        toCipherPayload(record),
       )
       const seal = sealByIncident.get(record.id) ?? null
       const evidence = await evidenceMetaFor(record.id)
@@ -272,6 +265,24 @@ export interface VaultBackup {
   seals: SealRecord[]
 }
 
+function serializeBinary(val: any): number[] {
+  if (val instanceof Uint8Array) return Array.from(val)
+  if (val instanceof ArrayBuffer) return Array.from(new Uint8Array(val))
+  if (Array.isArray(val)) return val
+  if (val && typeof val === "object") return Array.from(new Uint8Array(Object.values(val)))
+  return []
+}
+
+function serializeRecord(record: any): any {
+  const out: any = { ...record }
+  if ("iv" in out) out.iv = serializeBinary(out.iv)
+  if ("data" in out) out.data = serializeBinary(out.data)
+  if ("salt" in out) out.salt = serializeBinary(out.salt)
+  if ("verifierIv" in out) out.verifierIv = serializeBinary(out.verifierIv)
+  if ("verifierData" in out) out.verifierData = serializeBinary(out.verifierData)
+  return out
+}
+
 export async function exportAllRecords(): Promise<VaultBackup> {
   const [
     incidents,
@@ -289,15 +300,17 @@ export async function exportAllRecords(): Promise<VaultBackup> {
     getAll<SealRecord>(STORES.evidenceSeals),
   ])
 
+  // Serialize all binary fields to plain number arrays before JSON.stringify.
+  // ArrayBuffer serializes as {} in JSON — all binary must be arrays first.
   return {
     version: 2,
     exportedAt: Date.now(),
-    incidents,
-    evidence,
-    alerts,
-    users,
+    incidents: incidents.map(serializeRecord),
+    evidence: evidence.map(serializeRecord),
+    alerts: alerts.map(serializeRecord),
+    users: users.map(serializeRecord),
     seals,
-    userProfile,
+    userProfile: userProfile.map(serializeRecord),
   }
 }
 
