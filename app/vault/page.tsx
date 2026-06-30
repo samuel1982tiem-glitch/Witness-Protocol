@@ -44,6 +44,23 @@ export default function VaultPage() {
     }
   }, [vaultProfile])
 
+  // Save button is disabled until the user actually changes a field.
+  // Compares the live draft against the last-saved profile (or the
+  // empty baseline if no profile exists yet).
+  const savedBaseline = vaultProfile ?? {
+    name: "",
+    governmentId: "",
+    organization: "",
+    phone: "",
+    email: "",
+  }
+  const isDirty =
+    draft.name !== savedBaseline.name ||
+    draft.governmentId !== savedBaseline.governmentId ||
+    draft.organization !== savedBaseline.organization ||
+    draft.phone !== savedBaseline.phone ||
+    draft.email !== savedBaseline.email
+
   async function handleExport() {
     try {
       const fileName = await exportBackup()
@@ -139,6 +156,7 @@ async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
           <Button
             className="w-full"
             onClick={() => saveProfile(draft)}
+            disabled={!isDirty}
           >
             Save Identity
           </Button>
