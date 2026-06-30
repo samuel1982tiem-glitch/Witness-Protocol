@@ -396,6 +396,8 @@ export async function importVaultBackupFresh(
   // This lets us detect v4 even if the extension was changed or missing.
   const isZip = bytes.length > 2 && bytes[0] === 0x50 && bytes[1] === 0x4b
 
+  alert("file.name: " + file.name + " | size: " + bytes.length + " | bytes[0..1]: " + bytes[0] + "," + bytes[1] + " | isZip: " + isZip)
+
   if (isZip || file.name.endsWith(".wpbz")) {
     return importVaultBackupV4(bytes, passcode)
   }
