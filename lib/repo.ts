@@ -583,6 +583,7 @@ export async function mergeIncidentRecords(
 
     // Re-encrypt each evidence file under the current vault's key
     for (const evRecord of sourceEvidenceForThis) {
+      alert("D7\nevRecord.iv type: " + Object.prototype.toString.call(evRecord.iv) + " len:" + evRecord.iv?.length + "\nevRecord.data type: " + Object.prototype.toString.call(evRecord.data) + " len:" + evRecord.data?.byteLength)
       const evPlaintext = await decryptJSON<EvidencePlaintext>(
         sourceKey,
         toCipherPayload(evRecord),
