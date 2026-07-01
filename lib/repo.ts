@@ -583,18 +583,28 @@ export async function mergeIncidentRecords(
 
     // Re-encrypt each evidence file under the current vault's key
     for (const evRecord of sourceEvidenceForThis) {
-      alert("D7\nevRecord.iv type: " + Object.prototype.toString.call(evRecord.iv) + " len:" + evRecord.iv?.length + "\nevRecord.data type: " + Object.prototype.toString.call(evRecord.data) + " len:" + evRecord.data?.byteLength)
-      const evPlaintext = await decryptJSON<EvidencePlaintext>(
-        sourceKey,
-        toCipherPayload(evRecord),
-      )
+      // v3 backups store evidence as JSON {name, bytes:[...]} (decryptJSON).
+      // v4 backups store evidence as raw encrypted binary directly
+      // (decryptBytes) — no JSON wrapper. Try JSON first, fall back to raw.
+      let rawBytes: ArrayBuffer
+      let evName = (evRecord as any).name ?? ""
+      try {
+        const evPlaintext = await decryptJSON<EvidencePlaintext>(
+          sourceKey,
+          toCipherPayload(evRecord),
+        )
+        rawBytes = new Uint8Array(evPlaintext.bytes).buffer
+        evName = evPlaintext.name
+      } catch {
+        rawBytes = await decryptBytes(sourceKey, toCipherPayload(evRecord))
+      }
       await saveEvidence(currentKey, newId, {
         kind: evRecord.kind as EvidenceMeta["kind"],
-        name: evPlaintext.name,
+        name: evName,
         mimeType: evRecord.mimeType,
         size: evRecord.size,
         sha256: evRecord.sha256,
-        bytes: new Uint8Array(evPlaintext.bytes).buffer,
+        bytes: rawBytes,
       })
       result.totalEvidenceAdded++
     }
