@@ -1,6 +1,6 @@
 "use client"
 
-import { Plus, Search, SlidersHorizontal, X } from "lucide-react"
+import { Search, SlidersHorizontal, X } from "lucide-react"
 import * as React from "react"
 import { useRouter } from "next/navigation"
 
@@ -71,15 +71,12 @@ export default function IncidentsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-start justify-between gap-3">
       <SectionTitle
         title="Records"
         description={`${incidents.length} encrypted ${
           incidents.length === 1 ? "incident" : "incidents"
         } on this device.`}
       />
-      <button type="button" onClick={() => router.push("/log")} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"><Plus className="size-4" />New</button>
-      </div>
 
       <div className="flex items-center gap-2">
         <div className="relative flex-1">

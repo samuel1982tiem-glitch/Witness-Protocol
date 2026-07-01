@@ -3,6 +3,7 @@
 import {
   Activity,
   Lock,
+  Plus,
   ScrollText,
   ShieldCheck,
 } from "lucide-react"
@@ -75,6 +76,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
             )
           })}
+          <Link
+            href="/log"
+            className="flex flex-1 flex-col items-center gap-1 py-2.5 text-xs font-medium text-red-600 transition-colors hover:text-red-700"
+          >
+            <Plus className="size-5" aria-hidden="true" />
+            New
+          </Link>
         </div>
       </nav>
     </div>
