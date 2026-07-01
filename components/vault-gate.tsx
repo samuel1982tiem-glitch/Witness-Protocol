@@ -19,8 +19,6 @@ function Brand({ subtitle }: { subtitle: string }) {
       <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
         <ShieldCheck className="size-7" aria-hidden="true" />
       </div>
-      <h1 className="mt-4 text-xl font-semibold tracking-tight">Witness Protocol</h1>
-      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{subtitle}</p>
     </div>
   )
 }
@@ -221,16 +219,6 @@ function UnlockForm() {
         }}
         onDelete={() => setPasscode((s) => s.slice(0, -1))}
       />
-
-      <button
-        className="text-sm text-muted-foreground mt-4"
-        onClick={() => {
-          setPasscode("")
-          setLocalError(null)
-        }}
-      >
-        Clear
-      </button>
     </Shell>
   )
 }
