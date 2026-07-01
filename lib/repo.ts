@@ -140,11 +140,7 @@ export async function downloadEvidenceFile(
 ): Promise<string> {
   const { Filesystem, Directory } = await import("@capacitor/filesystem")
 
-  try {
-    await Filesystem.requestPermissions()
-  } catch {
-    // Permission API not available on this platform — continue anyway
-  }
+
 
   const plaintext = await decryptJSON<EvidencePlaintext>(
     key,
@@ -171,9 +167,20 @@ export async function downloadEvidenceFile(
   await Filesystem.writeFile({
     path: safeName,
     data: base64,
-    directory: Directory.Documents,
+    directory: Directory.Cache,
     recursive: true,
   })
+
+  // Share sheet lets the user save/move it wherever they want (Downloads,
+  // Drive, etc.) without needing broad storage permissions.
+  try {
+    const { Share } = await import("@capacitor/share")
+    const { Filesystem: FS } = await import("@capacitor/filesystem")
+    const uriResult = await FS.getUri({ path: safeName, directory: Directory.Cache })
+    await Share.share({ url: uriResult.uri, title: safeName })
+  } catch {
+    // Share plugin not installed — file still saved to app cache
+  }
 
   return safeName
 }
