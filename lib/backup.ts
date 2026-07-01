@@ -358,14 +358,17 @@ async function importVaultBackupV4(
   )
 
   for (const path of evidencePaths) {
-    const id = path.slice("evidence/".length, -".enc".length)
+    const id = path.slice("evidence/".length, path.length - ".enc".length)
     const sidecarPath = `evidence/${id}.json`
     const sidecarBytes = files[sidecarPath]
     if (!sidecarBytes) continue // skip if sidecar metadata is missing
 
-    const sidecar: EvidenceSidecar = JSON.parse(
-      new TextDecoder().decode(sidecarBytes),
-    )
+    let sidecar: EvidenceSidecar
+    try {
+      sidecar = JSON.parse(new TextDecoder().decode(sidecarBytes))
+    } catch {
+      continue
+    }
 
     const raw = await decryptRaw(key, files[path])
 
@@ -596,16 +599,21 @@ async function parseVaultBackupV4(
   )
 
   for (const path of evidencePaths) {
-    const id = path.slice("evidence/".length, -".enc".length)
+    const id = path.slice("evidence/".length, path.length - ".enc".length)
     const sidecarPath = `evidence/${id}.json`
     const sidecarBytes = files[sidecarPath]
     if (!sidecarBytes) continue
+    if (!sidecarPath.endsWith(".json")) continue
 
-    const sidecar: EvidenceSidecar = JSON.parse(
-      new TextDecoder().decode(sidecarBytes),
-    )
+    let sidecar: EvidenceSidecar
+    try {
+      sidecar = JSON.parse(new TextDecoder().decode(sidecarBytes))
+    } catch {
+      continue
+    }
 
     const blob = files[path]
+    if (!blob) continue
     // encryptRaw format: [12-byte IV][ciphertext]. Split it back into
     // the iv/data shape that toCipherPayload (and thus decryptJSON in
     // repo.ts's saveEvidence/decrypt path) expects, but since merge's
@@ -662,7 +670,6 @@ export async function mergeVaultBackup(
   
   // Use the same format detection for merge
   const format = detectFileFormat(bytes, file.name)
-  alert("MERGE DIAG v3\nfile.name: " + file.name + "\nbytes[0..7]: " + Array.from(bytes.slice(0,8)).join(",") + "\nformat: " + format)
   
   // Gracefully handle PNG files in merge as well
   if (format === 'png') {
