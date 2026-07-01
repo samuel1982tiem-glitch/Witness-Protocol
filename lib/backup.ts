@@ -582,8 +582,8 @@ async function parseVaultBackupV4(
     )
   }
 
-  const meta = JSON.parse(new TextDecoder().decode(metaPlain)) as Omit<
   alert("D6\nmetaPlain len: " + metaPlain.length + "\nfirst80: " + new TextDecoder().decode(metaPlain.slice(0,80)))
+  const meta = JSON.parse(new TextDecoder().decode(metaPlain)) as Omit<
     VaultBackup,
     "evidence"
   >
