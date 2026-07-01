@@ -13,6 +13,7 @@ import {
 import * as React from "react"
 
 import { Button } from "@/components/ui/button"
+import { PasscodeModal } from "@/components/passcode-modal"
 import { Card, CardBody } from "@/components/ui/primitives"
 import { useVault } from "@/components/vault-provider"
 
@@ -140,24 +141,21 @@ export default function VaultPage() {
     }
   }
 
-async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
+const [pendingImportFile, setPendingImportFile] = React.useState<File | null>(null)
+
+function handleFileSelected(event: React.ChangeEvent<HTMLInputElement>) {
   const file = event.target.files?.[0]
+  event.target.value = ""
+  if (!file) return
+  setPendingImportFile(file)
+}
+
+async function runImport(passcode: string) {
+  const file = pendingImportFile
+  setPendingImportFile(null)
   if (!file) return
 
-  // When the vault is already unlocked, importing a second backup merges
-  // its incidents into the current vault rather than replacing it.
   const isMerge = status === "unlocked"
-
-  const passcode = window.prompt(
-    isMerge
-      ? "Enter the PIN that was used to create the backup file you're merging in:"
-      : "Enter the vault PIN used to create this backup:",
-  )
-
-  if (!passcode) {
-    event.target.value = ""
-    return
-  }
 
   try {
     await importBackup(file, passcode)
@@ -169,8 +167,6 @@ async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
     console.error(err)
     alert(String(err))
   }
-
-  event.target.value = ""
 }
 
   return (
@@ -362,7 +358,7 @@ async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
             type="file"
             accept=".wpb,.wpbz,application/octet-stream,*/*"
             className="hidden"
-            onChange={handleImport}
+            onChange={handleFileSelected}
           />
 
           <Button
@@ -424,6 +420,17 @@ async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
         </CardBody>
       </Card>
 
+      <PasscodeModal
+        open={pendingImportFile !== null}
+        title={status === "unlocked" ? "Merge backup" : "Restore backup"}
+        subtitle={
+          status === "unlocked"
+            ? "Enter the PIN used to create the backup you're merging in."
+            : "Enter the vault PIN used to create this backup."
+        }
+        onSubmit={runImport}
+        onCancel={() => setPendingImportFile(null)}
+      />
     </div>
   )
 }
