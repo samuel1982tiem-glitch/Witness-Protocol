@@ -1,4 +1,4 @@
-import { zipSync, unzipSync, type Zippable } from "fflate"
+import { zipSync, unzipSync, Zip, ZipPassThrough, type Zippable } from "fflate"
 import {
   encryptJSON,
   decryptJSON,
@@ -14,6 +14,8 @@ import {
   exportAllRecords,
   exportEvidenceBlobs,
   importAllRecords,
+  listEvidenceRecords,
+  decryptEvidenceRaw,
   mergeIncidentRecords,
   saveEvidence,
   type VaultBackup,
@@ -418,10 +420,17 @@ async function importVaultBackupV4(
 
 /**
  * Export the vault as a Version 4 (.wpbz) backup.
- * This is the default export format going forward.
+ * Uses the streaming pipeline by default — evidence is processed one
+ * file at a time and written to disk incrementally, avoiding the
+ * memory spike of decrypting every file and buffering the full ZIP
+ * before writing (which is what exportVaultBackupV4 below still does,
+ * kept only for reference/fallback).
  */
-export async function exportVaultBackup(key: CryptoKey): Promise<string> {
-  return exportVaultBackupV4(key)
+export async function exportVaultBackup(
+  key: CryptoKey,
+  onProgress?: (progress: ExportProgress) => void,
+): Promise<string> {
+  return exportVaultBackupV4Streaming(key, onProgress)
 }
 
 /**
@@ -706,4 +715,215 @@ export async function mergeVaultBackup(
     parsed.evidence,
     onProgress,
   )
+}
+// ---------------------------------------------------------------------------
+// Streaming export — processes evidence one file at a time and writes
+// ZIP chunks to disk incrementally, instead of building the entire
+// backup in memory before writing. This fixes out-of-memory crashes on
+// exports with many/large media attachments.
+// ---------------------------------------------------------------------------
+
+export type ExportStage =
+  | "preparing"
+  | "metadata"
+  | "evidence"
+  | "finishing"
+  | "saving"
+
+export interface ExportProgress {
+  stage: ExportStage
+  processed: number
+  total: number
+  currentName: string
+  percent: number
+  etaSeconds: number | null
+}
+
+function uint8ToBase64Chunk(bytes: Uint8Array): string {
+  let binary = ""
+  const chunkSize = 0x8000
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize)
+    binary += String.fromCharCode(...chunk)
+  }
+  return btoa(binary)
+}
+
+/**
+ * Export the vault as a Version 4 (.wpbz) backup, processing evidence
+ * one file at a time and writing to disk incrementally via fflate's
+ * streaming Zip API + Capacitor Filesystem writeFile/appendFile.
+ *
+ * Peak memory is roughly "one decrypted evidence file + one ZIP chunk"
+ * rather than "every evidence file decrypted simultaneously plus the
+ * entire ZIP buffered in memory", which is what the non-streaming
+ * exportVaultBackupV4 does via exportEvidenceBlobs + zipSync.
+ */
+export async function exportVaultBackupV4Streaming(
+  key: CryptoKey,
+  onProgress?: (progress: ExportProgress) => void,
+): Promise<string> {
+  const vault = await getRecord<VaultRecord>(STORES.users, "vault")
+  if (!vault) throw new Error("Vault is not set up.")
+
+  onProgress?.({
+    stage: "preparing",
+    processed: 0,
+    total: 0,
+    currentName: "",
+    percent: 0,
+    etaSeconds: null,
+  })
+
+  const evidenceRecords = await listEvidenceRecords()
+  const total = evidenceRecords.length
+  const startTime = Date.now()
+
+  const fileName =
+    "WitnessProtocolBackup-" +
+    new Date().toISOString().replace(/[:.]/g, "-") +
+    ".wpbz"
+
+  // First chunk from the Zip stream creates the file; every chunk after
+  // that appends. This keeps at most one chunk resident at a time rather
+  // than buffering the whole ZIP before any disk write happens.
+  let wroteFirstChunk = false
+  let pendingWrites: Promise<any> = Promise.resolve()
+  let zipError: unknown = null
+
+  const zip = new Zip((err, chunk, _final) => {
+    if (err) {
+      zipError = err
+      return
+    }
+    // Serialize writes: each appendFile must wait for the previous one,
+    // since Capacitor's filesystem calls aren't guaranteed ordered
+    // if fired concurrently.
+    pendingWrites = pendingWrites.then(async () => {
+      const b64 = uint8ToBase64Chunk(chunk)
+      if (!wroteFirstChunk) {
+        wroteFirstChunk = true
+        await Filesystem.writeFile({
+          path: fileName,
+          data: b64,
+          directory: Directory.Documents,
+          recursive: true,
+        })
+      } else {
+        await Filesystem.appendFile({
+          path: fileName,
+          data: b64,
+          directory: Directory.Documents,
+        })
+      }
+    })
+  })
+
+  // --- Metadata section ---
+  onProgress?.({
+    stage: "metadata",
+    processed: 0,
+    total,
+    currentName: "",
+    percent: 2,
+    etaSeconds: null,
+  })
+
+  const backup = await exportAllRecords()
+  const metaPlain = buildMetaPlaintext(backup)
+  const metaCompressed = await compress(metaPlain)
+  const metaEncrypted = await encryptRaw(key, metaCompressed)
+
+  const manifestEntry = new ZipPassThrough("manifest.json")
+  zip.add(manifestEntry)
+  manifestEntry.push(
+    new TextEncoder().encode(
+      JSON.stringify({
+        version: 4,
+        exportedAt: Date.now(),
+        salt: Array.from(vault.salt),
+        evidenceCount: total,
+      } satisfies ManifestV4),
+    ),
+    true,
+  )
+
+  const metaEntry = new ZipPassThrough("meta.json.enc")
+  zip.add(metaEntry)
+  metaEntry.push(metaEncrypted, true)
+
+  // --- Evidence section: one file at a time ---
+  for (let i = 0; i < evidenceRecords.length; i++) {
+    if (zipError) throw zipError
+
+    const record = evidenceRecords[i]
+
+    // Decrypt just this one file, re-encrypt it, push to ZIP, then let
+    // both the decrypted and encrypted buffers fall out of scope before
+    // the next iteration — nothing from this file is retained.
+    const { name, raw } = await decryptEvidenceRaw(key, record)
+    const encrypted = await encryptRaw(key, raw)
+
+    const evEntry = new ZipPassThrough(`evidence/${record.id}.enc`)
+    zip.add(evEntry)
+    evEntry.push(encrypted, true)
+
+    const sidecarEntry = new ZipPassThrough(`evidence/${record.id}.json`)
+    zip.add(sidecarEntry)
+    sidecarEntry.push(
+      new TextEncoder().encode(
+        JSON.stringify({
+          id: record.id,
+          incidentId: record.incidentId,
+          kind: record.kind,
+          mimeType: record.mimeType,
+          size: record.size,
+          sha256: record.sha256,
+          createdAt: record.createdAt,
+          name,
+        }),
+      ),
+      true,
+    )
+
+    const processed = i + 1
+    const elapsed = (Date.now() - startTime) / 1000
+    const avgPerFile = elapsed / processed
+    const remaining = total - processed
+    const etaSeconds = processed >= 2 ? Math.round(avgPerFile * remaining) : null
+
+    onProgress?.({
+      stage: "evidence",
+      processed,
+      total,
+      currentName: name,
+      percent: total > 0 ? Math.round(5 + (processed / total) * 85) : 90,
+      etaSeconds,
+    })
+  }
+
+  onProgress?.({
+    stage: "finishing",
+    processed: total,
+    total,
+    currentName: "",
+    percent: 95,
+    etaSeconds: null,
+  })
+
+  zip.end()
+  await pendingWrites
+
+  if (zipError) throw zipError
+
+  onProgress?.({
+    stage: "saving",
+    processed: total,
+    total,
+    currentName: "",
+    percent: 100,
+    etaSeconds: 0,
+  })
+
+  return fileName
 }

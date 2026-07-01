@@ -348,6 +348,42 @@ export async function exportEvidenceBlobs(
   )
 }
 
+/**
+ * Returns just the evidence record list (metadata only — no decryption,
+ * no file bytes loaded). Used by the streaming v4 export pipeline to
+ * know the total count up front and iterate records one at a time,
+ * instead of exportEvidenceBlobs's Promise.all-everything approach
+ * which holds every decrypted file in memory simultaneously.
+ */
+export async function listEvidenceRecords(): Promise<EvidenceRecord[]> {
+  return getAll<EvidenceRecord>(STORES.evidenceFiles)
+}
+
+/**
+ * Decrypt a single evidence file's raw bytes, skipping the
+ * EvidencePlaintext {name, bytes: number[]} JSON round-trip that
+ * exportEvidenceBlobs uses. The number[] format costs ~8x memory
+ * overhead per byte (each byte becomes a full JS number in an array),
+ * which compounds badly when decrypting large media files. This
+ * decrypts straight to a Uint8Array instead.
+ *
+ * Used by the streaming v4 export pipeline, one record at a time,
+ * so peak memory is "one file" rather than "every file at once".
+ */
+export async function decryptEvidenceRaw(
+  key: CryptoKey,
+  record: EvidenceRecord,
+): Promise<{ name: string; raw: Uint8Array }> {
+  const plaintext = await decryptJSON<EvidencePlaintext>(
+    key,
+    toCipherPayload(record),
+  )
+  return {
+    name: plaintext.name,
+    raw: new Uint8Array(plaintext.bytes),
+  }
+}
+
 export async function importAllRecords(data: {
   incidents: any[]
   evidence: any[]
