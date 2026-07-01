@@ -2,6 +2,7 @@
 
 import {
   Lock,
+  ShieldCheck,
   Timer,
   User,
   IdCard,
@@ -18,6 +19,7 @@ import { useVault } from "@/components/vault-provider"
 export default function VaultPage() {
   const {
     status,
+    incidents,
     autoLockMs,
     lock,
     exportBackup,
@@ -26,6 +28,7 @@ export default function VaultPage() {
     mergeProgress,
     mergeResult,
     clearMergeResult,
+    sealIncident,
     profile: vaultProfile,
     saveProfile,
   } = useVault()
@@ -97,6 +100,43 @@ export default function VaultPage() {
     } catch (err) {
       console.error(err)
       alert(String(err))
+    }
+  }
+
+  const unsealedCount = incidents.filter((i) => !i.sealed).length
+  const [sealingAll, setSealingAll] = React.useState(false)
+  const [sealAllProgress, setSealAllProgress] = React.useState<{
+    processed: number
+    total: number
+  } | null>(null)
+
+  async function handleSealAll() {
+    const targets = incidents.filter((i) => !i.sealed)
+    if (targets.length === 0) return
+
+    setSealingAll(true)
+    setSealAllProgress({ processed: 0, total: targets.length })
+    let failed = 0
+
+    for (let i = 0; i < targets.length; i++) {
+      try {
+        await sealIncident(targets[i].id)
+      } catch (err) {
+        console.error("Seal failed for", targets[i].id, err)
+        failed++
+      }
+      setSealAllProgress({ processed: i + 1, total: targets.length })
+    }
+
+    setSealingAll(false)
+    setSealAllProgress(null)
+
+    if (failed > 0) {
+      alert(
+        `Sealed ${targets.length - failed} of ${targets.length} incidents. ${failed} failed.`,
+      )
+    } else {
+      alert(`Sealed ${targets.length} incident${targets.length === 1 ? "" : "s"}.`)
     }
   }
 
@@ -228,6 +268,52 @@ async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
             <Lock className="size-4" />
             Lock vault now
           </Button>
+
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardBody className="space-y-3">
+
+          <div className="flex items-start gap-3">
+            <ShieldCheck className="mt-1 size-4 text-primary" />
+            <div>
+              <p className="font-medium">Seal all unsealed records</p>
+              <p className="text-sm text-muted-foreground">
+                {unsealedCount > 0
+                  ? `${unsealedCount} incident${unsealedCount === 1 ? "" : "s"} not yet sealed.`
+                  : "All incidents are sealed."}
+              </p>
+            </div>
+          </div>
+
+          <Button
+            variant="outline"
+            className="w-full"
+            disabled={status !== "unlocked" || unsealedCount === 0 || sealingAll}
+            onClick={handleSealAll}
+          >
+            <ShieldCheck className="size-4" />
+            {sealingAll ? "Sealing…" : `Seal all (${unsealedCount})`}
+          </Button>
+
+          {sealAllProgress ? (
+            <div className="space-y-1.5 rounded-xl border border-border p-3">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{
+                    width: `${Math.round(
+                      (sealAllProgress.processed / sealAllProgress.total) * 100,
+                    )}%`,
+                  }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Sealing {sealAllProgress.processed} of {sealAllProgress.total}
+              </p>
+            </div>
+          ) : null}
 
         </CardBody>
       </Card>
