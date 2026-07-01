@@ -1,8 +1,9 @@
 "use client"
 
-import { FileCheck2 } from "lucide-react"
+import { Download, FileCheck2, FileText } from "lucide-react"
 import * as React from "react"
 
+import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/primitives"
 import { useVault } from "@/components/vault-provider"
 import type { EvidenceRecord } from "@/lib/db"
@@ -15,9 +16,10 @@ interface LoadedEvidence {
 }
 
 export function EvidenceList({ incidentId }: { incidentId: string }) {
-  const { getEvidenceRecords, loadEvidenceUrl } = useVault()
+  const { getEvidenceRecords, loadEvidenceUrl, downloadEvidence } = useVault()
   const [items, setItems] = React.useState<LoadedEvidence[]>([])
   const [loading, setLoading] = React.useState(true)
+  const [downloadingId, setDownloadingId] = React.useState<string | null>(null)
   const urlsRef = React.useRef<string[]>([])
 
   React.useEffect(() => {
@@ -48,6 +50,18 @@ export function EvidenceList({ incidentId }: { incidentId: string }) {
     }
   }, [incidentId, getEvidenceRecords, loadEvidenceUrl])
 
+  async function handleDownload(record: EvidenceRecord) {
+    setDownloadingId(record.id)
+    try {
+      const savedName = await downloadEvidence(record)
+      alert(`Saved to Documents:\n${savedName}`)
+    } catch (err) {
+      alert(`Download failed: ${(err as Error).message}`)
+    } finally {
+      setDownloadingId(null)
+    }
+  }
+
   if (loading) {
     return (
       <Card className="p-4 text-sm text-muted-foreground">
@@ -72,6 +86,10 @@ export function EvidenceList({ incidentId }: { incidentId: string }) {
             <div className="p-3">
               <audio controls src={url} className="w-full" />
             </div>
+          ) : record.kind === "document" ? (
+            <div className="flex items-center justify-center bg-muted p-6">
+              <FileText className="size-10 text-muted-foreground" aria-hidden="true" />
+            </div>
           ) : (
             <img
               src={url || "/placeholder.svg"}
@@ -84,7 +102,7 @@ export function EvidenceList({ incidentId }: { incidentId: string }) {
               className="mt-0.5 size-4 shrink-0 text-primary"
               aria-hidden="true"
             />
-            <div className="min-w-0 text-xs">
+            <div className="min-w-0 flex-1 text-xs">
               <p className="font-medium capitalize text-foreground">
                 {record.kind} · {formatBytes(record.size)}
               </p>
@@ -92,6 +110,15 @@ export function EvidenceList({ incidentId }: { incidentId: string }) {
                 SHA-256 {shortHash(record.sha256, 10)}
               </p>
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleDownload(record)}
+              disabled={downloadingId === record.id}
+            >
+              <Download className="size-3.5" aria-hidden="true" />
+              {downloadingId === record.id ? "Saving…" : "Download"}
+            </Button>
           </div>
         </Card>
       ))}

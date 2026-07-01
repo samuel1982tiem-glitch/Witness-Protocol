@@ -3,6 +3,7 @@
 import {
   Camera,
   Crosshair,
+  FileText,
   ImageIcon,
   Loader2,
   Mic,
@@ -57,6 +58,7 @@ export function IncidentForm() {
   const photoInput = React.useRef<HTMLInputElement>(null)
   const shotInput = React.useRef<HTMLInputElement>(null)
   const audioInput = React.useRef<HTMLInputElement>(null)
+  const docInput = React.useRef<HTMLInputElement>(null)
 
   React.useEffect(() => {
     return () => {
@@ -170,7 +172,7 @@ export function IncidentForm() {
     try {
       const evidence = await Promise.all(
         attachments.map(async (a) => {
-          const isImage = a.kind !== "voice"
+          const isImage = a.kind === "photo" || a.kind === "screenshot"
           const processed = await processMedia(a.blob, isImage)
           return {
             kind: a.kind,
@@ -339,6 +341,14 @@ export function IncidentForm() {
           <Mic className="size-4" aria-hidden="true" />
           Upload audio file
         </button>
+        <button
+          type="button"
+          onClick={() => docInput.current?.click()}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-medium hover:bg-muted"
+        >
+          <FileText className="size-4" aria-hidden="true" />
+          Upload document
+        </button>
 
         <input
           ref={photoInput}
@@ -372,6 +382,17 @@ export function IncidentForm() {
             e.target.value = ""
           }}
         />
+        <input
+          ref={docInput}
+          type="file"
+          accept=".pdf,.txt,.doc,.docx,application/pdf,text/plain,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            addFiles(e.target.files, "document")
+            e.target.value = ""
+          }}
+        />
 
         {attachments.length > 0 ? (
           <ul className="space-y-2">
@@ -386,6 +407,18 @@ export function IncidentForm() {
                     src={a.url}
                     className="h-9 min-w-0 flex-1"
                   />
+                ) : a.kind === "document" ? (
+                  <>
+                    <span className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                      <FileText className="size-5" aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{a.name}</p>
+                      <p className="text-xs capitalize text-muted-foreground">
+                        {a.kind} · {formatBytes(a.blob.size)}
+                      </p>
+                    </div>
+                  </>
                 ) : (
                   <>
                     <img

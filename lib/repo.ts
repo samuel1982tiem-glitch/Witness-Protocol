@@ -129,6 +129,49 @@ export async function loadEvidenceBlobUrl(
   return URL.createObjectURL(blob)
 }
 
+/**
+ * Decrypt an evidence file and save it to the device's Downloads/Documents
+ * directory (outside the encrypted vault), so the user can view or share
+ * it with other apps. Returns the saved filename.
+ */
+export async function downloadEvidenceFile(
+  key: CryptoKey,
+  record: EvidenceRecord,
+): Promise<string> {
+  const { Filesystem, Directory } = await import("@capacitor/filesystem")
+
+  const plaintext = await decryptJSON<EvidencePlaintext>(
+    key,
+    toCipherPayload(record),
+  )
+  const bytes = new Uint8Array(plaintext.bytes)
+
+  // Base64-encode for Capacitor's writeFile — chunked to avoid call-stack
+  // limits on large files (same approach used by the backup export pipeline).
+  let binary = ""
+  const chunkSize = 0x8000
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize)
+    binary += String.fromCharCode(...chunk)
+  }
+  const base64 = btoa(binary)
+
+  // Ensure a sensible filename even if the stored name is empty/generic.
+  const safeName =
+    plaintext.name && plaintext.name.trim().length > 0
+      ? plaintext.name
+      : `${record.kind}-${record.id}`
+
+  await Filesystem.writeFile({
+    path: safeName,
+    data: base64,
+    directory: Directory.Documents,
+    recursive: true,
+  })
+
+  return safeName
+}
+
 export async function getEvidenceRecords(
   incidentId: string,
 ): Promise<EvidenceRecord[]> {

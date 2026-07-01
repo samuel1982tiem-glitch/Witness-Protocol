@@ -34,6 +34,7 @@ import {
   getEvidenceRecords as repoGetEvidenceRecords,
   loadAllIncidents,
   loadEvidenceBlobUrl,
+  downloadEvidenceFile,
   loadUserProfile,
   saveUserProfile,
   saveEvidence,
@@ -71,6 +72,8 @@ interface VaultContextValue {
   runAnalysis: () => Promise<PatternAlert[]>
   getEvidenceRecords: (incidentId: string) => Promise<EvidenceRecord[]>
   loadEvidenceUrl: (record: EvidenceRecord) => Promise<string>
+  /** Decrypt an evidence file and save it to the device's Documents folder. */
+  downloadEvidence: (record: EvidenceRecord) => Promise<string>
   loadSampleData: () => Promise<void>
   registerActivity: () => void
   exportBackup: () => Promise<string>
@@ -398,6 +401,15 @@ return true
     [],
   )
 
+  const downloadEvidence = React.useCallback(
+    (record: EvidenceRecord) => {
+      const key = keyRef.current
+      if (!key) throw new Error("Vault is locked.")
+      return downloadEvidenceFile(key, record)
+    },
+    [],
+  )
+
   const loadSampleData = React.useCallback(async () => {
     const key = keyRef.current
     if (!key) throw new Error("Vault is locked.")
@@ -508,6 +520,7 @@ const importBackup = React.useCallback(
     runAnalysis,
     getEvidenceRecords,
     loadEvidenceUrl,
+    downloadEvidence,
     loadSampleData,
     registerActivity,
     exportBackup,
