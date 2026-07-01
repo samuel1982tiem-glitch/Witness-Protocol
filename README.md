@@ -37,7 +37,6 @@ Who Is This For?
 
 Witness Protocol is for individuals who:
 
-· Experience unexplained device behavior (battery drain, overheating, reboots)
 · Suspect their communications are being intercepted
 · Are targets of harassment or digital surveillance
 · Need to preserve evidence for legal proceedings or advocacy work
