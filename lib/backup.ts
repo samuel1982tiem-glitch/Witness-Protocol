@@ -662,6 +662,7 @@ async function parseVaultBackupV4(
 export async function mergeVaultBackup(
   file: File,
   passcode: string,
+  alert("D4\nfiles: " + Object.keys(files).join("|"))
   currentKey: CryptoKey,
   onProgress?: (progress: MergeProgress) => void,
 ): Promise<MergeResult> {
