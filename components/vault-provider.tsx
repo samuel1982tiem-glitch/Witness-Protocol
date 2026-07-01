@@ -8,6 +8,7 @@ import {
   mergeVaultBackup,
   type MergeProgress,
   type MergeResult,
+  type ExportProgress,
 } from "@/lib/backup"
 import {
   checkVerifier,
@@ -73,6 +74,8 @@ interface VaultContextValue {
   loadSampleData: () => Promise<void>
   registerActivity: () => void
   exportBackup: () => Promise<string>
+  /** Live progress during export (null when not exporting). */
+  exportProgress: ExportProgress | null
   importBackup: (file: File, passcode: string) => Promise<void>
   /** Live progress during a merge import (null when not merging). */
   mergeProgress: MergeProgress | null
@@ -412,12 +415,31 @@ return true
     await runAnalysis()
   }, [refreshIncidents, runAnalysis])
 
-  const exportBackup = React.useCallback(async (): Promise<string> => {
-  const key = keyRef.current
-  if (!key) throw new Error("Vault is locked.")
+  const [exportProgress, setExportProgress] = React.useState<ExportProgress | null>(
+    null,
+  )
 
-  return await exportVaultBackup(key)
-}, [])
+  const exportBackup = React.useCallback(async (): Promise<string> => {
+    const key = keyRef.current
+    if (!key) throw new Error("Vault is locked.")
+
+    setExportProgress({
+      stage: "preparing",
+      processed: 0,
+      total: 0,
+      currentName: "",
+      percent: 0,
+      etaSeconds: null,
+    })
+    try {
+      const fileName = await exportVaultBackup(key, (progress) =>
+        setExportProgress(progress),
+      )
+      return fileName
+    } finally {
+      setExportProgress(null)
+    }
+  }, [])
 
 const [mergeProgress, setMergeProgress] = React.useState<MergeProgress | null>(
   null,
@@ -489,6 +511,7 @@ const importBackup = React.useCallback(
     loadSampleData,
     registerActivity,
     exportBackup,
+    exportProgress,
     importBackup,
     mergeProgress,
     mergeResult,

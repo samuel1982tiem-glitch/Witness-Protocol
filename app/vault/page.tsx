@@ -21,6 +21,7 @@ export default function VaultPage() {
     autoLockMs,
     lock,
     exportBackup,
+    exportProgress,
     importBackup,
     mergeProgress,
     mergeResult,
@@ -63,6 +64,31 @@ export default function VaultPage() {
     draft.organization !== savedBaseline.organization ||
     draft.phone !== savedBaseline.phone ||
     draft.email !== savedBaseline.email
+
+  function exportStageLabel(stage: string): string {
+    switch (stage) {
+      case "preparing":
+        return "Preparing…"
+      case "metadata":
+        return "Exporting metadata…"
+      case "evidence":
+        return "Encrypting evidence…"
+      case "finishing":
+        return "Building ZIP…"
+      case "saving":
+        return "Saving file…"
+      default:
+        return "Working…"
+    }
+  }
+
+  function formatEta(seconds: number | null): string | null {
+    if (seconds === null) return null
+    if (seconds < 5) return "almost done"
+    if (seconds < 60) return `~${seconds}s remaining`
+    const mins = Math.round(seconds / 60)
+    return `~${mins} minute${mins === 1 ? "" : "s"} remaining`
+  }
 
   async function handleExport() {
     try {
@@ -212,9 +238,38 @@ async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
           <Button
             className="w-full"
             onClick={handleExport}
+            disabled={exportProgress !== null || mergeProgress !== null}
           >
-            Export Backup
+            {exportProgress !== null ? "Exporting…" : "Export Backup"}
           </Button>
+
+          {exportProgress !== null ? (
+            <div className="space-y-1.5 rounded-xl border border-border p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-foreground">
+                  {exportStageLabel(exportProgress.stage)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {exportProgress.percent}%
+                </p>
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{ width: `${exportProgress.percent}%` }}
+                />
+              </div>
+              {exportProgress.stage === "evidence" && exportProgress.total > 0 ? (
+                <p className="truncate text-xs text-muted-foreground">
+                  {exportProgress.processed} of {exportProgress.total} —{" "}
+                  {exportProgress.currentName}
+                  {formatEta(exportProgress.etaSeconds)
+                    ? ` · ${formatEta(exportProgress.etaSeconds)}`
+                    : ""}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
 
           <input
             id="backup-import"
