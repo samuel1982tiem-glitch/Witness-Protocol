@@ -551,6 +551,7 @@ async function parseVaultBackupV4(
   passcode: string,
 ): Promise<ParsedBackup> {
   const files = unzipSync(zipBytes)
+  alert("D5\nfiles: " + Object.keys(files).join("|"))
 
   const manifestBytes = files["manifest.json"]
   if (!manifestBytes) {
@@ -662,7 +663,6 @@ async function parseVaultBackupV4(
 export async function mergeVaultBackup(
   file: File,
   passcode: string,
-  alert("D4\nfiles: " + Object.keys(files).join("|"))
   currentKey: CryptoKey,
   onProgress?: (progress: MergeProgress) => void,
 ): Promise<MergeResult> {
