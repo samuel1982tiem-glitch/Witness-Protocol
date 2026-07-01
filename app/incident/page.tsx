@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react"
 import Link from "next/link"
+import { Linkify } from "@/lib/linkify"
 import { useSearchParams, useRouter } from "next/navigation"
 import * as React from "react"
 
@@ -332,7 +333,11 @@ const incidentId = searchParams.get("id")
                 Description
               </h2>
               <p className="whitespace-pre-wrap text-pretty text-sm leading-relaxed text-muted-foreground">
-                {incident.description || "No description provided."}
+                {incident.description ? (
+                  <Linkify text={incident.description} />
+                ) : (
+                  "No description provided."
+                )}
               </p>
             </div>
 
