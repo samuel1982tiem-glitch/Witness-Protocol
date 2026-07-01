@@ -662,6 +662,7 @@ export async function mergeVaultBackup(
   
   // Use the same format detection for merge
   const format = detectFileFormat(bytes, file.name)
+  alert("MERGE DIAG v3\nfile.name: " + file.name + "\nbytes[0..7]: " + Array.from(bytes.slice(0,8)).join(",") + "\nformat: " + format)
   
   // Gracefully handle PNG files in merge as well
   if (format === 'png') {
