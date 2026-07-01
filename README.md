@@ -46,12 +46,12 @@ Witness Protocol is for individuals who:
 
 Key Features
 
-Feature Description
-Offline Operation Works without internet; all data stays on your device
-Local Encryption AES-256 encryption protects your records
-Timeline Organization Records events chronologically for clear documentation
-Multiple Categories Log different types of events (surveillance, sabotage, harassment)
-Visual Evidence Attach screenshots and photos directly from the device
+Feature Description: 
+Offline Operation Works without internet; all data stays on your device, 
+Local Encryption AES-256 encryption protects your records, 
+Timeline Organization Records events chronologically for clear documentation, 
+Multiple Categories Log different types of events (surveillance, sabotage, harassment), 
+Visual Evidence Attach screenshots and photos directly from the device. 
 
 ---
 
