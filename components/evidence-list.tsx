@@ -13,6 +13,7 @@ import { formatBytes } from "@/lib/media"
 interface LoadedEvidence {
   record: EvidenceRecord
   url: string
+  name: string
 }
 
 export function EvidenceList({ incidentId }: { incidentId: string }) {
@@ -30,12 +31,10 @@ export function EvidenceList({ incidentId }: { incidentId: string }) {
       const loaded: LoadedEvidence[] = []
       for (const record of records) {
         try {
-          const url = await loadEvidenceUrl(record)
+          const { url, name } = await loadEvidenceUrl(record)
           urlsRef.current.push(url)
-          loaded.push({ record, url })
-        } catch {
-          // skip undecryptable item
-        }
+          loaded.push({ record, url, name })
+        } catch {}
       }
       if (active) {
         loaded.sort((a, b) => a.record.createdAt - b.record.createdAt)
@@ -56,31 +55,29 @@ export function EvidenceList({ incidentId }: { incidentId: string }) {
       const savedName = await downloadEvidence(record)
       alert(`Saved to Documents:\n${savedName}`)
     } catch (err) {
-      alert(`Download failed: ${(err as Error).message}`)
+      alert(`Download failed: ${(err as Error).message}\n\nIf this persists, allow storage permission for this app in Android Settings.`)
     } finally {
       setDownloadingId(null)
     }
   }
 
   if (loading) {
-    return (
-      <Card className="p-4 text-sm text-muted-foreground">
-        Decrypting attachments…
-      </Card>
-    )
+    return <Card className="p-4 text-sm text-muted-foreground">Decrypting attachments…</Card>
+  }
+  if (items.length === 0) {
+    return <Card className="p-4 text-sm text-muted-foreground">No attachments on this record.</Card>
   }
 
-  if (items.length === 0) {
-    return (
-      <Card className="p-4 text-sm text-muted-foreground">
-        No attachments on this record.
-      </Card>
-    )
-  }
+  const documentCount = items.filter((i) => i.record.kind === "document").length
 
   return (
     <div className="space-y-3">
-      {items.map(({ record, url }) => (
+      {documentCount > 0 ? (
+        <p className="text-xs text-muted-foreground">
+          {documentCount} document{documentCount === 1 ? "" : "s"} attached
+        </p>
+      ) : null}
+      {items.map(({ record, url, name }) => (
         <Card key={record.id} className="overflow-hidden">
           {record.kind === "voice" ? (
             <div className="p-3">
@@ -91,31 +88,22 @@ export function EvidenceList({ incidentId }: { incidentId: string }) {
               <FileText className="size-10 text-muted-foreground" aria-hidden="true" />
             </div>
           ) : (
-            <img
-              src={url || "/placeholder.svg"}
-              alt={`${record.kind} evidence`}
-              className="max-h-72 w-full object-contain bg-muted"
-            />
+            <img src={url || "/placeholder.svg"} alt={name || record.kind} className="max-h-72 w-full object-contain bg-muted" />
           )}
           <div className="flex items-start gap-2 border-t border-border p-3">
-            <FileCheck2
-              className="mt-0.5 size-4 shrink-0 text-primary"
-              aria-hidden="true"
-            />
+            <FileCheck2 className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
             <div className="min-w-0 flex-1 text-xs">
-              <p className="font-medium capitalize text-foreground">
+              <p className="truncate font-medium text-foreground">
+                {name || record.kind}
+              </p>
+              <p className="text-muted-foreground">
                 {record.kind} · {formatBytes(record.size)}
               </p>
               <p className="mt-0.5 break-all font-mono text-muted-foreground">
                 SHA-256 {shortHash(record.sha256, 10)}
               </p>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleDownload(record)}
-              disabled={downloadingId === record.id}
-            >
+            <Button variant="outline" size="sm" onClick={() => handleDownload(record)} disabled={downloadingId === record.id}>
               <Download className="size-3.5" aria-hidden="true" />
               {downloadingId === record.id ? "Saving…" : "Download"}
             </Button>

@@ -119,14 +119,14 @@ export async function saveEvidence(
 export async function loadEvidenceBlobUrl(
   key: CryptoKey,
   record: EvidenceRecord,
-): Promise<string> {
+): Promise<{ url: string; name: string }> {
   const plaintext = await decryptJSON<EvidencePlaintext>(
     key,
     toCipherPayload(record),
   )
   const bytes = new Uint8Array(plaintext.bytes)
   const blob = new Blob([bytes], { type: record.mimeType })
-  return URL.createObjectURL(blob)
+  return { url: URL.createObjectURL(blob), name: plaintext.name }
 }
 
 /**
@@ -139,6 +139,12 @@ export async function downloadEvidenceFile(
   record: EvidenceRecord,
 ): Promise<string> {
   const { Filesystem, Directory } = await import("@capacitor/filesystem")
+
+  try {
+    await Filesystem.requestPermissions()
+  } catch {
+    // Permission API not available on this platform — continue anyway
+  }
 
   const plaintext = await decryptJSON<EvidencePlaintext>(
     key,

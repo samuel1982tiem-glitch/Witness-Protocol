@@ -71,7 +71,7 @@ interface VaultContextValue {
   sealIncident: (incidentId: string) => Promise<void>
   runAnalysis: () => Promise<PatternAlert[]>
   getEvidenceRecords: (incidentId: string) => Promise<EvidenceRecord[]>
-  loadEvidenceUrl: (record: EvidenceRecord) => Promise<string>
+  loadEvidenceUrl: (record: EvidenceRecord) => Promise<{ url: string; name: string }>
   /** Decrypt an evidence file and save it to the device's Documents folder. */
   downloadEvidence: (record: EvidenceRecord) => Promise<string>
   loadSampleData: () => Promise<void>
