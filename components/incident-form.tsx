@@ -95,14 +95,26 @@ export function IncidentForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  function extFromMime(mime: string): string {
+    const map: Record<string, string> = {
+      "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp",
+      "image/gif": "gif", "audio/webm": "webm", "audio/mp4": "m4a",
+      "audio/mpeg": "mp3", "application/pdf": "pdf",
+      "text/plain": "txt", "application/msword": "doc",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+    }
+    return map[mime] || mime.split("/")[1] || "bin"
+  }
+
   function addFiles(files: FileList | null, kind: EvidenceKind) {
     if (!files) return
     const next: PendingAttachment[] = []
     Array.from(files).forEach((file) => {
+      const fallbackName = `${kind}-${Date.now()}.${extFromMime(file.type || "")}`
       next.push({
         id: pid(),
         kind,
-        name: file.name || `${kind}-${Date.now()}`,
+        name: file.name || fallbackName,
         blob: file,
         url: URL.createObjectURL(file),
       })
