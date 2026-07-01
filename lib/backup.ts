@@ -551,7 +551,6 @@ async function parseVaultBackupV4(
   passcode: string,
 ): Promise<ParsedBackup> {
   const files = unzipSync(zipBytes)
-  alert("D5\nfiles: " + Object.keys(files).join("|"))
 
   const manifestBytes = files["manifest.json"]
   if (!manifestBytes) {
@@ -584,6 +583,7 @@ async function parseVaultBackupV4(
   }
 
   const meta = JSON.parse(new TextDecoder().decode(metaPlain)) as Omit<
+  alert("D6\nmetaPlain len: " + metaPlain.length + "\nfirst80: " + new TextDecoder().decode(metaPlain.slice(0,80)))
     VaultBackup,
     "evidence"
   >
