@@ -74,6 +74,50 @@ function reviveBuffers(backup: VaultBackup): VaultBackup {
 }
 
 // ---------------------------------------------------------------------------
+// File format detection (ADDED)
+// ---------------------------------------------------------------------------
+
+/**
+ * Detect the format of the uploaded backup file.
+ * Returns one of: 'png', 'zip', 'json', 'unknown'
+ * 
+ * This prevents PNG images from being parsed as JSON, which was causing:
+ *   SyntaxError: Unexpected token '👁', "👁️PNG"… is not valid JSON
+ */
+function detectFileFormat(bytes: Uint8Array, fileName?: string): 'png' | 'zip' | 'json' | 'unknown' {
+  if (bytes.length < 4) {
+    return 'json' // Assume JSON for very small files
+  }
+
+  // PNG: 89 50 4E 47
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
+    return 'png'
+  }
+
+  // ZIP: 50 4B 03 04 (including .wpbz)
+  if (bytes[0] === 0x50 && bytes[1] === 0x4B && bytes[2] === 0x03 && bytes[3] === 0x04) {
+    return 'zip'
+  }
+
+  // JSON: starts with { or [
+  try {
+    const text = new TextDecoder().decode(bytes.slice(0, 20))
+    if (text.trim().startsWith('{') || text.trim().startsWith('[')) {
+      return 'json'
+    }
+  } catch (_) {
+    // ignore
+  }
+
+  // If it's a .wpbz but we didn't detect ZIP (corrupted), trust the extension
+  if (fileName && fileName.endsWith('.wpbz')) {
+    return 'zip'
+  }
+
+  return 'unknown'
+}
+
+// ---------------------------------------------------------------------------
 // Version 3 (.wpb) — legacy JSON format, kept for backwards compatibility
 // ---------------------------------------------------------------------------
 
@@ -391,21 +435,41 @@ export async function importVaultBackupFresh(
 ): Promise<{ key: CryptoKey; autoLockMs: number }> {
   const buffer = await file.arrayBuffer()
   const bytes = new Uint8Array(buffer)
-
-  // ZIP files start with the magic bytes 0x50 0x4B ("PK").
-  // This lets us detect v4 even if the extension was changed or missing.
-  const isZip = bytes.length > 2 && bytes[0] === 0x50 && bytes[1] === 0x4b
-
-  alert("file.name: " + file.name + " | size: " + bytes.length + " | bytes[0..1]: " + bytes[0] + "," + bytes[1] + " | isZip: " + isZip)
-
-  if (isZip || file.name.endsWith(".wpbz")) {
+  
+  // Detect format using the new function
+  const format = detectFileFormat(bytes, file.name)
+  
+  // Gracefully handle PNG files
+  if (format === 'png') {
+    throw new Error(
+      'This file is an image (PNG), not a valid backup file. Please select a .wpb or .wpbz file.'
+    )
+  }
+  
+  if (format === 'unknown') {
+    throw new Error(
+      'This file format is not recognized. Please select a valid backup file (.wpb or .wpbz).'
+    )
+  }
+  
+  // ZIP format (which is what .wpbz is)
+  if (format === 'zip') {
     return importVaultBackupV4(bytes, passcode)
   }
-
-  // Otherwise treat as v3 JSON
-  const text = new TextDecoder().decode(bytes)
-  const raw = JSON.parse(text)
-  return importVaultBackupV3(raw, passcode)
+  
+  // JSON format (legacy .wpb)
+  if (format === 'json') {
+    try {
+      const text = new TextDecoder().decode(bytes)
+      const raw = JSON.parse(text)
+      return importVaultBackupV3(raw, passcode)
+    } catch (e) {
+      throw new Error('The file is not a valid JSON backup. Please ensure you selected the correct file.')
+    }
+  }
+  
+  // Fallback safety
+  throw new Error('Unable to determine file format. Please select a valid backup file (.wpb or .wpbz).')
 }
 
 // ---------------------------------------------------------------------------
@@ -595,15 +659,36 @@ export async function mergeVaultBackup(
 ): Promise<MergeResult> {
   const buffer = await file.arrayBuffer()
   const bytes = new Uint8Array(buffer)
-  const isZip = bytes.length > 2 && bytes[0] === 0x50 && bytes[1] === 0x4b
+  
+  // Use the same format detection for merge
+  const format = detectFileFormat(bytes, file.name)
+  
+  // Gracefully handle PNG files in merge as well
+  if (format === 'png') {
+    throw new Error(
+      'This file is an image (PNG), not a valid backup file. Please select a .wpb or .wpbz file.'
+    )
+  }
+  
+  if (format === 'unknown') {
+    throw new Error(
+      'This file format is not recognized. Please select a valid backup file (.wpb or .wpbz).'
+    )
+  }
 
   let parsed: ParsedBackup
-  if (isZip || file.name.endsWith(".wpbz")) {
+  if (format === 'zip') {
     parsed = await parseVaultBackupV4(bytes, passcode)
+  } else if (format === 'json') {
+    try {
+      const text = new TextDecoder().decode(bytes)
+      const raw = JSON.parse(text)
+      parsed = await parseVaultBackupV3(raw, passcode)
+    } catch (e) {
+      throw new Error('The file is not a valid JSON backup. Please ensure you selected the correct file.')
+    }
   } else {
-    const text = new TextDecoder().decode(bytes)
-    const raw = JSON.parse(text)
-    parsed = await parseVaultBackupV3(raw, passcode)
+    throw new Error('Unable to determine file format. Please select a valid backup file (.wpb or .wpbz).')
   }
 
   return mergeIncidentRecords(
