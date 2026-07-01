@@ -158,11 +158,17 @@ export async function downloadEvidenceFile(
   }
   const base64 = btoa(binary)
 
-  // Ensure a sensible filename even if the stored name is empty/generic.
-  const safeName =
+  // Ensure a sensible filename WITH an extension even if the stored
+  // name is empty or was captured before extensions were tracked.
+  const extMap: Record<string, string> = { "image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/gif":"gif","audio/webm":"webm","audio/mp4":"m4a","audio/mpeg":"mp3","application/pdf":"pdf","text/plain":"txt","application/msword":"doc","application/vnd.openxmlformats-officedocument.wordprocessingml.document":"docx" }
+  const guessedExt = extMap[record.mimeType] || record.mimeType.split("/")[1] || "bin"
+  let safeName =
     plaintext.name && plaintext.name.trim().length > 0
       ? plaintext.name
-      : `${record.kind}-${record.id}`
+      : `${record.kind}-${record.id}.${guessedExt}`
+  if (!/\.[a-zA-Z0-9]{2,5}$/.test(safeName)) {
+    safeName = `${safeName}.${guessedExt}`
+  }
 
   await Filesystem.writeFile({
     path: safeName,
@@ -171,16 +177,11 @@ export async function downloadEvidenceFile(
     recursive: true,
   })
 
-  // Share sheet lets the user save/move it wherever they want (Downloads,
-  // Drive, etc.) without needing broad storage permissions.
-  try {
-    const { Share } = await import("@capacitor/share")
-    const { Filesystem: FS } = await import("@capacitor/filesystem")
-    const uriResult = await FS.getUri({ path: safeName, directory: Directory.Cache })
-    await Share.share({ url: uriResult.uri, title: safeName })
-  } catch {
-    // Share plugin not installed — file still saved to app cache
-  }
+  // Share sheet lets the user save/move it (Files, Drive, WhatsApp, etc).
+  const { Share } = await import("@capacitor/share")
+  const { Filesystem: FS } = await import("@capacitor/filesystem")
+  const uriResult = await FS.getUri({ path: safeName, directory: Directory.Cache })
+  await Share.share({ url: uriResult.uri, title: safeName })
 
   return safeName
 }

@@ -53,7 +53,7 @@ export function EvidenceList({ incidentId }: { incidentId: string }) {
     setDownloadingId(record.id)
     try {
       const savedName = await downloadEvidence(record)
-      alert(`Saved to Documents:\n${savedName}`)
+      alert(`Ready to save/share:\n${savedName}`)
     } catch (err) {
       alert(`Download failed: ${(err as Error).message}\n\nIf this persists, allow storage permission for this app in Android Settings.`)
     } finally {
