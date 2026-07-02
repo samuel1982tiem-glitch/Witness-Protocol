@@ -17,6 +17,9 @@ import { Button } from "@/components/ui/button"
 import { PasscodeModal } from "@/components/passcode-modal"
 import { Card, CardBody } from "@/components/ui/primitives"
 import { useVault } from "@/components/vault-provider"
+import { useI18n } from "@/components/i18n-provider"
+import { SUPPORTED_LANGUAGES, type LanguagePreference } from "@/lib/i18n"
+import { Globe } from "lucide-react"
 
 export default function VaultPage() {
   const {
@@ -35,6 +38,8 @@ export default function VaultPage() {
     saveProfile,
     getAuditLog,
   } = useVault()
+
+  const { t, language, preference, setLanguage } = useI18n()
 
   const autoLockMin = Math.round(autoLockMs / 60000)
 
@@ -74,15 +79,15 @@ export default function VaultPage() {
   function exportStageLabel(stage: string): string {
     switch (stage) {
       case "preparing":
-        return "Preparing…"
+        return t("backup.stagePreparing")
       case "metadata":
-        return "Exporting metadata…"
+        return t("backup.stageMetadata")
       case "evidence":
-        return "Encrypting evidence…"
+        return t("backup.stageEvidence")
       case "finishing":
-        return "Building ZIP…"
+        return t("backup.stageFinishing")
       case "saving":
-        return "Saving file…"
+        return t("backup.stageSaving")
       default:
         return "Working…"
     }
@@ -99,7 +104,7 @@ export default function VaultPage() {
   async function handleExport() {
     try {
       const fileName = await exportBackup()
-      alert(`Backup saved:\n${fileName}`)
+      alert(t("backup.backupSaved", { fileName }))
     } catch (err) {
       console.error(err)
       alert(String(err))
@@ -119,18 +124,19 @@ export default function VaultPage() {
   }, [status, getAuditLog])
 
   function auditActionLabel(action: string): string {
-    const labels: Record<string, string> = {
-      incident_created: "Incident created",
-      incident_edited: "Incident edited",
-      incident_sealed: "Incident sealed",
-      incident_deleted: "Incident deleted",
-      evidence_downloaded: "Evidence downloaded",
-      pdf_exported: "PDF exported",
-      backup_exported: "Backup exported",
-      backup_restored: "Backup restored",
-      backup_merged: "Backup merged",
+    const keys: Record<string, string> = {
+      incident_created: "auditLog.incidentCreated",
+      incident_edited: "auditLog.incidentEdited",
+      incident_sealed: "auditLog.incidentSealed",
+      incident_deleted: "auditLog.incidentDeleted",
+      evidence_downloaded: "auditLog.evidenceDownloaded",
+      pdf_exported: "auditLog.pdfExported",
+      backup_exported: "auditLog.backupExported",
+      backup_restored: "auditLog.backupRestored",
+      backup_merged: "auditLog.backupMerged",
     }
-    return labels[action] || action
+    const key = keys[action]
+    return key ? t(key) : action
   }
   const [sealingAll, setSealingAll] = React.useState(false)
   const [sealAllProgress, setSealAllProgress] = React.useState<{
@@ -187,7 +193,7 @@ async function runImport(passcode: string) {
   try {
     await importBackup(file, passcode)
     if (!isMerge) {
-      alert("Backup restored successfully.")
+      alert(t("backup.backupRestored"))
     }
     // On merge, the result summary card renders inline instead of an alert.
   } catch (err) {
@@ -205,13 +211,13 @@ async function runImport(passcode: string) {
           <div className="flex items-center gap-2">
             <User className="size-5 text-primary" />
             <h2 className="text-lg font-semibold">
-              Investigator Identity
+              {t("vault.investigatorIdentity")}
             </h2>
           </div>
 
           <Field
             icon={<User className="size-4" />}
-            placeholder="Full name"
+            placeholder={t("vault.fullName")}
             value={draft.name}
             onChange={(v) =>
               setDraft((p) => ({ ...p, name: v }))
@@ -220,7 +226,7 @@ async function runImport(passcode: string) {
 
           <Field
             icon={<IdCard className="size-4" />}
-            placeholder="Government ID"
+            placeholder={t("vault.governmentId")}
             value={draft.governmentId}
             onChange={(v) =>
               setDraft((p) => ({ ...p, governmentId: v }))
@@ -229,7 +235,7 @@ async function runImport(passcode: string) {
 
           <Field
             icon={<Building2 className="size-4" />}
-            placeholder="Organization"
+            placeholder={t("vault.organization")}
             value={draft.organization}
             onChange={(v) =>
               setDraft((p) => ({ ...p, organization: v }))
@@ -238,7 +244,7 @@ async function runImport(passcode: string) {
 
           <Field
             icon={<Phone className="size-4" />}
-            placeholder="Phone"
+            placeholder={t("vault.phone")}
             value={draft.phone}
             onChange={(v) =>
               setDraft((p) => ({ ...p, phone: v }))
@@ -247,7 +253,7 @@ async function runImport(passcode: string) {
 
           <Field
             icon={<Mail className="size-4" />}
-            placeholder="Email"
+            placeholder={t("vault.email")}
             value={draft.email}
             onChange={(v) =>
               setDraft((p) => ({ ...p, email: v }))
@@ -259,9 +265,45 @@ async function runImport(passcode: string) {
             onClick={() => saveProfile(draft)}
             disabled={!isDirty}
           >
-            Save Identity
+            {t("vault.saveIdentity")}
           </Button>
 
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardBody className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Globe className="size-4 text-primary" />
+            <p className="font-medium">{t("vault.language")}</p>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setLanguage("system")}
+              className={`rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors ${
+                preference === "system"
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border bg-background text-foreground hover:bg-muted"
+              }`}
+            >
+              System
+            </button>
+            {SUPPORTED_LANGUAGES.map((l) => (
+              <button
+                key={l.code}
+                type="button"
+                onClick={() => setLanguage(l.code as LanguagePreference)}
+                className={`rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors ${
+                  preference === l.code
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border bg-background text-foreground hover:bg-muted"
+                }`}
+              >
+                {l.nativeName}
+              </button>
+            ))}
+          </div>
         </CardBody>
       </Card>
 
@@ -272,12 +314,14 @@ async function runImport(passcode: string) {
             <Timer className="mt-1 size-4 text-primary" />
             <div>
               <p className="font-medium">
-                Inactivity auto-lock
+                {t("vault.autoLockTitle")}
               </p>
 
               <p className="text-sm text-muted-foreground">
-                Vault locks automatically after {autoLockMin} minute
-                {autoLockMin === 1 ? "" : "s"}.
+                {t("vault.autoLockDescription", {
+                  minutes: autoLockMin,
+                  plural: autoLockMin === 1 ? "" : "s",
+                })}
               </p>
             </div>
           </div>
@@ -289,7 +333,7 @@ async function runImport(passcode: string) {
             onClick={lock}
           >
             <Lock className="size-4" />
-            Lock vault now
+            {t("vault.lockNow")}
           </Button>
 
         </CardBody>
@@ -301,11 +345,14 @@ async function runImport(passcode: string) {
           <div className="flex items-start gap-3">
             <ShieldCheck className="mt-1 size-4 text-primary" />
             <div>
-              <p className="font-medium">Seal all unsealed records</p>
+              <p className="font-medium">{t("vault.sealAllTitle")}</p>
               <p className="text-sm text-muted-foreground">
                 {unsealedCount > 0
-                  ? `${unsealedCount} incident${unsealedCount === 1 ? "" : "s"} not yet sealed.`
-                  : "All incidents are sealed."}
+                  ? t("vault.sealAllDescription", {
+                      count: unsealedCount,
+                      plural: unsealedCount === 1 ? "" : "s",
+                    })
+                  : t("vault.sealAllNoneUnsealed")}
               </p>
             </div>
           </div>
@@ -317,7 +364,7 @@ async function runImport(passcode: string) {
             onClick={handleSealAll}
           >
             <ShieldCheck className="size-4" />
-            {sealingAll ? "Sealing…" : `Seal all (${unsealedCount})`}
+            {sealingAll ? t("common.saving") : t("vault.sealAllButton", { count: unsealedCount })}
           </Button>
 
           {sealAllProgress ? (
@@ -333,7 +380,10 @@ async function runImport(passcode: string) {
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                Sealing {sealAllProgress.processed} of {sealAllProgress.total}
+                {t("vault.sealingProgress", {
+                  processed: sealAllProgress.processed,
+                  total: sealAllProgress.total,
+                })}
               </p>
             </div>
           ) : null}
@@ -346,7 +396,7 @@ async function runImport(passcode: string) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <ScrollText className="size-4 text-primary" />
-              <p className="font-medium">Audit log</p>
+              <p className="font-medium">{t("auditLog.title")}</p>
             </div>
             {auditEntries.length > 5 ? (
               <button
@@ -354,14 +404,16 @@ async function runImport(passcode: string) {
                 className="text-xs text-muted-foreground underline"
                 onClick={() => setAuditExpanded((v) => !v)}
               >
-                {auditExpanded ? "Show less" : `Show all (${auditEntries.length})`}
+                {auditExpanded
+                  ? t("auditLog.showLess")
+                  : t("auditLog.showAll", { count: auditEntries.length })}
               </button>
             ) : null}
           </div>
 
           {auditEntries.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No activity recorded yet.
+              {t("auditLog.noActivity")}
             </p>
           ) : (
             <ul className="space-y-2">
@@ -389,7 +441,7 @@ async function runImport(passcode: string) {
             onClick={handleExport}
             disabled={exportProgress !== null || mergeProgress !== null}
           >
-            {exportProgress !== null ? "Exporting…" : "Export Backup"}
+            {exportProgress !== null ? t("backup.exporting") : t("backup.exportBackup")}
           </Button>
 
           {exportProgress !== null ? (
@@ -436,7 +488,7 @@ async function runImport(passcode: string) {
             }
             disabled={mergeProgress !== null}
           >
-            {mergeProgress !== null ? "Merging…" : "Import Backup"}
+            {mergeProgress !== null ? t("backup.merging") : t("backup.importBackup")}
           </Button>
 
           {mergeProgress !== null ? (
@@ -465,13 +517,13 @@ async function runImport(passcode: string) {
           {mergeResult !== null ? (
             <div className="space-y-2 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3">
               <p className="text-sm font-medium text-emerald-900">
-                Merge complete
+                {t("backup.mergeComplete")}
               </p>
               <ul className="space-y-0.5 text-xs text-emerald-800/90">
-                <li>{mergeResult.added} new record{mergeResult.added === 1 ? "" : "s"} added</li>
-                <li>{mergeResult.diverged} record{mergeResult.diverged === 1 ? "" : "s"} added as new (matching ID but different content)</li>
-                <li>{mergeResult.duplicates} duplicate{mergeResult.duplicates === 1 ? "" : "s"} skipped</li>
-                <li>{mergeResult.totalEvidenceAdded} evidence file{mergeResult.totalEvidenceAdded === 1 ? "" : "s"} imported</li>
+                <li>{t("backup.mergeAdded", { count: mergeResult.added, plural: mergeResult.added === 1 ? "" : "s" })}</li>
+                <li>{t("backup.mergeDiverged", { count: mergeResult.diverged, plural: mergeResult.diverged === 1 ? "" : "s" })}</li>
+                <li>{t("backup.mergeDuplicates", { count: mergeResult.duplicates, plural: mergeResult.duplicates === 1 ? "" : "s" })}</li>
+                <li>{t("backup.mergeEvidenceAdded", { count: mergeResult.totalEvidenceAdded, plural: mergeResult.totalEvidenceAdded === 1 ? "" : "s" })}</li>
               </ul>
               <Button
                 variant="outline"
@@ -479,7 +531,7 @@ async function runImport(passcode: string) {
                 className="w-full"
                 onClick={clearMergeResult}
               >
-                Dismiss
+                {t("backup.dismiss")}
               </Button>
             </div>
           ) : null}
@@ -489,11 +541,11 @@ async function runImport(passcode: string) {
 
       <PasscodeModal
         open={pendingImportFile !== null}
-        title={status === "unlocked" ? "Merge backup" : "Restore backup"}
+        title={status === "unlocked" ? t("backup.mergeTitle") : t("backup.restoreTitle")}
         subtitle={
           status === "unlocked"
-            ? "Enter the PIN used to create the backup you're merging in."
-            : "Enter the vault PIN used to create this backup."
+            ? t("backup.mergeSubtitle")
+            : t("backup.restoreSubtitle")
         }
         onSubmit={runImport}
         onCancel={() => setPendingImportFile(null)}
