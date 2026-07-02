@@ -813,5 +813,21 @@ export async function exportVaultBackupV4Streaming(
     etaSeconds: 0,
   })
 
+  // Directory.Cache is app-private sandboxed storage — not browsable
+  // from a file manager or visible outside the app. Immediately share
+  // it so the user can save to Downloads, Drive, etc. via the share sheet.
+  try {
+    const { Share } = await import("@capacitor/share")
+    const uriResult = await Filesystem.getUri({
+      path: fileName,
+      directory: Directory.Cache,
+    })
+    await Share.share({ url: uriResult.uri, title: fileName })
+  } catch (err) {
+    console.log("[backup] share step failed:", err)
+    // The file still exists in app cache even if sharing failed —
+    // don't throw, since the export itself succeeded.
+  }
+
   return fileName
 }
