@@ -131,9 +131,8 @@ export async function loadEvidenceBlobUrl(
 }
 
 /**
- * Decrypt an evidence file and save it to the device's Downloads/Documents
- * directory (outside the encrypted vault), so the user can view or share
- * it with other apps. Returns the saved filename.
+ * Decrypt an evidence file and save it to the device's cache directory,
+ * then open the share sheet so the user can save/share it externally.
  */
 export async function downloadEvidenceFile(
   key: CryptoKey,
@@ -141,16 +140,12 @@ export async function downloadEvidenceFile(
 ): Promise<string> {
   const { Filesystem, Directory } = await import("@capacitor/filesystem")
 
-
-
   const plaintext = await decryptJSON<EvidencePlaintext>(
     key,
     toCipherPayload(record),
   )
   const bytes = new Uint8Array(plaintext.bytes)
 
-  // Base64-encode for Capacitor's writeFile — chunked to avoid call-stack
-  // limits on large files (same approach used by the backup export pipeline).
   let binary = ""
   const chunkSize = 0x8000
   for (let i = 0; i < bytes.length; i += chunkSize) {
@@ -159,14 +154,28 @@ export async function downloadEvidenceFile(
   }
   const base64 = btoa(binary)
 
-  // Ensure a sensible filename WITH an extension even if the stored
-  // name is empty or was captured before extensions were tracked.
-  const extMap: Record<string, string> = { "image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/gif":"gif","audio/webm":"webm","audio/mp4":"m4a","audio/mpeg":"mp3","application/pdf":"pdf","text/plain":"txt","application/msword":"doc","application/vnd.openxmlformats-officedocument.wordprocessingml.document":"docx" }
-  const guessedExt = extMap[record.mimeType] || record.mimeType.split("/")[1] || "bin"
+  const extMap: Record<string, string> = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+    "image/gif": "gif",
+    "audio/webm": "webm",
+    "audio/mp4": "m4a",
+    "audio/mpeg": "mp3",
+    "application/pdf": "pdf",
+    "text/plain": "txt",
+    "application/msword": "doc",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+      "docx",
+  }
+  const guessedExt =
+    extMap[record.mimeType] || record.mimeType.split("/")[1] || "bin"
+
   let safeName =
     plaintext.name && plaintext.name.trim().length > 0
       ? plaintext.name
       : `${record.kind}-${record.id}.${guessedExt}`
+
   if (!/\.[a-zA-Z0-9]{2,5}$/.test(safeName)) {
     safeName = `${safeName}.${guessedExt}`
   }
@@ -178,10 +187,11 @@ export async function downloadEvidenceFile(
     recursive: true,
   })
 
-  // Share sheet lets the user save/move it (Files, Drive, WhatsApp, etc).
   const { Share } = await import("@capacitor/share")
-  const { Filesystem: FS } = await import("@capacitor/filesystem")
-  const uriResult = await FS.getUri({ path: safeName, directory: Directory.Cache })
+  const uriResult = await Filesystem.getUri({
+    path: safeName,
+    directory: Directory.Cache,
+  })
   await Share.share({ url: uriResult.uri, title: safeName })
 
   return safeName
@@ -204,7 +214,7 @@ async function evidenceMetaFor(incidentId: string): Promise<EvidenceMeta[]> {
       id: r.id,
       incidentId: r.incidentId,
       kind: r.kind as EvidenceMeta["kind"],
-      name: "", // resolved lazily on detail view to avoid bulk decryption
+      name: "",
       mimeType: r.mimeType,
       size: r.size,
       sha256: r.sha256,
@@ -299,16 +309,14 @@ export async function sealIncident(
 
 export async function deleteIncident(incidentId: string): Promise<void> {
   const evidence = await getEvidenceRecords(incidentId)
-  await Promise.all(
-    evidence.map((e) => deleteRecord(STORES.evidenceFiles, e.id)),
-  )
+  await Promise.all(evidence.map((e) => deleteRecord(STORES.evidenceFiles, e.id)))
   await deleteRecord(STORES.incidents, incidentId)
 }
 
 export type StoredCipher = CipherPayload
 
 // ---------------------------------------------------------------------------
-// Audit log — encrypted, append-only record of vault activity.
+// Audit log
 // ---------------------------------------------------------------------------
 
 export type AuditAction =
@@ -328,7 +336,7 @@ export interface AuditEntry {
   timestamp: number
 }
 
-/** Append one entry to the audit log. Never overwrites — always adds new. */
+/** Append one entry to the audit log. */
 export async function logAuditEvent(
   key: CryptoKey,
   action: AuditAction,
@@ -337,7 +345,9 @@ export async function logAuditEvent(
   const entry: AuditEntry = { action, detail, timestamp: Date.now() }
   const payload = await encryptJSON(key, entry)
   const record: AuditLogRecord = {
-    id: `audit_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+    id: `audit_${Date.now().toString(36)}_${Math.random()
+      .toString(36)
+      .slice(2, 8)}`,
     createdAt: entry.timestamp,
     iv: payload.iv,
     data: payload.data,
@@ -375,9 +385,9 @@ export interface VaultBackup {
  * under the backup key in the v4 pipeline.
  */
 export interface EvidenceBlob {
-  record: EvidenceRecord  // metadata (id, incidentId, mimeType, etc.)
-  name: string            // decrypted filename
-  raw: Uint8Array         // decrypted file bytes
+  record: EvidenceRecord
+  name: string
+  raw: Uint8Array
 }
 
 function serializeBinary(val: any): number[] {
@@ -401,9 +411,6 @@ function serializeRecord(record: any): any {
 
 /**
  * Export all records as a serialization-safe VaultBackup.
- * All binary fields are converted to plain number arrays so that
- * JSON.stringify produces correct output (ArrayBuffer serializes as {}).
- * Used by both v3 and v4 export for the metadata section.
  */
 export async function exportAllRecords(): Promise<VaultBackup> {
   const [incidents, evidence, alerts, users, userProfile, seals] =
@@ -429,9 +436,41 @@ export async function exportAllRecords(): Promise<VaultBackup> {
 }
 
 /**
+ * Export only metadata for streaming ZIP backup creation.
+ * Evidence is excluded here and streamed separately.
+ */
+export async function exportMetadataOnly(): Promise<{
+  version: number
+  exportedAt: number
+  incidents: any[]
+  alerts: any[]
+  users: any[]
+  userProfile: any[]
+  seals: any[]
+}> {
+  const [incidents, alerts, users, userProfile, seals] =
+    await Promise.all([
+      getAll<IncidentRecord>(STORES.incidents),
+      getAll(STORES.patternAlerts),
+      getAll(STORES.users),
+      getAll(STORES.userProfile),
+      getAll<SealRecord>(STORES.evidenceSeals),
+    ])
+
+  return {
+    version: 2,
+    exportedAt: Date.now(),
+    incidents: incidents.map(serializeRecord),
+    alerts: alerts.map(serializeRecord),
+    users: users.map(serializeRecord),
+    userProfile: userProfile.map(serializeRecord),
+    seals,
+  }
+}
+
+/**
  * Decrypt all evidence files from IndexedDB and return raw bytes.
- * Used exclusively by the v4 export pipeline — evidence is stored
- * as raw binary in the ZIP rather than base64-encoded JSON.
+ * Used by non-streaming export.
  */
 export async function exportEvidenceBlobs(
   key: CryptoKey,
@@ -454,26 +493,14 @@ export async function exportEvidenceBlobs(
 }
 
 /**
- * Returns just the evidence record list (metadata only — no decryption,
- * no file bytes loaded). Used by the streaming v4 export pipeline to
- * know the total count up front and iterate records one at a time,
- * instead of exportEvidenceBlobs's Promise.all-everything approach
- * which holds every decrypted file in memory simultaneously.
+ * Returns just the evidence record list (metadata only — no decryption).
  */
 export async function listEvidenceRecords(): Promise<EvidenceRecord[]> {
   return getAll<EvidenceRecord>(STORES.evidenceFiles)
 }
 
 /**
- * Decrypt a single evidence file's raw bytes, skipping the
- * EvidencePlaintext {name, bytes: number[]} JSON round-trip that
- * exportEvidenceBlobs uses. The number[] format costs ~8x memory
- * overhead per byte (each byte becomes a full JS number in an array),
- * which compounds badly when decrypting large media files. This
- * decrypts straight to a Uint8Array instead.
- *
- * Used by the streaming v4 export pipeline, one record at a time,
- * so peak memory is "one file" rather than "every file at once".
+ * Decrypt a single evidence file's raw bytes.
  */
 export async function decryptEvidenceRaw(
   key: CryptoKey,
@@ -534,20 +561,14 @@ export async function loadUserProfile<T>(key: CryptoKey): Promise<T | null> {
 }
 
 // ---------------------------------------------------------------------------
-// Merge import — combine a second backup's incidents into the currently
-// unlocked vault, rather than replacing it. Used when the vault already
-// has data and the user imports another backup file (e.g. from a second
-// device) to consolidate records.
+// Merge import
 // ---------------------------------------------------------------------------
 
 export type MergeOutcome = "added" | "duplicate" | "diverged"
 
 export interface MergeProgress {
-  /** Number of incidents processed so far, including the current one. */
   processed: number
-  /** Total incidents in the source file. */
   total: number
-  /** Title of the incident currently being processed, for display. */
   currentTitle: string
 }
 
@@ -558,11 +579,6 @@ export interface MergeResult {
   totalEvidenceAdded: number
 }
 
-/**
- * Decrypt one IncidentRecord (from either the current vault or a source
- * backup) into a comparable Incident-shaped object, without touching seals
- * or evidence content lookups beyond what's needed for content hashing.
- */
 async function decryptIncidentForCompare(
   key: CryptoKey,
   record: IncidentRecord,
@@ -598,11 +614,6 @@ async function decryptIncidentForCompare(
   }
 }
 
-/**
- * Same as computeSealHash but without createdAt — used for merge-import
- * content comparison, where two incidents with the same logical content
- * may have been saved at different times across devices.
- */
 async function computeContentHash(incident: Incident): Promise<string> {
   const canonical = JSON.stringify({
     title: incident.title,
@@ -617,26 +628,6 @@ async function computeContentHash(incident: Incident): Promise<string> {
   return sha256Hex(canonical)
 }
 
-/**
- * Merge a decrypted source backup's incidents + evidence into the
- * currently unlocked vault (encrypted under currentKey).
- *
- * For each source incident:
- *   - No existing incident with the same ID  -> import as-is (re-encrypted
- *     under currentKey), outcome "added"
- *   - Existing incident with same ID, identical content (via content hash)
- *     -> skip, outcome "duplicate"
- *   - Existing incident with same ID, different content
- *     -> import as a new incident with a freshly generated ID,
- *        outcome "diverged" (never silently overwrites)
- *
- * Evidence files belonging to imported incidents are decrypted with
- * sourceKey and re-encrypted under currentKey via saveEvidence, so the
- * existing read path needs no changes.
- *
- * onProgress is called once per source incident processed, so the UI
- * can render a live progress bar and running counts.
- */
 export async function mergeIncidentRecords(
   sourceKey: CryptoKey,
   currentKey: CryptoKey,
@@ -651,7 +642,6 @@ export async function mergeIncidentRecords(
     totalEvidenceAdded: 0,
   }
 
-  // Load current vault's incidents once, keyed by ID, for fast lookup.
   const currentRecords = await getAll<IncidentRecord>(STORES.incidents)
   const currentEvidenceAll = await getAll<EvidenceRecord>(STORES.evidenceFiles)
   const currentById = new Map(currentRecords.map((r) => [r.id, r]))
@@ -696,7 +686,7 @@ export async function mergeIncidentRecords(
         outcome = "duplicate"
       } else {
         outcome = "diverged"
-        targetId = genId("inc") // fresh ID — never overwrite
+        targetId = genId("inc")
       }
     }
 
@@ -705,7 +695,6 @@ export async function mergeIncidentRecords(
       continue
     }
 
-    // Re-encrypt the incident under the current vault's key
     const newId = await saveIncident(
       currentKey,
       {
@@ -718,17 +707,14 @@ export async function mergeIncidentRecords(
       {
         id: targetId,
         createdAt: sourceRecord.createdAt,
-        sealed: false, // merged incidents always land unsealed; user can re-seal
+        sealed: false,
       },
     )
 
-    // Re-encrypt each evidence file under the current vault's key
     for (const evRecord of sourceEvidenceForThis) {
-      // v3 backups store evidence as JSON {name, bytes:[...]} (decryptJSON).
-      // v4 backups store evidence as raw encrypted binary directly
-      // (decryptBytes) — no JSON wrapper. Try JSON first, fall back to raw.
       let rawBytes: ArrayBuffer
       let evName = (evRecord as any).name ?? ""
+
       try {
         const evPlaintext = await decryptJSON<EvidencePlaintext>(
           sourceKey,
@@ -739,6 +725,7 @@ export async function mergeIncidentRecords(
       } catch {
         rawBytes = await decryptBytes(sourceKey, toCipherPayload(evRecord))
       }
+
       await saveEvidence(currentKey, newId, {
         kind: evRecord.kind as EvidenceMeta["kind"],
         name: evName,
