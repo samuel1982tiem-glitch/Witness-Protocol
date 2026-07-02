@@ -1,4 +1,4 @@
-import { zipSync, unzipSync, Zip, ZipPassThrough, type Zippable } from "fflate"
+import { zipSync, unzipSync, type Zippable } from "fflate"
 import {
   encryptJSON,
   decryptJSON,
@@ -7,19 +7,15 @@ import {
   compress,
   decompress,
   deriveKey,
-  type CipherPayload,
 } from "./crypto"
 import { Filesystem, Directory } from "@capacitor/filesystem"
 import {
   exportAllRecords,
+  exportMetadataOnly,
   exportEvidenceBlobs,
   importAllRecords,
-  listEvidenceRecords,
-  decryptEvidenceRaw,
   mergeIncidentRecords,
-  saveEvidence,
   type VaultBackup,
-  type EvidenceInput,
   type MergeProgress,
   type MergeResult,
 } from "./repo"
@@ -36,9 +32,6 @@ import {
 // Shared binary coercion helpers
 // ---------------------------------------------------------------------------
 
-// Safely convert any value coming out of JSON.parse to a Uint8Array.
-// Handles: real Uint8Array, plain JS Array [255,12,...],
-// and plain object {0:255, 1:12} which Android WebView IDB can produce.
 function toUint8(val: any): Uint8Array {
   if (val instanceof Uint8Array) return val
   if (Array.isArray(val)) return new Uint8Array(val)
@@ -47,10 +40,6 @@ function toUint8(val: any): Uint8Array {
 }
 
 function reviveBuffers(backup: VaultBackup): VaultBackup {
-  // Store EVERYTHING as Uint8Array, never ArrayBuffer.
-  // Android WebView IndexedDB stores and retrieves Uint8Array correctly,
-  // but silently mangles ArrayBuffer on read-back, causing "data too small".
-  // toCipherPayload in db.ts converts Uint8Array → ArrayBuffer for Web Crypto.
   for (const incident of backup.incidents ?? []) {
     incident.iv = toUint8(incident.iv)
     incident.data = toUint8(incident.data) as any
@@ -64,9 +53,9 @@ function reviveBuffers(backup: VaultBackup): VaultBackup {
     if (alert.data != null) alert.data = toUint8(alert.data)
   }
   for (const user of backup.users ?? []) {
-    if ("salt" in user) user.salt = toUint8(user.salt)
-    if ("verifierIv" in user) user.verifierIv = toUint8(user.verifierIv)
-    if ("verifierData" in user) user.verifierData = toUint8(user.verifierData) as any
+    if ("salt" in user) user.salt = toUint8((user as any).salt)
+    if ("verifierIv" in user) (user as any).verifierIv = toUint8((user as any).verifierIv)
+    if ("verifierData" in user) (user as any).verifierData = toUint8((user as any).verifierData) as any
   }
   for (const profile of backup.userProfile ?? []) {
     if (profile.iv != null) profile.iv = toUint8(profile.iv)
@@ -76,51 +65,51 @@ function reviveBuffers(backup: VaultBackup): VaultBackup {
 }
 
 // ---------------------------------------------------------------------------
-// File format detection (ADDED)
+// File format detection
 // ---------------------------------------------------------------------------
 
-/**
- * Detect the format of the uploaded backup file.
- * Returns one of: 'png', 'zip', 'json', 'unknown'
- * 
- * This prevents PNG images from being parsed as JSON, which was causing:
- *   SyntaxError: Unexpected token '👁', "👁️PNG"… is not valid JSON
- */
-function detectFileFormat(bytes: Uint8Array, fileName?: string): 'png' | 'zip' | 'json' | 'unknown' {
-  if (bytes.length < 4) {
-    return 'json' // Assume JSON for very small files
+function detectFileFormat(
+  bytes: Uint8Array,
+  fileName?: string,
+): "png" | "zip" | "json" | "unknown" {
+  if (bytes.length < 4) return "json"
+
+  // PNG
+  if (
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47
+  ) {
+    return "png"
   }
 
-  // PNG: 89 50 4E 47
-  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
-    return 'png'
+  // ZIP / .wpbz
+  if (
+    bytes[0] === 0x50 &&
+    bytes[1] === 0x4b &&
+    bytes[2] === 0x03 &&
+    bytes[3] === 0x04
+  ) {
+    return "zip"
   }
 
-  // ZIP: 50 4B 03 04 (including .wpbz)
-  if (bytes[0] === 0x50 && bytes[1] === 0x4B && bytes[2] === 0x03 && bytes[3] === 0x04) {
-    return 'zip'
-  }
-
-  // JSON: starts with { or [
   try {
-    const text = new TextDecoder().decode(bytes.slice(0, 20))
-    if (text.trim().startsWith('{') || text.trim().startsWith('[')) {
-      return 'json'
-    }
-  } catch (_) {
+    const text = new TextDecoder().decode(bytes.slice(0, 32))
+    const trimmed = text.trimStart()
+    if (trimmed.startsWith("{") || trimmed.startsWith("[")) return "json"
+  } catch {
     // ignore
   }
 
-  // If it's a .wpbz but we didn't detect ZIP (corrupted), trust the extension
-  if (fileName && fileName.endsWith('.wpbz')) {
-    return 'zip'
-  }
+  if (fileName?.endsWith(".wpbz")) return "zip"
+  if (fileName?.endsWith(".wpb")) return "json"
 
-  return 'unknown'
+  return "unknown"
 }
 
 // ---------------------------------------------------------------------------
-// Version 3 (.wpb) — legacy JSON format, kept for backwards compatibility
+// Version 3 (.wpb) legacy JSON backup
 // ---------------------------------------------------------------------------
 
 async function exportVaultBackupV3(key: CryptoKey): Promise<string> {
@@ -159,8 +148,7 @@ async function importVaultBackupV3(
 ): Promise<{ key: CryptoKey; autoLockMs: number }> {
   if (!raw.salt) {
     throw new Error(
-      "This backup was created with an older version of the app. " +
-        "Please export a new backup from your previous device first.",
+      "This backup was created with an older version of the app. Please export a new backup from your previous device first.",
     )
   }
 
@@ -193,18 +181,8 @@ async function importVaultBackupV3(
 }
 
 // ---------------------------------------------------------------------------
-// Version 4 (.wpbz) — ZIP container, compressed metadata, raw-binary evidence
+// Version 4 (.wpbz) ZIP backup
 // ---------------------------------------------------------------------------
-//
-// Layout inside the ZIP:
-//   manifest.json     — unencrypted: version, salt, exportedAt, counts
-//   meta.json.enc      — encrypted+compressed: incidents/users/alerts/seals/profile
-//   evidence/<id>.enc — encrypted raw bytes per evidence file (no compression;
-//                        media formats like JPG/MP4/MP3 are already compressed)
-//
-// Each .enc file produced by encryptRaw is self-contained: a 12-byte IV
-// prefix followed by the AES-GCM ciphertext. No external IV bookkeeping
-// is needed for evidence files.
 
 interface ManifestV4 {
   version: 4
@@ -213,35 +191,36 @@ interface ManifestV4 {
   evidenceCount: number
 }
 
-function buildMetaPlaintext(backup: VaultBackup): Uint8Array {
-  // Reuses the same VaultBackup shape as v3, minus the evidence array
-  // (evidence ships as separate files in the evidence/ folder instead).
-  const meta = {
-    version: backup.version,
-    exportedAt: backup.exportedAt,
-    incidents: backup.incidents,
-    alerts: backup.alerts,
-    users: backup.users,
-    userProfile: backup.userProfile,
-    seals: backup.seals,
+interface EvidenceSidecar {
+  id: string
+  incidentId: string
+  kind: string
+  mimeType: string
+  size: number
+  sha256: string
+  createdAt: number
+  name: string
+}
+
+function uint8ToBase64(bytes: Uint8Array): string {
+  let binary = ""
+  const chunkSize = 0x8000
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize)
+    binary += String.fromCharCode(...chunk)
   }
-  return new TextEncoder().encode(JSON.stringify(meta))
+  return btoa(binary)
 }
 
 export async function exportVaultBackupV4(key: CryptoKey): Promise<string> {
   const vault = await getRecord<VaultRecord>(STORES.users, "vault")
   if (!vault) throw new Error("Vault is not set up.")
 
-  // 1. Gather metadata (incidents, users, alerts, seals, profile)
-  const backup = await exportAllRecords()
-  const metaPlain = buildMetaPlaintext(backup)
-
-  // 2. Compress metadata, then encrypt
+  const backup = await exportMetadataOnly()
+  const metaPlain = new TextEncoder().encode(JSON.stringify(backup))
   const metaCompressed = await compress(metaPlain)
   const metaEncrypted = await encryptRaw(key, metaCompressed)
 
-  // 3. Gather and encrypt evidence as raw binary — no compression,
-  //    since photos/video/audio are already compressed formats.
   const evidenceBlobs = await exportEvidenceBlobs(key)
 
   const zipEntries: Zippable = {
@@ -259,8 +238,6 @@ export async function exportVaultBackupV4(key: CryptoKey): Promise<string> {
   for (const blob of evidenceBlobs) {
     const encrypted = await encryptRaw(key, blob.raw)
     zipEntries[`evidence/${blob.record.id}.enc`] = encrypted
-    // Store filename + mimeType alongside via a tiny sidecar JSON so the
-    // ZIP entry itself stays pure binary (faster to write, no escaping).
     zipEntries[`evidence/${blob.record.id}.json`] = new TextEncoder().encode(
       JSON.stringify({
         id: blob.record.id,
@@ -276,11 +253,6 @@ export async function exportVaultBackupV4(key: CryptoKey): Promise<string> {
   }
 
   const zipped = zipSync(zipEntries, { level: 0 })
-  // level: 0 — fflate's own compression is disabled because:
-  //   - metadata is already deflate-compressed above
-  //   - evidence is already-compressed media (or raw, also not worth zipping)
-  // The ZIP container here is just a file-structure format, not a
-  // second compression pass.
 
   const fileName =
     "WitnessProtocolBackup-" +
@@ -297,17 +269,6 @@ export async function exportVaultBackupV4(key: CryptoKey): Promise<string> {
   return fileName
 }
 
-interface EvidenceSidecar {
-  id: string
-  incidentId: string
-  kind: string
-  mimeType: string
-  size: number
-  sha256: string
-  createdAt: number
-  name: string
-}
-
 async function importVaultBackupV4(
   zipBytes: Uint8Array,
   passcode: string,
@@ -318,6 +279,7 @@ async function importVaultBackupV4(
   if (!manifestBytes) {
     throw new Error("Backup file is missing manifest.json — file may be corrupted.")
   }
+
   const manifest: ManifestV4 = JSON.parse(
     new TextDecoder().decode(manifestBytes),
   )
@@ -326,11 +288,9 @@ async function importVaultBackupV4(
     throw new Error(`Unsupported backup version: ${manifest.version}`)
   }
 
-  // 1. Re-derive the key from the manifest's salt + passcode
   const salt = new Uint8Array(manifest.salt)
   const key = await deriveKey(passcode, salt)
 
-  // 2. Decrypt + decompress metadata
   const metaEncrypted = files["meta.json.enc"]
   if (!metaEncrypted) {
     throw new Error("Backup file is missing meta.json.enc — file may be corrupted.")
@@ -351,10 +311,7 @@ async function importVaultBackupV4(
     "evidence"
   >
 
-  // 3. Decrypt every evidence file and re-encrypt under the in-memory
-  //    vault key in the same shape saveEvidence() produces, so the
-  //    existing read path (loadEvidenceBlobUrl) needs no changes.
-  const evidenceRecords: any[] = []
+  const evidenceRecords: EvidenceRecord[] = []
   const evidencePaths = Object.keys(files).filter(
     (p) => p.startsWith("evidence/") && p.endsWith(".enc"),
   )
@@ -363,7 +320,7 @@ async function importVaultBackupV4(
     const id = path.slice("evidence/".length, path.length - ".enc".length)
     const sidecarPath = `evidence/${id}.json`
     const sidecarBytes = files[sidecarPath]
-    if (!sidecarBytes) continue // skip if sidecar metadata is missing
+    if (!sidecarBytes) continue
 
     let sidecar: EvidenceSidecar
     try {
@@ -372,35 +329,39 @@ async function importVaultBackupV4(
       continue
     }
 
-    const raw = await decryptRaw(key, files[path])
+    const blob = files[path]
+    if (!blob || blob.byteLength < 13) continue
 
-    const input: EvidenceInput = {
-      kind: sidecar.kind as EvidenceInput["kind"],
-      name: sidecar.name,
+    const iv = blob.slice(0, 12)
+    const ciphertext = blob.slice(12)
+
+    evidenceRecords.push({
+      id: sidecar.id,
+      incidentId: sidecar.incidentId,
+      kind: sidecar.kind,
       mimeType: sidecar.mimeType,
       size: sidecar.size,
       sha256: sidecar.sha256,
-      bytes: raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength),
-    }
-
-    // saveEvidence re-encrypts under `key` and writes directly to IndexedDB,
-    // matching the exact record shape the rest of the app expects.
-    await saveEvidence(key, sidecar.incidentId, input)
+      createdAt: sidecar.createdAt,
+      iv,
+      data: ciphertext.buffer.slice(
+        ciphertext.byteOffset,
+        ciphertext.byteOffset + ciphertext.byteLength,
+      ),
+    } as EvidenceRecord)
   }
 
-  // 4. Restore incidents/users/alerts/seals/profile metadata.
-  //    Snapshot the current vault record first — if anything fails partway,
-  //    restore it so the PIN keeps working.
   const fullBackup: VaultBackup = {
     version: meta.version,
     exportedAt: meta.exportedAt,
-    incidents: meta.incidents,
-    evidence: [], // evidence already written above via saveEvidence
-    alerts: meta.alerts,
-    users: meta.users,
-    userProfile: meta.userProfile,
-    seals: meta.seals,
+    incidents: meta.incidents ?? [],
+    evidence: evidenceRecords,
+    alerts: meta.alerts ?? [],
+    users: meta.users ?? [],
+    userProfile: meta.userProfile ?? [],
+    seals: meta.seals ?? [],
   }
+
   const revived = reviveBuffers(fullBackup)
 
   const currentVault = await getRecord<VaultRecord>(STORES.users, "vault")
@@ -415,95 +376,56 @@ async function importVaultBackupV4(
 }
 
 // ---------------------------------------------------------------------------
-// Public API — format detection + unified entry points
+// Public export/import API
 // ---------------------------------------------------------------------------
 
-/**
- * Export the vault as a Version 4 (.wpbz) backup.
- * Uses the streaming pipeline by default — evidence is processed one
- * file at a time and written to disk incrementally, avoiding the
- * memory spike of decrypting every file and buffering the full ZIP
- * before writing (which is what exportVaultBackupV4 below still does,
- * kept only for reference/fallback).
- */
-export async function exportVaultBackup(
-  key: CryptoKey,
-  onProgress?: (progress: ExportProgress) => void,
-): Promise<string> {
-  return exportVaultBackupV4Streaming(key, onProgress)
+export async function exportVaultBackup(key: CryptoKey): Promise<string> {
+  return exportVaultBackupV4(key)
 }
 
-/**
- * Import a backup file, auto-detecting Version 3 (.wpb, JSON) vs
- * Version 4 (.wpbz, ZIP) by file extension and content sniffing.
- *
- * Always re-derives the key from the salt embedded in the backup file
- * + the user's passcode — never uses the current device key. Works
- * identically for normal import and fresh-install restore.
- */
 export async function importVaultBackupFresh(
   file: File,
   passcode: string,
 ): Promise<{ key: CryptoKey; autoLockMs: number }> {
   const buffer = await file.arrayBuffer()
   const bytes = new Uint8Array(buffer)
-  
-  // Detect format using the new function
   const format = detectFileFormat(bytes, file.name)
-  
-  // Gracefully handle PNG files
-  if (format === 'png') {
+
+  if (format === "png") {
     throw new Error(
-      'This file is an image (PNG), not a valid backup file. Please select a .wpb or .wpbz file.'
+      "This file is an image (PNG), not a valid backup file. Please select a .wpb or .wpbz file.",
     )
   }
-  
-  if (format === 'unknown') {
+
+  if (format === "unknown") {
     throw new Error(
-      'This file format is not recognized. Please select a valid backup file (.wpb or .wpbz).'
+      "This file format is not recognized. Please select a valid backup file (.wpb or .wpbz).",
     )
   }
-  
-  // ZIP format (which is what .wpbz is)
-  if (format === 'zip') {
+
+  if (format === "zip") {
     return importVaultBackupV4(bytes, passcode)
   }
-  
-  // JSON format (legacy .wpb)
-  if (format === 'json') {
+
+  if (format === "json") {
     try {
       const text = new TextDecoder().decode(bytes)
       const raw = JSON.parse(text)
       return importVaultBackupV3(raw, passcode)
-    } catch (e) {
-      throw new Error('The file is not a valid JSON backup. Please ensure you selected the correct file.')
+    } catch {
+      throw new Error(
+        "The file is not a valid JSON backup. Please ensure you selected the correct file.",
+      )
     }
   }
-  
-  // Fallback safety
-  throw new Error('Unable to determine file format. Please select a valid backup file (.wpb or .wpbz).')
+
+  throw new Error(
+    "Unable to determine file format. Please select a valid backup file (.wpb or .wpbz).",
+  )
 }
 
 // ---------------------------------------------------------------------------
-// Base64 helper for Capacitor Filesystem (which expects base64 for
-// binary writes when no explicit encoding is given)
-// ---------------------------------------------------------------------------
-
-function uint8ToBase64(bytes: Uint8Array): string {
-  let binary = ""
-  const chunkSize = 0x8000 // avoid call-stack limits on large arrays
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    const chunk = bytes.subarray(i, i + chunkSize)
-    binary += String.fromCharCode(...chunk)
-  }
-  return btoa(binary)
-}
-
-// ---------------------------------------------------------------------------
-// Merge import — decrypt a second backup file and merge its incidents
-// into the currently unlocked vault, rather than replacing it.
-// Unlike importVaultBackupFresh, this never touches the users/vault
-// store — only incidents and their evidence are merged.
+// Merge import
 // ---------------------------------------------------------------------------
 
 interface ParsedBackup {
@@ -512,18 +434,13 @@ interface ParsedBackup {
   evidence: EvidenceRecord[]
 }
 
-/**
- * Decrypt a v3 (.wpb) backup file into its raw incident/evidence arrays,
- * without writing anything to IndexedDB. Used by mergeVaultBackup.
- */
 async function parseVaultBackupV3(
   raw: any,
   passcode: string,
 ): Promise<ParsedBackup> {
   if (!raw.salt) {
     throw new Error(
-      "This backup was created with an older version of the app. " +
-        "Please export a new backup from your previous device first.",
+      "This backup was created with an older version of the app. Please export a new backup from your previous device first.",
     )
   }
 
@@ -551,10 +468,6 @@ async function parseVaultBackupV3(
   }
 }
 
-/**
- * Decrypt a v4 (.wpbz) backup file into its raw incident/evidence arrays,
- * without writing anything to IndexedDB. Used by mergeVaultBackup.
- */
 async function parseVaultBackupV4(
   zipBytes: Uint8Array,
   passcode: string,
@@ -565,6 +478,7 @@ async function parseVaultBackupV4(
   if (!manifestBytes) {
     throw new Error("Backup file is missing manifest.json — file may be corrupted.")
   }
+
   const manifest: ManifestV4 = JSON.parse(
     new TextDecoder().decode(manifestBytes),
   )
@@ -596,12 +510,6 @@ async function parseVaultBackupV4(
     "evidence"
   >
 
-  // Evidence stays encrypted under sourceKey here — mergeIncidentRecords
-  // decrypts each file lazily with sourceKey as it processes incidents,
-  // so we reconstruct EvidenceRecord-shaped entries pointing at the
-  // raw encrypted .enc bytes via a synthetic iv+data pair compatible
-  // with toCipherPayload (encryptRaw's [iv][ciphertext] format needs
-  // splitting back into the two-field shape first).
   const evidenceRecords: EvidenceRecord[] = []
   const evidencePaths = Object.keys(files).filter(
     (p) => p.startsWith("evidence/") && p.endsWith(".enc"),
@@ -612,7 +520,6 @@ async function parseVaultBackupV4(
     const sidecarPath = `evidence/${id}.json`
     const sidecarBytes = files[sidecarPath]
     if (!sidecarBytes) continue
-    if (!sidecarPath.endsWith(".json")) continue
 
     let sidecar: EvidenceSidecar
     try {
@@ -622,16 +529,8 @@ async function parseVaultBackupV4(
     }
 
     const blob = files[path]
-    if (!blob) continue
-    // encryptRaw format: [12-byte IV][ciphertext]. Split it back into
-    // the iv/data shape that toCipherPayload (and thus decryptJSON in
-    // repo.ts's saveEvidence/decrypt path) expects, but since merge's
-    // evidence decryption goes through decryptRaw directly inside
-    // mergeIncidentRecords, we instead stash the whole .enc blob and
-    // decrypt it with decryptRaw at merge time. To keep EvidenceRecord's
-    // shape (iv: Uint8Array, data: ArrayBuffer) usable by the standard
-    // toCipherPayload/decryptJSON path mergeIncidentRecords relies on,
-    // we split the blob here once.
+    if (!blob || blob.byteLength < 13) continue
+
     const iv = blob.slice(0, 12)
     const ciphertext = blob.slice(12)
 
@@ -653,21 +552,11 @@ async function parseVaultBackupV4(
 
   return {
     sourceKey,
-    incidents: meta.incidents as unknown as IncidentRecord[],
+    incidents: (meta.incidents ?? []) as unknown as IncidentRecord[],
     evidence: evidenceRecords,
   }
 }
 
-/**
- * Merge a backup file's incidents into the currently unlocked vault.
- * Auto-detects v3 (.wpb) vs v4 (.wpbz) the same way importVaultBackupFresh
- * does. The vault's own salt/PIN/users store is never touched — only
- * incidents and their evidence are merged in, deduplicated by content hash.
- *
- * currentKey must be the already-unlocked vault's key (keyRef.current).
- * passcode is the PASSCODE OF THE SOURCE FILE being merged in, which may
- * differ from the current vault's PIN if it came from another device.
- */
 export async function mergeVaultBackup(
   file: File,
   passcode: string,
@@ -676,36 +565,38 @@ export async function mergeVaultBackup(
 ): Promise<MergeResult> {
   const buffer = await file.arrayBuffer()
   const bytes = new Uint8Array(buffer)
-  
-  // Use the same format detection for merge
   const format = detectFileFormat(bytes, file.name)
-  
-  // Gracefully handle PNG files in merge as well
-  if (format === 'png') {
+
+  if (format === "png") {
     throw new Error(
-      'This file is an image (PNG), not a valid backup file. Please select a .wpb or .wpbz file.'
+      "This file is an image (PNG), not a valid backup file. Please select a .wpb or .wpbz file.",
     )
   }
-  
-  if (format === 'unknown') {
+
+  if (format === "unknown") {
     throw new Error(
-      'This file format is not recognized. Please select a valid backup file (.wpb or .wpbz).'
+      "This file format is not recognized. Please select a valid backup file (.wpb or .wpbz).",
     )
   }
 
   let parsed: ParsedBackup
-  if (format === 'zip') {
+
+  if (format === "zip") {
     parsed = await parseVaultBackupV4(bytes, passcode)
-  } else if (format === 'json') {
+  } else if (format === "json") {
     try {
       const text = new TextDecoder().decode(bytes)
       const raw = JSON.parse(text)
       parsed = await parseVaultBackupV3(raw, passcode)
-    } catch (e) {
-      throw new Error('The file is not a valid JSON backup. Please ensure you selected the correct file.')
+    } catch {
+      throw new Error(
+        "The file is not a valid JSON backup. Please ensure you selected the correct file.",
+      )
     }
   } else {
-    throw new Error('Unable to determine file format. Please select a valid backup file (.wpb or .wpbz).')
+    throw new Error(
+      "Unable to determine file format. Please select a valid backup file (.wpb or .wpbz).",
+    )
   }
 
   return mergeIncidentRecords(
@@ -714,216 +605,6 @@ export async function mergeVaultBackup(
     parsed.incidents,
     parsed.evidence,
     onProgress,
+
   )
-}
-// ---------------------------------------------------------------------------
-// Streaming export — processes evidence one file at a time and writes
-// ZIP chunks to disk incrementally, instead of building the entire
-// backup in memory before writing. This fixes out-of-memory crashes on
-// exports with many/large media attachments.
-// ---------------------------------------------------------------------------
-
-export type ExportStage =
-  | "preparing"
-  | "metadata"
-  | "evidence"
-  | "finishing"
-  | "saving"
-
-export interface ExportProgress {
-  stage: ExportStage
-  processed: number
-  total: number
-  currentName: string
-  percent: number
-  etaSeconds: number | null
-}
-
-function uint8ToBase64Chunk(bytes: Uint8Array): string {
-  let binary = ""
-  const chunkSize = 0x8000
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    const chunk = bytes.subarray(i, i + chunkSize)
-    binary += String.fromCharCode(...chunk)
-  }
-  return btoa(binary)
-}
-
-/**
- * Export the vault as a Version 4 (.wpbz) backup, processing evidence
- * one file at a time and writing to disk incrementally via fflate's
- * streaming Zip API + Capacitor Filesystem writeFile/appendFile.
- *
- * Peak memory is roughly "one decrypted evidence file + one ZIP chunk"
- * rather than "every evidence file decrypted simultaneously plus the
- * entire ZIP buffered in memory", which is what the non-streaming
- * exportVaultBackupV4 does via exportEvidenceBlobs + zipSync.
- */
-export async function exportVaultBackupV4Streaming(
-  key: CryptoKey,
-  onProgress?: (progress: ExportProgress) => void,
-): Promise<string> {
-  const vault = await getRecord<VaultRecord>(STORES.users, "vault")
-  if (!vault) throw new Error("Vault is not set up.")
-
-  onProgress?.({
-    stage: "preparing",
-    processed: 0,
-    total: 0,
-    currentName: "",
-    percent: 0,
-    etaSeconds: null,
-  })
-
-  const evidenceRecords = await listEvidenceRecords()
-  const total = evidenceRecords.length
-  const startTime = Date.now()
-
-  const fileName =
-    "WitnessProtocolBackup-" +
-    new Date().toISOString().replace(/[:.]/g, "-") +
-    ".wpbz"
-
-  // First chunk from the Zip stream creates the file; every chunk after
-  // that appends. This keeps at most one chunk resident at a time rather
-  // than buffering the whole ZIP before any disk write happens.
-  let wroteFirstChunk = false
-  let pendingWrites: Promise<any> = Promise.resolve()
-  let zipError: unknown = null
-
-  const zip = new Zip((err, chunk, _final) => {
-    if (err) {
-      zipError = err
-      return
-    }
-    // Serialize writes: each appendFile must wait for the previous one,
-    // since Capacitor's filesystem calls aren't guaranteed ordered
-    // if fired concurrently.
-    pendingWrites = pendingWrites.then(async () => {
-      const b64 = uint8ToBase64Chunk(chunk)
-      if (!wroteFirstChunk) {
-        wroteFirstChunk = true
-        await Filesystem.writeFile({
-          path: fileName,
-          data: b64,
-          directory: Directory.Documents,
-          recursive: true,
-        })
-      } else {
-        await Filesystem.appendFile({
-          path: fileName,
-          data: b64,
-          directory: Directory.Documents,
-        })
-      }
-    })
-  })
-
-  // --- Metadata section ---
-  onProgress?.({
-    stage: "metadata",
-    processed: 0,
-    total,
-    currentName: "",
-    percent: 2,
-    etaSeconds: null,
-  })
-
-  const backup = await exportAllRecords()
-  const metaPlain = buildMetaPlaintext(backup)
-  const metaCompressed = await compress(metaPlain)
-  const metaEncrypted = await encryptRaw(key, metaCompressed)
-
-  const manifestEntry = new ZipPassThrough("manifest.json")
-  zip.add(manifestEntry)
-  manifestEntry.push(
-    new TextEncoder().encode(
-      JSON.stringify({
-        version: 4,
-        exportedAt: Date.now(),
-        salt: Array.from(vault.salt),
-        evidenceCount: total,
-      } satisfies ManifestV4),
-    ),
-    true,
-  )
-
-  const metaEntry = new ZipPassThrough("meta.json.enc")
-  zip.add(metaEntry)
-  metaEntry.push(metaEncrypted, true)
-
-  // --- Evidence section: one file at a time ---
-  for (let i = 0; i < evidenceRecords.length; i++) {
-    if (zipError) throw zipError
-
-    const record = evidenceRecords[i]
-
-    // Decrypt just this one file, re-encrypt it, push to ZIP, then let
-    // both the decrypted and encrypted buffers fall out of scope before
-    // the next iteration — nothing from this file is retained.
-    const { name, raw } = await decryptEvidenceRaw(key, record)
-    const encrypted = await encryptRaw(key, raw)
-
-    const evEntry = new ZipPassThrough(`evidence/${record.id}.enc`)
-    zip.add(evEntry)
-    evEntry.push(encrypted, true)
-
-    const sidecarEntry = new ZipPassThrough(`evidence/${record.id}.json`)
-    zip.add(sidecarEntry)
-    sidecarEntry.push(
-      new TextEncoder().encode(
-        JSON.stringify({
-          id: record.id,
-          incidentId: record.incidentId,
-          kind: record.kind,
-          mimeType: record.mimeType,
-          size: record.size,
-          sha256: record.sha256,
-          createdAt: record.createdAt,
-          name,
-        }),
-      ),
-      true,
-    )
-
-    const processed = i + 1
-    const elapsed = (Date.now() - startTime) / 1000
-    const avgPerFile = elapsed / processed
-    const remaining = total - processed
-    const etaSeconds = processed >= 2 ? Math.round(avgPerFile * remaining) : null
-
-    onProgress?.({
-      stage: "evidence",
-      processed,
-      total,
-      currentName: name,
-      percent: total > 0 ? Math.round(5 + (processed / total) * 85) : 90,
-      etaSeconds,
-    })
-  }
-
-  onProgress?.({
-    stage: "finishing",
-    processed: total,
-    total,
-    currentName: "",
-    percent: 95,
-    etaSeconds: null,
-  })
-
-  zip.end()
-  await pendingWrites
-
-  if (zipError) throw zipError
-
-  onProgress?.({
-    stage: "saving",
-    processed: total,
-    total,
-    currentName: "",
-    percent: 100,
-    etaSeconds: 0,
-  })
-
-  return fileName
 }
