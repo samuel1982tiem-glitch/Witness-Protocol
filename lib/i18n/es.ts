@@ -3,6 +3,7 @@ import type { Dictionary } from "./types"
 /** Spanish — neutral/general, intended to work reasonably across regions. */
 export const es: Dictionary = {
   incidentForm: incidentFormEs,
+  incidentRecord: incidentRecordEs,
   common: {
     save: "Guardar",
     cancel: "Cancelar",
@@ -105,4 +106,13 @@ export const incidentFormEs = {
   category: "Categoría", title: "Título", description: "Descripción",
   date: "Fecha y hora", gps: "Coordenadas GPS", evidence: "Archivos de evidencia",
   cancel: "Cancelar", saveIncident: "Guardar incidente",
+}
+export const incidentRecordEs = {
+  allRecords: "Todos los registros", sealed: "Sellado", unsealed: "No sellado",
+  description: "Descripción", noDescription: "No se proporcionó descripción.",
+  evidence: "Evidencia", decryptedInMemory: "Descifrado solo en memoria.",
+  noAttachments: "No hay archivos adjuntos en este registro.", sealEvidence: "Sellar evidencia",
+  sealedCannotDelete: "Los registros sellados son permanentes y no se pueden eliminar.",
+  confirmDelete: "Confirmar eliminación", cancel: "Cancelar", deleteRecord: "Eliminar registro",
+  edit: "Editar", saveChanges: "Guardar cambios", pdf: "PDF", exporting: "Exportando…",
 }

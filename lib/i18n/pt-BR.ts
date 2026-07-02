@@ -3,6 +3,7 @@ import type { Dictionary } from "./types"
 /** Portuguese (Brazil) */
 export const ptBR: Dictionary = {
   incidentForm: incidentFormPtBR,
+  incidentRecord: incidentRecordPtBR,
   common: {
     save: "Salvar",
     cancel: "Cancelar",
@@ -104,4 +105,13 @@ export const incidentFormPtBR = {
   category: "Categoria", title: "Título", description: "Descrição",
   date: "Data e hora", gps: "Coordenadas GPS", evidence: "Anexos de evidência",
   cancel: "Cancelar", saveIncident: "Salvar incidente",
+}
+export const incidentRecordPtBR = {
+  allRecords: "Todos os registros", sealed: "Selado", unsealed: "Não selado",
+  description: "Descrição", noDescription: "Nenhuma descrição fornecida.",
+  evidence: "Evidência", decryptedInMemory: "Descriptografado apenas na memória.",
+  noAttachments: "Nenhum anexo neste registro.", sealEvidence: "Selar evidência",
+  sealedCannotDelete: "Registros selados são permanentes e não podem ser excluídos.",
+  confirmDelete: "Confirmar exclusão", cancel: "Cancelar", deleteRecord: "Excluir registro",
+  edit: "Editar", saveChanges: "Salvar alterações", pdf: "PDF", exporting: "Exportando…",
 }

@@ -6,6 +6,7 @@ import type { Dictionary } from "./types"
  */
 export const en: Dictionary = {
   incidentForm: incidentFormEn,
+  incidentRecord: incidentRecordEn,
   common: {
     save: "Save",
     cancel: "Cancel",
@@ -106,4 +107,13 @@ export const incidentFormEn = {
   category: "Category", title: "Title", description: "Description",
   date: "Date and time", gps: "GPS coordinates", evidence: "Evidence attachments",
   cancel: "Cancel", saveIncident: "Save incident",
+}
+export const incidentRecordEn = {
+  allRecords: "All records", sealed: "Sealed", unsealed: "Unsealed",
+  description: "Description", noDescription: "No description provided.",
+  evidence: "Evidence", decryptedInMemory: "Decrypted in memory only.",
+  noAttachments: "No attachments on this record.", sealEvidence: "Seal evidence",
+  sealedCannotDelete: "Sealed records are permanent and cannot be deleted.",
+  confirmDelete: "Confirm delete", cancel: "Cancel", deleteRecord: "Delete record",
+  edit: "Edit", saveChanges: "Save changes", pdf: "PDF", exporting: "Exporting…",
 }

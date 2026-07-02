@@ -16,6 +16,7 @@ import { Linkify } from "@/lib/linkify"
 import { generateIncidentPdf } from "@/lib/pdf-export"
 import { useSearchParams, useRouter } from "next/navigation"
 import * as React from "react"
+import { useI18n } from "@/components/i18n-provider"
 
 import { Button } from "@/components/ui/button"
 import { EvidenceList } from "@/components/evidence-list"
@@ -214,10 +215,10 @@ const incidentId = searchParams.get("id")
             {incident.sealed ? (
               <Badge tone="green">
                 <ShieldCheck className="size-3" aria-hidden="true" />
-                Sealed
+                {t("incidentRecord.sealed")}
               </Badge>
             ) : (
-              <Badge tone="gray">Unsealed</Badge>
+              <Badge tone="gray">{t("incidentRecord.unsealed")}</Badge>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -235,7 +236,7 @@ const incidentId = searchParams.get("id")
                 disabled={exportingPdf}
               >
                 <FileDown className="size-4" aria-hidden="true" />
-                {exportingPdf ? "Exporting…" : "PDF"}
+                {exportingPdf ? t("incidentRecord.exporting") : t("incidentRecord.pdf")}
               </Button>
             ) : null}
           </div>
@@ -372,7 +373,7 @@ const incidentId = searchParams.get("id")
                 onClick={handleSaveEdit}
                 disabled={working || busy}
               >
-                Save changes
+                {t("incidentRecord.saveChanges")}
               </Button>
             </div>
           </CardBody>
@@ -382,13 +383,13 @@ const incidentId = searchParams.get("id")
           <CardBody className="space-y-4">
             <div>
               <h2 className="mb-1 text-sm font-medium text-foreground">
-                Description
+                {t("incidentRecord.description")}
               </h2>
               <p className="whitespace-pre-wrap text-pretty text-sm leading-relaxed text-muted-foreground">
                 {incident.description ? (
                   <Linkify text={incident.description} />
                 ) : (
-                  "No description provided."
+                  t("incidentRecord.noDescription")
                 )}
               </p>
             </div>
@@ -416,8 +417,8 @@ const incidentId = searchParams.get("id")
       {!editing ? (
         <section className="space-y-3">
           <SectionTitle
-            title="Evidence"
-            description="Decrypted in memory only."
+            title={t("incidentRecord.evidence")}
+            description={t("incidentRecord.decryptedInMemory")}
           />
           <EvidenceList incidentId={incident.id} />
         </section>
@@ -459,7 +460,7 @@ const incidentId = searchParams.get("id")
 
         {incident.sealed ? (
           <p className="rounded-xl bg-muted px-3 py-2 text-center text-xs text-muted-foreground">
-            Sealed records are permanent and cannot be deleted.
+            {t("incidentRecord.sealedCannotDelete")}
           </p>
         ) : confirmDelete ? (
           <div className="flex gap-2">
@@ -470,7 +471,7 @@ const incidentId = searchParams.get("id")
               className="flex-1"
             >
               <Trash2 className="size-4" aria-hidden="true" />
-              Confirm delete
+              {t("incidentRecord.confirmDelete")}
             </Button>
             <Button
               variant="outline"
@@ -489,7 +490,7 @@ const incidentId = searchParams.get("id")
             className="w-full text-destructive hover:text-destructive"
           >
             <Trash2 className="size-4" aria-hidden="true" />
-            Delete record
+            {t("incidentRecord.deleteRecord")}
           </Button>
         )}
       </div>

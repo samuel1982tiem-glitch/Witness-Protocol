@@ -17,6 +17,7 @@ export type LanguageCode = "en" | "pt-BR" | "es"
 export type LanguagePreference = "system" | LanguageCode
 
 export interface Dictionary {
+  incidentRecord: IncidentRecordDict
   incidentForm: IncidentFormDict
   common: {
     save: string
@@ -121,4 +122,24 @@ export interface IncidentFormDict {
   evidence: string
   cancel: string
   saveIncident: string
+}
+
+export interface IncidentRecordDict {
+  allRecords: string
+  sealed: string
+  unsealed: string
+  description: string
+  noDescription: string
+  evidence: string
+  decryptedInMemory: string
+  noAttachments: string
+  sealEvidence: string
+  sealedCannotDelete: string
+  confirmDelete: string
+  cancel: string
+  deleteRecord: string
+  edit: string
+  saveChanges: string
+  pdf: string
+  exporting: string
 }
