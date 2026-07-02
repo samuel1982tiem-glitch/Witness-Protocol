@@ -3,6 +3,7 @@
 import { ShieldCheck } from "lucide-react"
 import * as React from "react"
 import { useVault } from "@/components/vault-provider"
+import { useI18n } from "@/components/i18n-provider"
 import { useRouter } from "next/navigation"
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -82,6 +83,7 @@ function DialPad({
 
 function SetupForm() {
   const { setupVault, busy } = useVault()
+  const { t } = useI18n()
 
   const length = 6
   const [passcode, setPasscode] = React.useState("")
@@ -118,7 +120,7 @@ function SetupForm() {
   }
 
   if (next !== firstEntry) {
-    setLocalError("Passcodes do not match.")
+    setLocalError(t("vault.passcodesDoNotMatch"))
     setShake(true)
 
     setTimeout(() => {
@@ -137,7 +139,7 @@ function SetupForm() {
     setPasscode("")
     await setupVault(next)
   } catch {
-    setLocalError("Could not create the vault.")
+    setLocalError(t("vault.couldNotCreateVault"))
     setPasscode("")
     setFirstEntry("")
     setConfirming(false)
@@ -179,6 +181,7 @@ function SetupForm() {
 
 function UnlockForm() {
   const { unlock, busy, error } = useVault()
+  const { t } = useI18n()
 
   const length = 6
   const [passcode, setPasscode] = React.useState("")
@@ -190,7 +193,7 @@ function UnlockForm() {
       ;(async () => {
         const ok = await unlock(passcode)
         if (!ok) {
-          setLocalError("Incorrect vault passcode.")
+          setLocalError(t("vault.incorrectPasscode"))
           setShake(true)
           setPasscode("")
         } else {
