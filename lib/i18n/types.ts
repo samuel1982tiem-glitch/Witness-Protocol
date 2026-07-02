@@ -17,6 +17,7 @@ export type LanguageCode = "en" | "pt-BR" | "es"
 export type LanguagePreference = "system" | LanguageCode
 
 export interface Dictionary {
+  incidentForm: IncidentFormDict
   common: {
     save: string
     cancel: string
@@ -109,4 +110,15 @@ export interface Dictionary {
     backupRestored: string
     backupMerged: string
   }
+}
+
+export interface IncidentFormDict {
+  category: string
+  title: string
+  description: string
+  date: string
+  gps: string
+  evidence: string
+  cancel: string
+  saveIncident: string
 }

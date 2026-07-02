@@ -2,6 +2,7 @@ import type { Dictionary } from "./types"
 
 /** Portuguese (Brazil) */
 export const ptBR: Dictionary = {
+  incidentForm: incidentFormPtBR,
   common: {
     save: "Salvar",
     cancel: "Cancelar",
@@ -98,4 +99,9 @@ export const ptBR: Dictionary = {
     backupRestored: "Backup restaurado",
     backupMerged: "Backup mesclado",
   },
+}
+export const incidentFormPtBR = {
+  category: "Categoria", title: "Título", description: "Descrição",
+  date: "Data e hora", gps: "Coordenadas GPS", evidence: "Anexos de evidência",
+  cancel: "Cancelar", saveIncident: "Salvar incidente",
 }

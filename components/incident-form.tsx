@@ -12,6 +12,7 @@ import {
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import * as React from "react"
+import { useI18n } from "@/components/i18n-provider"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -42,6 +43,7 @@ function pid() {
 export function IncidentForm() {
   const router = useRouter()
   const { addIncident } = useVault()
+  const { t } = useI18n()
 
   const [category, setCategory] = React.useState<CategoryId | null>(null)
   const [title, setTitle] = React.useState("")
@@ -216,7 +218,7 @@ export function IncidentForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-6">
       <div>
-        <Label>Category</Label>
+        <Label>{t("incidentForm.category")}</Label>
         <div className="grid grid-cols-2 gap-2">
           {CATEGORIES.map((c) => (
             <button
@@ -245,7 +247,7 @@ export function IncidentForm() {
       </div>
 
       <div>
-        <Label htmlFor="title">Title</Label>
+        <Label htmlFor="title">{t("incidentForm.title")}</Label>
         <Input
           id="title"
           value={title}
@@ -256,7 +258,7 @@ export function IncidentForm() {
       </div>
 
       <div>
-        <Label htmlFor="description">Description</Label>
+        <Label htmlFor="description">{t("incidentForm.description")}</Label>
         <Textarea
           id="description"
           value={description}
@@ -267,7 +269,7 @@ export function IncidentForm() {
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label htmlFor="occurredAt">Date and time</Label>
+          <Label htmlFor="occurredAt">{t("incidentForm.date")}</Label>
           <Input
             id="occurredAt"
             type="datetime-local"
@@ -277,7 +279,7 @@ export function IncidentForm() {
         </div>
 
         <div>
-          <Label>GPS coordinates</Label>
+          <Label>{t("incidentForm.gps")}</Label>
           <Card className="flex h-full flex-col justify-between gap-2 p-3">
             {location ? (
               <button
@@ -325,7 +327,7 @@ export function IncidentForm() {
       </div>
 
       <div className="space-y-3">
-        <Label>Evidence attachments</Label>
+        <Label>{t("incidentForm.evidence")}</Label>
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
@@ -485,7 +487,7 @@ export function IncidentForm() {
               Encrypting…
             </>
           ) : (
-            "Save incident"
+            t("incidentForm.saveIncident")
           )}
         </Button>
       </div>

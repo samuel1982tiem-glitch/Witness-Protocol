@@ -5,6 +5,7 @@ import type { Dictionary } from "./types"
  * Dictionary shape; every other language file must match it exactly.
  */
 export const en: Dictionary = {
+  incidentForm: incidentFormEn,
   common: {
     save: "Save",
     cancel: "Cancel",
@@ -100,4 +101,9 @@ export const en: Dictionary = {
     backupRestored: "Backup restored",
     backupMerged: "Backup merged",
   },
+}
+export const incidentFormEn = {
+  category: "Category", title: "Title", description: "Description",
+  date: "Date and time", gps: "GPS coordinates", evidence: "Evidence attachments",
+  cancel: "Cancel", saveIncident: "Save incident",
 }

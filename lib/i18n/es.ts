@@ -2,6 +2,7 @@ import type { Dictionary } from "./types"
 
 /** Spanish — neutral/general, intended to work reasonably across regions. */
 export const es: Dictionary = {
+  incidentForm: incidentFormEs,
   common: {
     save: "Guardar",
     cancel: "Cancelar",
@@ -99,4 +100,9 @@ export const es: Dictionary = {
     backupRestored: "Copia de seguridad restaurada",
     backupMerged: "Copia de seguridad fusionada",
   },
+}
+export const incidentFormEs = {
+  category: "Categoría", title: "Título", description: "Descripción",
+  date: "Fecha y hora", gps: "Coordenadas GPS", evidence: "Archivos de evidencia",
+  cancel: "Cancelar", saveIncident: "Guardar incidente",
 }
