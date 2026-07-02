@@ -2,6 +2,7 @@
 
 import {
   Lock,
+  ScrollText,
   ShieldCheck,
   Timer,
   User,
@@ -32,6 +33,7 @@ export default function VaultPage() {
     sealIncident,
     profile: vaultProfile,
     saveProfile,
+    getAuditLog,
   } = useVault()
 
   const autoLockMin = Math.round(autoLockMs / 60000)
@@ -105,6 +107,31 @@ export default function VaultPage() {
   }
 
   const unsealedCount = incidents.filter((i) => !i.sealed).length
+
+  const [auditEntries, setAuditEntries] = React.useState<
+    { action: string; detail: string; timestamp: number }[]
+  >([])
+  const [auditExpanded, setAuditExpanded] = React.useState(false)
+
+  React.useEffect(() => {
+    if (status !== "unlocked") return
+    getAuditLog().then(setAuditEntries)
+  }, [status, getAuditLog])
+
+  function auditActionLabel(action: string): string {
+    const labels: Record<string, string> = {
+      incident_created: "Incident created",
+      incident_edited: "Incident edited",
+      incident_sealed: "Incident sealed",
+      incident_deleted: "Incident deleted",
+      evidence_downloaded: "Evidence downloaded",
+      pdf_exported: "PDF exported",
+      backup_exported: "Backup exported",
+      backup_restored: "Backup restored",
+      backup_merged: "Backup merged",
+    }
+    return labels[action] || action
+  }
   const [sealingAll, setSealingAll] = React.useState(false)
   const [sealAllProgress, setSealAllProgress] = React.useState<{
     processed: number
@@ -311,6 +338,46 @@ async function runImport(passcode: string) {
             </div>
           ) : null}
 
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardBody className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ScrollText className="size-4 text-primary" />
+              <p className="font-medium">Audit log</p>
+            </div>
+            {auditEntries.length > 5 ? (
+              <button
+                type="button"
+                className="text-xs text-muted-foreground underline"
+                onClick={() => setAuditExpanded((v) => !v)}
+              >
+                {auditExpanded ? "Show less" : `Show all (${auditEntries.length})`}
+              </button>
+            ) : null}
+          </div>
+
+          {auditEntries.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No activity recorded yet.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {(auditExpanded ? auditEntries : auditEntries.slice(0, 5)).map((entry, i) => (
+                <li key={i} className="rounded-lg border px-3 py-2 text-xs">
+                  <p className="font-medium">{auditActionLabel(entry.action)}</p>
+                  {entry.detail ? (
+                    <p className="truncate text-muted-foreground">{entry.detail}</p>
+                  ) : null}
+                  <p className="text-muted-foreground">
+                    {new Date(entry.timestamp).toLocaleString()}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
         </CardBody>
       </Card>
 

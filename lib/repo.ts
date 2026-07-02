@@ -16,6 +16,7 @@ import {
   putRecord,
   STORES,
   toCipherPayload,
+  type AuditLogRecord,
   type EvidenceRecord,
   type IncidentRecord,
   type SealRecord,
@@ -305,6 +306,53 @@ export async function deleteIncident(incidentId: string): Promise<void> {
 }
 
 export type StoredCipher = CipherPayload
+
+// ---------------------------------------------------------------------------
+// Audit log — encrypted, append-only record of vault activity.
+// ---------------------------------------------------------------------------
+
+export type AuditAction =
+  | "incident_created"
+  | "incident_edited"
+  | "incident_sealed"
+  | "incident_deleted"
+  | "evidence_downloaded"
+  | "pdf_exported"
+  | "backup_exported"
+  | "backup_restored"
+  | "backup_merged"
+
+export interface AuditEntry {
+  action: AuditAction
+  detail: string
+  timestamp: number
+}
+
+/** Append one entry to the audit log. Never overwrites — always adds new. */
+export async function logAuditEvent(
+  key: CryptoKey,
+  action: AuditAction,
+  detail: string,
+): Promise<void> {
+  const entry: AuditEntry = { action, detail, timestamp: Date.now() }
+  const payload = await encryptJSON(key, entry)
+  const record: AuditLogRecord = {
+    id: `audit_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+    createdAt: entry.timestamp,
+    iv: payload.iv,
+    data: payload.data,
+  }
+  await putRecord(STORES.auditLog, record)
+}
+
+/** Decrypt and return all audit log entries, newest first. */
+export async function loadAuditLog(key: CryptoKey): Promise<AuditEntry[]> {
+  const records = await getAll<AuditLogRecord>(STORES.auditLog)
+  const entries = await Promise.all(
+    records.map((r) => decryptJSON<AuditEntry>(key, toCipherPayload(r))),
+  )
+  return entries.sort((a, b) => b.timestamp - a.timestamp)
+}
 
 // ---------------------------------------------------------------------------
 // Backup helpers

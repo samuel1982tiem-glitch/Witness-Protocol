@@ -36,6 +36,10 @@ import {
   loadEvidenceBlobUrl,
   downloadEvidenceFile,
   loadUserProfile,
+  logAuditEvent,
+  loadAuditLog,
+  type AuditAction,
+  type AuditEntry,
   saveUserProfile,
   saveEvidence,
   saveIncident,
@@ -89,6 +93,8 @@ interface VaultContextValue {
   profile: any
   saveProfile: (profile:any)=>Promise<void>
   loadProfile: ()=>Promise<void>
+  getAuditLog: () => Promise<AuditEntry[]>
+  logAudit: (action: AuditAction, detail: string) => Promise<void>
 }
 
 
@@ -344,14 +350,39 @@ return true
     [incidents, refreshIncidents],
   )
 
+  const logAudit = React.useCallback(
+    async (action: AuditAction, detail: string) => {
+      const key = keyRef.current
+      if (!key) return
+      try {
+        await logAuditEvent(key, action, detail)
+      } catch (err) {
+        console.log("[audit] log error:", (err as Error).message)
+      }
+    },
+    [],
+  )
+
+  const getAuditLog = React.useCallback(async (): Promise<AuditEntry[]> => {
+    const key = keyRef.current
+    if (!key) return []
+    try {
+      return await loadAuditLog(key)
+    } catch {
+      return []
+    }
+  }, [])
+
   const removeIncident = React.useCallback(
     async (incidentId: string) => {
       const target = incidents.find((i) => i.id === incidentId)
       if (target?.sealed) throw new Error("Sealed incidents cannot be deleted.")
+      const title = target?.title ?? incidentId
       await repoDeleteIncident(incidentId)
       await refreshIncidents()
+      await logAudit("incident_deleted", title)
     },
-    [incidents, refreshIncidents],
+    [incidents, refreshIncidents, logAudit],
   )
 
   const sealIncident = React.useCallback(
@@ -362,8 +393,9 @@ return true
       if (!target) throw new Error("Incident not found.")
       await repoSealIncident(key, target)
       await refreshIncidents()
+      await logAudit("incident_sealed", target.title)
     },
-    [incidents, refreshIncidents],
+    [incidents, refreshIncidents, logAudit],
   )
 
   const runAnalysis = React.useCallback(async (): Promise<PatternAlert[]> => {
@@ -447,6 +479,7 @@ return true
       const fileName = await exportVaultBackup(key, (progress) =>
         setExportProgress(progress),
       )
+      await logAudit("backup_exported", fileName)
       return fileName
     } finally {
       setExportProgress(null)
@@ -532,6 +565,8 @@ const importBackup = React.useCallback(
     profile,
     saveProfile,
     loadProfile,
+    getAuditLog,
+    logAudit,
   }
 
   return <VaultContext.Provider value={value}>{children}</VaultContext.Provider>

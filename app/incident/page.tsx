@@ -3,6 +3,7 @@
 import {
   ArrowLeft,
   Crosshair,
+  FileDown,
   Lock,
   MapPin,
   Pencil,
@@ -12,6 +13,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { Linkify } from "@/lib/linkify"
+import { generateIncidentPdf } from "@/lib/pdf-export"
 import { useSearchParams, useRouter } from "next/navigation"
 import * as React from "react"
 
@@ -36,7 +38,7 @@ export default function IncidentDetailPage() {
  const searchParams = useSearchParams()
 const incidentId = searchParams.get("id")
   const router = useRouter()
-  const { incidents, sealIncident, removeIncident, updateIncident, busy } =
+  const { incidents, sealIncident, removeIncident, updateIncident, profile, logAudit, busy } =
     useVault()
   const [working, setWorking] = React.useState(false)
   const [confirmDelete, setConfirmDelete] = React.useState(false)
@@ -140,6 +142,43 @@ const incidentId = searchParams.get("id")
     )
   }
 
+  const [exportingPdf, setExportingPdf] = React.useState(false)
+
+  async function handlePdfExport() {
+    if (!incident) return
+    setExportingPdf(true)
+    try {
+      const blob = generateIncidentPdf(incident, profile)
+      const arrayBuffer = await blob.arrayBuffer()
+      const bytes = new Uint8Array(arrayBuffer)
+      let binary = ""
+      const chunkSize = 0x8000
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize))
+      }
+      const base64 = btoa(binary)
+
+      const { Filesystem, Directory } = await import("@capacitor/filesystem")
+      const safeName = `${incident.title.replace(/[^a-zA-Z0-9-_ ]/g, "").slice(0, 60) || "incident"}.pdf`
+
+      await Filesystem.writeFile({
+        path: safeName,
+        data: base64,
+        directory: Directory.Cache,
+        recursive: true,
+      })
+
+      const { Share } = await import("@capacitor/share")
+      const uriResult = await Filesystem.getUri({ path: safeName, directory: Directory.Cache })
+      await Share.share({ url: uriResult.uri, title: safeName })
+      await logAudit("pdf_exported", incident.title)
+    } catch (err) {
+      alert(`PDF export failed: ${(err as Error).message}`)
+    } finally {
+      setExportingPdf(false)
+    }
+  }
+
   async function handleSeal() {
     setError(null)
     setWorking(true)
@@ -181,12 +220,25 @@ const incidentId = searchParams.get("id")
               <Badge tone="gray">Unsealed</Badge>
             )}
           </div>
-          {!incident.sealed && !editing ? (
-            <Button variant="outline" size="sm" onClick={beginEdit}>
-              <Pencil className="size-4" aria-hidden="true" />
-              Edit
-            </Button>
-          ) : null}
+          <div className="flex items-center gap-2">
+            {!incident.sealed && !editing ? (
+              <Button variant="outline" size="sm" onClick={beginEdit}>
+                <Pencil className="size-4" aria-hidden="true" />
+                Edit
+              </Button>
+            ) : null}
+            {!editing ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePdfExport}
+                disabled={exportingPdf}
+              >
+                <FileDown className="size-4" aria-hidden="true" />
+                {exportingPdf ? "Exporting…" : "PDF"}
+              </Button>
+            ) : null}
+          </div>
         </div>
         {!editing ? (
           <>
