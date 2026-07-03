@@ -45,20 +45,57 @@ function bytesToDataUrl(data: Uint8Array, mimeType: string): string {
 }
 
 /**
+ * Calculate image dimensions that preserve aspect ratio while fitting in max width/height.
+ */
+function calculateImageDimensions(
+  origWidth: number,
+  origHeight: number,
+  maxWidth: number,
+  maxHeight: number,
+): { width: number; height: number } {
+  const widthRatio = maxWidth / origWidth
+  const heightRatio = maxHeight / origHeight
+  const ratio = Math.min(widthRatio, heightRatio, 1) // don't upscale
+
+  return {
+    width: origWidth * ratio,
+    height: origHeight * ratio,
+  }
+}
+
+/**
+ * Get image dimensions from a Blob/data URL by decoding the image.
+ */
+async function getImageDimensions(
+  dataUrl: string,
+): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => {
+      resolve({ width: img.naturalWidth, height: img.naturalHeight })
+    }
+    img.onerror = () => {
+      reject(new Error("Failed to load image"))
+    }
+    img.src = dataUrl
+  })
+}
+
+/**
  * Generates a single-incident PDF report with:
  * - Investigator identity header (if filled out)
  * - Incident details, GPS, category
- * - Full evidence list with images embedded
+ * - Full evidence list with images embedded (properly scaled and centered)
  * - Evidence hashes and metadata
  * - Seal info if sealed
  *
  * Returns the PDF as a Blob for saving or sharing.
  */
-export function generateIncidentPdf(
+export async function generateIncidentPdf(
   incident: Incident,
   profile: InvestigatorProfile | null,
   evidenceWithData?: EvidenceWithData[],
-): Blob {
+): Promise<Blob> {
   const doc = new jsPDF({ unit: "pt", format: "a4" })
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
@@ -174,22 +211,34 @@ export function generateIncidentPdf(
       ) {
         try {
           const dataUrl = bytesToDataUrl(evidenceData.data, ev.mimeType)
-          const imgWidth = pageWidth - margin * 2
-          const maxImgHeight = 150
+          
+          // Get actual image dimensions
+          const imgDims = await getImageDimensions(dataUrl)
+          
+          // Calculate scaled dimensions (max 280pt wide, 200pt tall)
+          const maxImgWidth = 280
+          const maxImgHeight = 200
+          const { width: scaledWidth, height: scaledHeight } = calculateImageDimensions(
+            imgDims.width,
+            imgDims.height,
+            maxImgWidth,
+            maxImgHeight,
+          )
 
-          // Rough aspect ratio preservation (jsPDF doesn't auto-calculate)
-          // For simplicity, use a fixed height and let it scale width proportionally
+          // Center the image horizontally
+          const imgX = margin + (pageWidth - margin * 2 - scaledWidth) / 2
+
           doc.addImage(
             dataUrl,
             "JPEG",
-            margin,
+            imgX,
             y,
-            imgWidth,
-            maxImgHeight,
+            scaledWidth,
+            scaledHeight,
             undefined,
             "NONE",
           )
-          line(maxImgHeight + 10)
+          line(scaledHeight + 10)
         } catch (err) {
           console.error(`Failed to embed image for evidence ${ev.id}:`, err)
           doc.setFontSize(8)
