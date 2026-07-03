@@ -501,6 +501,7 @@ const incidentId = searchParams.get("id")
 }
 
 function BackLink() {
+  const { t } = useI18n()
   return (
     <Link
       href="/incidents"
