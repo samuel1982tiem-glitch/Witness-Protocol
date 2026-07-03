@@ -146,9 +146,9 @@ export function IncidentForm() {
   }
 
   function captureLocation() {
-    setGeoStatus("Locating…")
+    setGeoStatus(t("incidentFormExtra.locating"))
     if (typeof navigator === "undefined" || !navigator.geolocation) {
-      setGeoStatus("Geolocation is not available on this device.")
+      setGeoStatus(t("incidentFormExtra.geoNotAvailable"))
       return
     }
     navigator.geolocation.getCurrentPosition(
@@ -160,7 +160,7 @@ export function IncidentForm() {
         })
         setGeoStatus(null)
       },
-      () => setGeoStatus("Location permission denied or unavailable."),
+      () => setGeoStatus(t("incidentFormExtra.geoPermissionDenied")),
       { enableHighAccuracy: true, timeout: 10000 },
     )
   }
@@ -175,11 +175,11 @@ export function IncidentForm() {
     e.preventDefault()
     setError(null)
     if (!category) {
-      setError("Select a category.")
+      setError(t("incidentFormExtra.selectCategory"))
       return
     }
     if (!title.trim()) {
-      setError("Enter a title.")
+      setError(t("incidentFormExtra.enterTitle"))
       return
     }
     setSubmitting(true)
@@ -210,7 +210,7 @@ export function IncidentForm() {
       )
       router.replace("/incidents")
     } catch (err) {
-      setError((err as Error).message || "Could not save the incident.")
+      setError((err as Error).message || t("incidentFormExtra.couldNotSaveIncident"))
       setSubmitting(false)
     }
   }
@@ -298,7 +298,7 @@ export function IncidentForm() {
               </button>
             ) : (
               <p className="flex-1 text-sm text-muted-foreground">
-                {geoStatus ?? "No location attached."}
+                {geoStatus ?? t("incidentFormExtra.noLocationAttached")}
               </p>
             )}
             <div className="flex items-center justify-end gap-2">
@@ -307,7 +307,7 @@ export function IncidentForm() {
                   type="button"
                   onClick={() => setLocation(null)}
                   className="rounded-lg p-2 text-muted-foreground hover:bg-muted"
-                  aria-label="Remove location"
+                  aria-label={t("incidentFormExtra.removeLocation")}
                 >
                   <X className="size-4" aria-hidden="true" />
                 </button>
@@ -319,7 +319,7 @@ export function IncidentForm() {
                 onClick={captureLocation}
               >
                 <Crosshair className="size-4" aria-hidden="true" />
-                Capture
+                {t("incidentFormExtra.capture")}
               </Button>
             </div>
           </Card>
@@ -335,7 +335,7 @@ export function IncidentForm() {
             className="flex items-center justify-center gap-2 rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-medium hover:bg-muted"
           >
             <Camera className="size-4" aria-hidden="true" />
-            Photo
+            {t("incidentFormExtra.photo")}
           </button>
           <button
             type="button"
@@ -343,7 +343,7 @@ export function IncidentForm() {
             className="flex items-center justify-center gap-2 rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-medium hover:bg-muted"
           >
             <ImageIcon className="size-4" aria-hidden="true" />
-            Screenshot
+            {t("incidentFormExtra.screenshot")}
           </button>
         </div>
         <VoiceRecorder onRecorded={addVoice} />
@@ -353,7 +353,7 @@ export function IncidentForm() {
           className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-medium hover:bg-muted"
         >
           <Mic className="size-4" aria-hidden="true" />
-          Upload audio file
+          {t("incidentFormExtra.uploadAudio")}
         </button>
         <button
           type="button"
@@ -361,7 +361,7 @@ export function IncidentForm() {
           className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-medium hover:bg-muted"
         >
           <FileText className="size-4" aria-hidden="true" />
-          Upload document
+          {t("incidentFormExtra.uploadDocument")}
         </button>
 
         <input
@@ -452,7 +452,7 @@ export function IncidentForm() {
                   type="button"
                   onClick={() => removeAttachment(a.id)}
                   className="rounded-lg p-2 text-muted-foreground hover:bg-muted"
-                  aria-label="Remove attachment"
+                  aria-label={t("incidentFormExtra.removeAttachment")}
                 >
                   <Trash2 className="size-4" aria-hidden="true" />
                 </button>
@@ -478,13 +478,13 @@ export function IncidentForm() {
           onClick={() => router.back()}
           disabled={submitting}
         >
-          Cancel
+          {t("incidentFormExtra.cancel")}
         </Button>
         <Button type="submit" size="lg" className="flex-1" disabled={submitting}>
           {submitting ? (
             <>
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              Encrypting…
+              {t("incidentFormExtra.encrypting")}
             </>
           ) : (
             t("incidentForm.saveIncident")
