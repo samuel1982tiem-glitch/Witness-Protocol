@@ -180,34 +180,42 @@ const incidentId = searchParams.get("id")
         }),
       ).then((items) => items.filter((i) => i !== null))
 
-      // Generate PDF with embedded images
-      const blob = generateIncidentPdf(incident, profile, evidenceWithData as any)
-      const arrayBuffer = await blob.arrayBuffer()
-      const bytes = new Uint8Array(arrayBuffer)
-      let binary = ""
-      const chunkSize = 0x8000
-      for (let i = 0; i < bytes.length; i += chunkSize) {
-        binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize))
+      // Generate PDF with embedded images (now async)
+      const blob = await generateIncidentPdf(incident, profile, evidenceWithData as any)
+      
+      // Convert blob to base64
+      const reader = new FileReader()
+      reader.onload = async () => {
+        try {
+          const base64 = (reader.result as string).split(",")[1]
+
+          const { Filesystem, Directory } = await import("@capacitor/filesystem")
+          const safeName = `${incident.title.replace(/[^a-zA-Z0-9-_ ]/g, "").slice(0, 60) || "incident"}.pdf`
+
+          await Filesystem.writeFile({
+            path: safeName,
+            data: base64,
+            directory: Directory.Cache,
+            recursive: true,
+          })
+
+          const { Share } = await import("@capacitor/share")
+          const uriResult = await Filesystem.getUri({ path: safeName, directory: Directory.Cache })
+          await Share.share({ url: uriResult.uri, title: safeName })
+          await logAudit("pdf_exported", incident.title)
+        } catch (err) {
+          alert(`PDF export failed: ${(err as Error).message}`)
+        } finally {
+          setExportingPdf(false)
+        }
       }
-      const base64 = btoa(binary)
-
-      const { Filesystem, Directory } = await import("@capacitor/filesystem")
-      const safeName = `${incident.title.replace(/[^a-zA-Z0-9-_ ]/g, "").slice(0, 60) || "incident"}.pdf`
-
-      await Filesystem.writeFile({
-        path: safeName,
-        data: base64,
-        directory: Directory.Cache,
-        recursive: true,
-      })
-
-      const { Share } = await import("@capacitor/share")
-      const uriResult = await Filesystem.getUri({ path: safeName, directory: Directory.Cache })
-      await Share.share({ url: uriResult.uri, title: safeName })
-      await logAudit("pdf_exported", incident.title)
+      reader.onerror = () => {
+        alert(`PDF export failed: Could not read blob`)
+        setExportingPdf(false)
+      }
+      reader.readAsDataURL(blob)
     } catch (err) {
       alert(`PDF export failed: ${(err as Error).message}`)
-    } finally {
       setExportingPdf(false)
     }
   }
