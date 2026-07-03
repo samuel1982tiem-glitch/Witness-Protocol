@@ -13,6 +13,7 @@ import {
   Select,
 } from "@/components/ui/primitives"
 import { useVault } from "@/components/vault-provider"
+import { useI18n } from "@/components/i18n-provider"
 import { CATEGORIES } from "@/lib/categories"
 import type { IncidentFilters } from "@/lib/types"
 
@@ -28,6 +29,7 @@ const EMPTY_FILTERS: IncidentFilters = {
 export default function IncidentsPage() {
   const router = useRouter()
   const { incidents } = useVault()
+  const { t } = useI18n()
   const [filters, setFilters] = React.useState<IncidentFilters>(EMPTY_FILTERS)
   const [showFilters, setShowFilters] = React.useState(false)
 
@@ -72,7 +74,7 @@ export default function IncidentsPage() {
   return (
     <div className="space-y-5">
       <SectionTitle
-        title="Records"
+        title={t("recordsPage.title")}
         description={`${incidents.length} encrypted ${
           incidents.length === 1 ? "incident" : "incidents"
         } on this device.`}
@@ -87,7 +89,7 @@ export default function IncidentsPage() {
           <Input
             value={filters.query}
             onChange={(e) => update("query", e.target.value)}
-            placeholder="Search title or description"
+            placeholder={t("recordsPage.searchPlaceholder")}
             className="pl-9"
           />
         </div>
@@ -99,7 +101,7 @@ export default function IncidentsPage() {
               ? "border-primary bg-primary/10 text-primary"
               : "border-border bg-background text-muted-foreground hover:bg-muted"
           }`}
-          aria-label="Toggle filters"
+          aria-label={t("recordsPage.toggleFilters")}
         >
           <SlidersHorizontal className="size-4.5" aria-hidden="true" />
           {activeFilterCount > 0 ? (
@@ -113,7 +115,7 @@ export default function IncidentsPage() {
       {showFilters ? (
         <Card className="space-y-4 p-4">
           <div>
-            <Label htmlFor="f-category">Category</Label>
+            <Label htmlFor="f-category">{t("recordsPage.category")}</Label>
             <Select
               id="f-category"
               value={filters.category}
@@ -121,7 +123,7 @@ export default function IncidentsPage() {
                 update("category", e.target.value as IncidentFilters["category"])
               }
             >
-              <option value="all">All categories</option>
+              <option value="all">{t("recordsPage.allCategories")}</option>
               {CATEGORIES.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -131,7 +133,7 @@ export default function IncidentsPage() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="f-from">From</Label>
+              <Label htmlFor="f-from">{t("recordsPage.from")}</Label>
               <Input
                 id="f-from"
                 type="date"
@@ -140,7 +142,7 @@ export default function IncidentsPage() {
               />
             </div>
             <div>
-              <Label htmlFor="f-to">To</Label>
+              <Label htmlFor="f-to">{t("recordsPage.to")}</Label>
               <Input
                 id="f-to"
                 type="date"
@@ -150,7 +152,7 @@ export default function IncidentsPage() {
             </div>
           </div>
           <div>
-            <Label htmlFor="f-sealed">Sealed status</Label>
+            <Label htmlFor="f-sealed">{t("recordsPage.sealedStatus")}</Label>
             <Select
               id="f-sealed"
               value={filters.sealed}
@@ -158,9 +160,9 @@ export default function IncidentsPage() {
                 update("sealed", e.target.value as IncidentFilters["sealed"])
               }
             >
-              <option value="all">All</option>
-              <option value="sealed">Sealed only</option>
-              <option value="unsealed">Unsealed only</option>
+              <option value="all">{t("recordsPage.all")}</option>
+              <option value="sealed">{t("recordsPage.sealedOnly")}</option>
+              <option value="unsealed">{t("recordsPage.unsealedOnly")}</option>
             </Select>
           </div>
           <label className="flex items-center gap-2.5 text-sm font-medium">
@@ -170,7 +172,7 @@ export default function IncidentsPage() {
               onChange={(e) => update("hasLocation", e.target.checked)}
               className="size-4 rounded border-border accent-primary"
             />
-            Only records with GPS location
+            {t("recordsPage.onlyGpsRecords")}
           </label>
           {activeFilterCount > 0 ? (
             <button
@@ -179,7 +181,7 @@ export default function IncidentsPage() {
               className="inline-flex items-center gap-1.5 text-sm font-medium text-primary"
             >
               <X className="size-4" aria-hidden="true" />
-              Clear filters
+              {t("recordsPage.clearFilters")}
             </button>
           ) : null}
         </Card>
@@ -194,8 +196,8 @@ export default function IncidentsPage() {
       ) : (
         <Card className="p-8 text-center text-sm text-muted-foreground">
           {incidents.length === 0
-            ? "No incidents recorded yet."
-            : "No records match the current filters."}
+            ? t("recordsPage.noIncidentsYet")
+            : t("recordsPage.noRecordsMatchFilters")}
         </Card>
       )}
     </div>

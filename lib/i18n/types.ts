@@ -17,6 +17,7 @@ export type LanguageCode = "en" | "pt-BR" | "es"
 export type LanguagePreference = "system" | LanguageCode
 
 export interface Dictionary {
+  recordsPage: RecordsPageDict
   incidentFormExtra: IncidentFormExtraDict
   incidentRecord: IncidentRecordDict
   incidentForm: IncidentFormDict
@@ -162,4 +163,22 @@ export interface IncidentFormExtraDict {
   couldNotSaveIncident: string
   encrypting: string
   cancel: string
+}
+
+export interface RecordsPageDict {
+  title: string
+  searchPlaceholder: string
+  toggleFilters: string
+  category: string
+  allCategories: string
+  from: string
+  to: string
+  sealedStatus: string
+  all: string
+  sealedOnly: string
+  unsealedOnly: string
+  onlyGpsRecords: string
+  clearFilters: string
+  noIncidentsYet: string
+  noRecordsMatchFilters: string
 }

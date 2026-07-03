@@ -29,7 +29,18 @@ export const incidentFormExtraEs = {
   cancel: "Cancelar",
 }
 
+export const recordsPageEs = {
+  title: "Registros", searchPlaceholder: "Buscar título o descripción",
+  toggleFilters: "Alternar filtros", category: "Categoría", allCategories: "Todas las categorías",
+  from: "Desde", to: "Hasta", sealedStatus: "Estado de sellado", all: "Todos",
+  sealedOnly: "Solo sellados", unsealedOnly: "Solo no sellados",
+  onlyGpsRecords: "Solo registros con ubicación GPS", clearFilters: "Borrar filtros",
+  noIncidentsYet: "Aún no hay incidentes registrados.",
+  noRecordsMatchFilters: "Ningún registro coincide con los filtros actuales.",
+}
+
 export const es: Dictionary = {
+  recordsPage: recordsPageEs,
   incidentForm: incidentFormEs,
   incidentRecord: incidentRecordEs,
   incidentFormExtra: incidentFormExtraEs,
