@@ -252,7 +252,7 @@ export function IncidentForm() {
           id="title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Short summary of the incident"
+          placeholder={t("miscUi.shortSummaryPlaceholder")}
           maxLength={120}
         />
       </div>

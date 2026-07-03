@@ -42,7 +42,20 @@ export const recordsPageEn = {
   noRecordsMatchFilters: "No records match the current filters.",
 }
 
+export const miscUiEn = {
+  noDescriptionShort: "No description.",
+  gpsTagged: "GPS tagged",
+  stopRecording: "Stop recording",
+  logIncidentTitle: "Log incident",
+  logIncidentDescription: "Document an event. All fields stay on this device and are encrypted before storage.",
+  shortSummaryPlaceholder: "Short summary of the incident",
+  recordVoiceNote: "Record voice note",
+  sealed: "Sealed",
+  noAttachments: "No attachments",
+}
+
 export const en: Dictionary = {
+  miscUi: miscUiEn,
   recordsPage: recordsPageEn,
   incidentForm: incidentFormEn,
   incidentRecord: incidentRecordEn,

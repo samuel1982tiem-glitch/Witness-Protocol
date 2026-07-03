@@ -39,7 +39,20 @@ export const recordsPagePtBR = {
   noRecordsMatchFilters: "Nenhum registro corresponde aos filtros atuais.",
 }
 
+export const miscUiPtBR = {
+  noDescriptionShort: "Sem descrição.",
+  gpsTagged: "GPS marcado",
+  stopRecording: "Parar gravação",
+  logIncidentTitle: "Registrar incidente",
+  logIncidentDescription: "Documente um evento. Todos os campos permanecem neste dispositivo e são criptografados antes do armazenamento.",
+  shortSummaryPlaceholder: "Breve resumo do incidente",
+  recordVoiceNote: "Gravar nota de voz",
+  sealed: "Selado",
+  noAttachments: "Sem anexos",
+}
+
 export const ptBR: Dictionary = {
+  miscUi: miscUiPtBR,
   recordsPage: recordsPagePtBR,
   incidentForm: incidentFormPtBR,
   incidentRecord: incidentRecordPtBR,

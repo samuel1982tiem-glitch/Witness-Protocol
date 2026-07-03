@@ -39,7 +39,20 @@ export const recordsPageEs = {
   noRecordsMatchFilters: "Ningún registro coincide con los filtros actuales.",
 }
 
+export const miscUiEs = {
+  noDescriptionShort: "Sin descripción.",
+  gpsTagged: "GPS marcado",
+  stopRecording: "Detener grabación",
+  logIncidentTitle: "Registrar incidente",
+  logIncidentDescription: "Documenta un evento. Todos los campos permanecen en este dispositivo y se cifran antes de almacenarse.",
+  shortSummaryPlaceholder: "Breve resumen del incidente",
+  recordVoiceNote: "Grabar nota de voz",
+  sealed: "Sellado",
+  noAttachments: "Sin archivos adjuntos",
+}
+
 export const es: Dictionary = {
+  miscUi: miscUiEs,
   recordsPage: recordsPageEs,
   incidentForm: incidentFormEs,
   incidentRecord: incidentRecordEs,

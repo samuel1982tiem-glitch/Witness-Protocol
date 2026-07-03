@@ -17,6 +17,7 @@ export type LanguageCode = "en" | "pt-BR" | "es"
 export type LanguagePreference = "system" | LanguageCode
 
 export interface Dictionary {
+  miscUi: MiscUiDict
   recordsPage: RecordsPageDict
   incidentFormExtra: IncidentFormExtraDict
   incidentRecord: IncidentRecordDict
@@ -181,4 +182,16 @@ export interface RecordsPageDict {
   clearFilters: string
   noIncidentsYet: string
   noRecordsMatchFilters: string
+}
+
+export interface MiscUiDict {
+  gpsTagged: string
+  noDescriptionShort: string
+  stopRecording: string
+  logIncidentTitle: string
+  logIncidentDescription: string
+  shortSummaryPlaceholder: string
+  recordVoiceNote: string
+  sealed: string
+  noAttachments: string
 }

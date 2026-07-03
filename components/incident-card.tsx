@@ -4,11 +4,13 @@ import { FileText, ImageIcon, Lock, MapPin, Mic, Paperclip } from "lucide-react"
 import Link from "next/link"
 
 import { Badge } from "@/components/ui/primitives"
+import { useI18n } from "@/components/i18n-provider"
 import { categoryName } from "@/lib/categories"
 import { formatDateTime, relativeTime } from "@/lib/format"
 import type { Incident } from "@/lib/types"
 
 export function IncidentCard({ incident }: { incident: Incident }) {
+  const { t } = useI18n()
   const photoCount = incident.evidence.filter(
     (e) => e.kind === "photo" || e.kind === "screenshot",
   ).length
@@ -27,7 +29,7 @@ export function IncidentCard({ incident }: { incident: Incident }) {
             {incident.sealed ? (
               <Badge tone="green">
                 <Lock className="size-3" aria-hidden="true" />
-                Sealed
+                {t("miscUi.sealed")}
               </Badge>
             ) : null}
           </div>
@@ -35,7 +37,7 @@ export function IncidentCard({ incident }: { incident: Incident }) {
             {incident.title}
           </h3>
           <p className="mt-0.5 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
-            {incident.description || "No description."}
+            {incident.description || t("miscUi.noDescriptionShort")}
           </p>
         </div>
         <span className="shrink-0 text-xs text-muted-foreground">
@@ -48,7 +50,7 @@ export function IncidentCard({ incident }: { incident: Incident }) {
         {incident.location ? (
           <span className="inline-flex items-center gap-1">
             <MapPin className="size-3.5" aria-hidden="true" />
-            GPS tagged
+            {t("miscUi.gpsTagged")}
           </span>
         ) : null}
         {photoCount > 0 ? (
@@ -72,7 +74,7 @@ export function IncidentCard({ incident }: { incident: Incident }) {
         {incident.evidence.length === 0 ? (
           <span className="inline-flex items-center gap-1">
             <Paperclip className="size-3.5" aria-hidden="true" />
-            No attachments
+            {t("miscUi.noAttachments")}
           </span>
         ) : null}
       </div>

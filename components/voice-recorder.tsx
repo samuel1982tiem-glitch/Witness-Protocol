@@ -1,6 +1,7 @@
 "use client"
 
 import { Mic, Square } from "lucide-react"
+import { useI18n } from "@/components/i18n-provider"
 import * as React from "react"
 import { Capacitor } from "@capacitor/core"
 import VoiceRecorderPlugin from "@/plugins/voice-recorder"
@@ -10,6 +11,7 @@ export function VoiceRecorder({
 }: {
   onRecorded: (blob: any) => void
 }) {
+  const { t } = useI18n()
   const [recording, setRecording] = React.useState(false)
   const [elapsed, setElapsed] = React.useState(0)
   const [error, setError] = React.useState<string | null>(null)
@@ -85,12 +87,12 @@ export function VoiceRecorder({
         {recording ? (
           <>
             <Square className="size-4" aria-hidden="true" />
-            Stop recording · {mm}:{ss}
+            {t("miscUi.stopRecording")} · {mm}:{ss}
           </>
         ) : (
           <>
             <Mic className="size-4" aria-hidden="true" />
-            Record voice note
+            {t("miscUi.recordVoiceNote")}
           </>
         )}
       </button>
