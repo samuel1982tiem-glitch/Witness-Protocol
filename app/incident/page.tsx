@@ -41,6 +41,7 @@ const incidentId = searchParams.get("id")
   const router = useRouter()
   const { incidents, sealIncident, removeIncident, updateIncident, profile, logAudit, busy } =
     useVault()
+  const { t } = useI18n()
   const [working, setWorking] = React.useState(false)
   const [confirmDelete, setConfirmDelete] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
@@ -454,7 +455,7 @@ const incidentId = searchParams.get("id")
             className="w-full"
           >
             <Lock className="size-4" aria-hidden="true" />
-            Seal evidence
+            {t("incidentRecord.sealEvidence")}
           </Button>
         ) : null}
 
@@ -506,7 +507,7 @@ function BackLink() {
       className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
     >
       <ArrowLeft className="size-4" aria-hidden="true" />
-      All records
+      {t("incidentRecord.allRecords")}
     </Link>
   )
 }
