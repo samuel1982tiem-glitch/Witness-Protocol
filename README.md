@@ -1,3 +1,82 @@
+Witness Protocol – Aplicativo de Documentação de Privacidade e Segurança
+
+O Witness Protocol é um aplicativo móvel desenvolvido para ajudar indivíduos a documentar e registrar casos de vigilância digital, assédio e violações de privacidade em um ambiente seguro e offline.
+
+O que o Witness Protocol faz
+
+O Witness Protocol permite que os usuários criem um registro cronológico e seguro de atividades suspeitas em seus dispositivos. Todos os dados são armazenados localmente com criptografia forte e não exigem acesso à internet, minimizando a exposição a vigilância remota.
+
+Por que o Witness Protocol?
+
+Em uma era em que a privacidade digital está cada vez mais frágil, indivíduos que enfrentam vigilância sofisticada muitas vezes têm dificuldade em manter registros confiáveis do que está acontecendo. Aplicativos comuns de anotações e serviços em nuvem podem ser acessados remotamente, dificultando a preservação de evidências sem interferência.
+
+O Witness Protocol oferece uma solução simples e segura:
+
+· Prioridade offline: Funciona sem internet, mantendo seus registros inacessíveis a agentes remotos
+· Criptografia local: Todos os dados permanecem no seu dispositivo, criptografados com alta segurança
+· Evidências visuais: Capture capturas de tela e fotos diretamente no aplicativo
+· Linha do tempo cronológica: Organize os eventos à medida que acontecem para documentação clara
+· Armazenamento confiável: Os dados permanecem intactos mesmo se outras partes do seu dispositivo forem comprometidas
+
+Como funciona
+
+1. Ative o modo avião no seu dispositivo (recomendado para máxima segurança)
+2. Abra o Witness Protocol
+3. Registre o evento: descreva o que aconteceu, quando ocorreu e anexe qualquer evidência visual relevante
+4. Salve com segurança – todos os dados são criptografados localmente
+
+Para quem é este aplicativo?
+
+O Witness Protocol é para indivíduos que:
+
+· Suspeitam que suas comunicações estão sendo interceptadas
+· São alvos de assédio ou vigilância digital
+· Precisam preservar evidências para processos judiciais ou trabalho de advocacy
+· Desejam manter um registro pessoal dos eventos sem depender de serviços em nuvem
+
+Principais recursos
+
+Recurso Descrição
+Operação offline Funciona sem internet; todos os dados permanecem no seu dispositivo
+Criptografia local Criptografia AES-256 protege seus registros
+Organização por linha do tempo Registra eventos cronologicamente para documentação clara
+Múltiplas categorias Registre diferentes tipos de eventos (vigilância, sabotagem, assédio)
+Evidências visuais Anexe capturas de tela e fotos diretamente do dispositivo
+
+Compromisso com a privacidade
+
+O Witness Protocol não:
+
+· Envia nenhum dado pela internet
+· Armazena informações em serviços em nuvem
+· Compartilha ou acessa suas informações pessoais
+· Utiliza análises ou rastreamento de terceiros
+
+O Witness Protocol faz:
+
+· Armazena tudo localmente no seu dispositivo
+· Dá a você controle total sobre seus registros
+· Oferece uma ferramenta de documentação confiável e privada
+
+Status atual
+
+O Witness Protocol está atualmente em desenvolvimento. O criador está buscando:
+
+· Testadores: Pessoas que possam fornecer feedback e relatar problemas
+· Colaboradores: Desenvolvedores, designers e defensores da privacidade
+· Conselheiros: Profissionais da área jurídica e especialistas em segurança
+
+Como participar
+
+Se você ou alguém que você conhece pode se beneficiar do Witness Protocol, ou se deseja contribuir para seu desenvolvimento, entre em contato.
+
+Contato
+
+samuel.tiem@proton.me
+
+O Witness Protocol não tem a intenção de substituir aconselhamento profissional de segurança ou orientação jurídica. É uma ferramenta de documentação projetada para apoiar indivíduos na preservação de evidências de violações de privacidade digital.
+
+—-----------------------------------------------------------------------------------
 Witness Protocol - Privacy & Security Documentation App
 
 Witness Protocol is a mobile application designed to help individuals document and record instances of digital surveillance, harassment, and privacy violations in a secure, offline environment.
