@@ -14,12 +14,8 @@ import * as React from "react"
 import { InstallPrompt } from "@/components/install-prompt"
 import { useVault } from "@/components/vault-provider"
 import { cn } from "@/lib/utils"
+import { useI18n } from "@/components/i18n-provider"
 
-const NAV = [
-  { href: "/incidents", label: "Records", icon: ScrollText },
-  { href: "/patterns", label: "Patterns", icon: Activity },
-  { href: "/vault", label: "Vault", icon: ShieldCheck },
-] as const
 
 function isActive(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/"
@@ -29,6 +25,12 @@ function isActive(pathname: string, href: string): boolean {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { lock } = useVault()
+  const { t } = useI18n()
+  const NAV = [
+    { href: "/incidents", label: t("nav.records"), icon: ScrollText },
+    { href: "/patterns", label: t("nav.patterns"), icon: Activity },
+    { href: "/vault", label: t("nav.vault"), icon: ShieldCheck },
+  ] as const
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-background">
