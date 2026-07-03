@@ -39,7 +39,7 @@ export default function IncidentDetailPage() {
  const searchParams = useSearchParams()
 const incidentId = searchParams.get("id")
   const router = useRouter()
-  const { incidents, sealIncident, removeIncident, updateIncident, profile, logAudit, busy } =
+  const { incidents, sealIncident, removeIncident, updateIncident, profile, logAudit, busy, decryptEvidenceRaw, getEvidenceRecords } =
     useVault()
   const { t } = useI18n()
   const [working, setWorking] = React.useState(false)
@@ -150,7 +150,38 @@ const incidentId = searchParams.get("id")
     if (!incident) return
     setExportingPdf(true)
     try {
-      const blob = generateIncidentPdf(incident, profile)
+      // Fetch evidence records for this incident
+      const evidenceRecords = await getEvidenceRecords(incident.id)
+      
+      // Decrypt all evidence and collect data
+      const evidenceWithData = await Promise.all(
+        evidenceRecords.map(async (record) => {
+          try {
+            const { name, raw } = await decryptEvidenceRaw(record)
+            return {
+              meta: {
+                id: record.id,
+                incidentId: record.incidentId,
+                kind: record.kind,
+                name: name || "",
+                mimeType: record.mimeType,
+                size: record.size,
+                sha256: record.sha256,
+                createdAt: record.createdAt,
+              },
+              record,
+              data: raw,
+              mimeType: record.mimeType,
+            }
+          } catch (err) {
+            console.error(`Failed to decrypt evidence ${record.id}:`, err)
+            return null
+          }
+        }),
+      ).then((items) => items.filter((i) => i !== null))
+
+      // Generate PDF with embedded images
+      const blob = generateIncidentPdf(incident, profile, evidenceWithData as any)
       const arrayBuffer = await blob.arrayBuffer()
       const bytes = new Uint8Array(arrayBuffer)
       let binary = ""
