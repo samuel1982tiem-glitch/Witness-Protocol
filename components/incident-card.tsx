@@ -1,6 +1,6 @@
 "use client"
 
-import { ImageIcon, Lock, MapPin, Mic, Paperclip } from "lucide-react"
+import { FileText, ImageIcon, Lock, MapPin, Mic, Paperclip } from "lucide-react"
 import Link from "next/link"
 
 import { Badge } from "@/components/ui/primitives"
@@ -13,6 +13,7 @@ export function IncidentCard({ incident }: { incident: Incident }) {
     (e) => e.kind === "photo" || e.kind === "screenshot",
   ).length
   const voiceCount = incident.evidence.filter((e) => e.kind === "voice").length
+  const documentCount = incident.evidence.filter((e) => e.kind === "document").length
 
   return (
     <Link
@@ -60,6 +61,12 @@ export function IncidentCard({ incident }: { incident: Incident }) {
           <span className="inline-flex items-center gap-1">
             <Mic className="size-3.5" aria-hidden="true" />
             {voiceCount}
+          </span>
+        ) : null}
+        {documentCount > 0 ? (
+          <span className="inline-flex items-center gap-1">
+            <FileText className="size-3.5" aria-hidden="true" />
+            {documentCount}
           </span>
         ) : null}
         {incident.evidence.length === 0 ? (
