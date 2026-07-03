@@ -51,7 +51,15 @@ export const miscUiPtBR = {
   noAttachments: "Sem anexos",
 }
 
+export const relativeTimePtBR = {
+  justNow: "agora mesmo",
+  minutesAgo: "há {n}m",
+  hoursAgo: "há {n}h",
+  daysAgo: "há {n}d",
+}
+
 export const ptBR: Dictionary = {
+  relativeTime: relativeTimePtBR,
   miscUi: miscUiPtBR,
   recordsPage: recordsPagePtBR,
   incidentForm: incidentFormPtBR,

@@ -17,6 +17,7 @@ export type LanguageCode = "en" | "pt-BR" | "es"
 export type LanguagePreference = "system" | LanguageCode
 
 export interface Dictionary {
+  relativeTime: RelativeTimeDict
   miscUi: MiscUiDict
   recordsPage: RecordsPageDict
   incidentFormExtra: IncidentFormExtraDict
@@ -194,4 +195,11 @@ export interface MiscUiDict {
   recordVoiceNote: string
   sealed: string
   noAttachments: string
+}
+
+export interface RelativeTimeDict {
+  justNow: string
+  minutesAgo: string
+  hoursAgo: string
+  daysAgo: string
 }

@@ -12,6 +12,7 @@ import {
 import * as React from "react"
 
 import { Button } from "@/components/ui/button"
+import { useI18n } from "@/components/i18n-provider"
 import {
   Badge,
   Card,
@@ -38,6 +39,7 @@ const SEVERITY_TONE = {
 } as const
 
 export default function PatternsPage() {
+  const { t } = useI18n()
   const { alerts, incidents, runAnalysis, busy } = useVault()
   const [running, setRunning] = React.useState(false)
   const [lastRun, setLastRun] = React.useState<number | null>(null)
@@ -68,7 +70,7 @@ export default function PatternsPage() {
             </p>
             <p className="text-muted-foreground">
               {lastRun
-                ? `Last run ${relativeTime(lastRun)}`
+                ? `Last run ${relativeTime(lastRun, t)}`
                 : "Run analysis to refresh observations."}
             </p>
           </div>

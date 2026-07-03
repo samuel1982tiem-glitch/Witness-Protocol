@@ -51,7 +51,15 @@ export const miscUiEs = {
   noAttachments: "Sin archivos adjuntos",
 }
 
+export const relativeTimeEs = {
+  justNow: "justo ahora",
+  minutesAgo: "hace {n}m",
+  hoursAgo: "hace {n}h",
+  daysAgo: "hace {n}d",
+}
+
 export const es: Dictionary = {
+  relativeTime: relativeTimeEs,
   miscUi: miscUiEs,
   recordsPage: recordsPageEs,
   incidentForm: incidentFormEs,

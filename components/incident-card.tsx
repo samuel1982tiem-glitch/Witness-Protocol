@@ -41,7 +41,7 @@ export function IncidentCard({ incident }: { incident: Incident }) {
           </p>
         </div>
         <span className="shrink-0 text-xs text-muted-foreground">
-          {relativeTime(incident.occurredAt)}
+          {relativeTime(incident.occurredAt, t)}
         </span>
       </div>
 

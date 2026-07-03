@@ -23,15 +23,18 @@ export function formatTime(ms: number): string {
   })
 }
 
-export function relativeTime(ms: number): string {
+export function relativeTime(
+  ms: number,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): string {
   const diff = Date.now() - ms
   const mins = Math.round(diff / 60000)
-  if (mins < 1) return "just now"
-  if (mins < 60) return `${mins}m ago`
+  if (mins < 1) return t("relativeTime.justNow")
+  if (mins < 60) return t("relativeTime.minutesAgo", { n: mins })
   const hours = Math.round(mins / 60)
-  if (hours < 24) return `${hours}h ago`
+  if (hours < 24) return t("relativeTime.hoursAgo", { n: hours })
   const days = Math.round(hours / 24)
-  if (days < 30) return `${days}d ago`
+  if (days < 30) return t("relativeTime.daysAgo", { n: days })
   return formatDate(ms)
 }
 
