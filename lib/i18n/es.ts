@@ -58,7 +58,25 @@ export const relativeTimeEs = {
   daysAgo: "hace {n}d",
 }
 
+export const categoriesEs = {
+  surveillanceName: "Vigilancia",
+  surveillanceDesc: "Observación, grabación o actividad de monitoreo.",
+  personalTrackingName: "Seguimiento Personal",
+  personalTrackingDesc: "Seguimiento, rastreo de ubicación o monitoreo de movimiento.",
+  gaslightingName: "Manipulación Psicológica",
+  gaslightingDesc: "Manipulación, negación o distorsión de eventos.",
+  deviceAnomalyName: "Anomalía de Dispositivo",
+  deviceAnomalyDesc: "Comportamiento inesperado del dispositivo o irregularidades técnicas.",
+  poisoningName: "Envenenamiento y Amenazas",
+  poisoningDesc: "Sospecha de contaminación de alimentos, agua o ambiente.",
+  legalName: "Legal",
+  legalDesc: "Documentos legales, notificaciones o procedimientos.",
+  categoryLabel: "Categoría",
+  unknown: "Desconocido",
+}
+
 export const es: Dictionary = {
+  categories: categoriesEs,
   relativeTime: relativeTimeEs,
   miscUi: miscUiEs,
   recordsPage: recordsPageEs,

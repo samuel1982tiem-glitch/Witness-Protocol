@@ -61,7 +61,25 @@ export const relativeTimeEn = {
   daysAgo: "{n}d ago",
 }
 
+export const categoriesEn = {
+  surveillanceName: "Surveillance",
+  surveillanceDesc: "Observation, recording, or monitoring activity.",
+  personalTrackingName: "Personal Tracking",
+  personalTrackingDesc: "Following, location tracking, or movement monitoring.",
+  gaslightingName: "Gaslighting",
+  gaslightingDesc: "Manipulation, denial, or distortion of events.",
+  deviceAnomalyName: "Device Anomaly",
+  deviceAnomalyDesc: "Unexpected device behavior or technical irregularities.",
+  poisoningName: "Poisoning and Threats",
+  poisoningDesc: "Suspected contamination of food, water, or environment.",
+  legalName: "Legal",
+  legalDesc: "Legal documents, notices, or proceedings.",
+  categoryLabel: "Category",
+  unknown: "Unknown",
+}
+
 export const en: Dictionary = {
+  categories: categoriesEn,
   relativeTime: relativeTimeEn,
   miscUi: miscUiEn,
   recordsPage: recordsPageEn,

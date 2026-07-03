@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/primitives"
 import { useVault } from "@/components/vault-provider"
 import { VoiceRecorder } from "@/components/voice-recorder"
-import { CATEGORIES } from "@/lib/categories"
+import { CATEGORIES, categoryDescription, categoryName } from "@/lib/categories"
 import { fromDateTimeLocal, toDateTimeLocal } from "@/lib/format"
 import { formatBytes, processMedia } from "@/lib/media"
 import type { CategoryId, EvidenceKind, GeoLocation } from "@/lib/types"
@@ -236,10 +236,10 @@ export function IncidentForm() {
                   category === c.id ? "text-primary" : "text-foreground"
                 }`}
               >
-                {c.name}
+                {categoryName(c.id, t)}
               </span>
               <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">
-                {c.description}
+                {categoryDescription(c.id, t)}
               </span>
             </button>
           ))}

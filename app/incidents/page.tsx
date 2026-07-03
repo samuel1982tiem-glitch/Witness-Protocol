@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/primitives"
 import { useVault } from "@/components/vault-provider"
 import { useI18n } from "@/components/i18n-provider"
-import { CATEGORIES } from "@/lib/categories"
+import { CATEGORIES, categoryDescription, categoryName } from "@/lib/categories"
 import type { IncidentFilters } from "@/lib/types"
 
 const EMPTY_FILTERS: IncidentFilters = {
@@ -126,7 +126,7 @@ export default function IncidentsPage() {
               <option value="all">{t("recordsPage.allCategories")}</option>
               {CATEGORIES.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name}
+                  {categoryName(c.id, t)}
                 </option>
               ))}
             </Select>

@@ -1,5 +1,5 @@
 import { jsPDF } from "jspdf"
-import { categoryName } from "./categories"
+import { CATEGORY_MAP } from "./categories"
 import { formatCoords, formatDateTime, shortHash } from "./format"
 import type { Incident, EvidenceMeta } from "./types"
 import type { EvidenceRecord } from "./db"
@@ -163,7 +163,7 @@ export async function generateIncidentPdf(
   // --- Incident header ---
   heading(incident.title || "Untitled incident", 16)
 
-  labelValue("Category:", categoryName(incident.category))
+  labelValue("Category:", CATEGORY_MAP[incident.category]?.name ?? "Unknown")
   labelValue("Occurred:", formatDateTime(incident.occurredAt))
   labelValue("Logged:", formatDateTime(incident.createdAt))
   labelValue("Status:", incident.sealed ? "Sealed" : "Unsealed")

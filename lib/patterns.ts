@@ -5,7 +5,7 @@
 // estimation). It surfaces observations and correlations only — it never makes
 // claims about causes, perpetrators, or external intent.
 
-import { categoryName } from "./categories"
+import { CATEGORY_MAP } from "./categories"
 import type { CategoryId, Incident, PatternAlert } from "./types"
 
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -131,12 +131,10 @@ function categoryClustering(incidents: Incident[]): PatternAlert[] {
         id: id(),
         type: "category-cluster",
         severity: share >= 0.6 ? "high" : "notable",
-        title: `Clustering in ${categoryName(category)}`,
+        title: `Clustering in ${CATEGORY_MAP[category]?.name ?? "Unknown"}`,
         observation: `${Math.round(
           share * 100,
-        )}% of your incidents are categorized as ${categoryName(
-          category,
-        )}. This is a categorical correlation only.`,
+        )}% of your incidents are categorized as ${CATEGORY_MAP[category]?.name ?? "Unknown"}. This is a categorical correlation only.`,
         detail: `${list.length} of ${incidents.length} total incidents.`,
         relatedIncidentIds: list.map((i) => i.id),
         createdAt: Date.now(),

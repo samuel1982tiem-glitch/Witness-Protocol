@@ -17,6 +17,7 @@ export type LanguageCode = "en" | "pt-BR" | "es"
 export type LanguagePreference = "system" | LanguageCode
 
 export interface Dictionary {
+  categories: CategoryDict
   relativeTime: RelativeTimeDict
   miscUi: MiscUiDict
   recordsPage: RecordsPageDict
@@ -202,4 +203,21 @@ export interface RelativeTimeDict {
   minutesAgo: string
   hoursAgo: string
   daysAgo: string
+}
+
+export interface CategoryDict {
+  surveillanceName: string
+  surveillanceDesc: string
+  personalTrackingName: string
+  personalTrackingDesc: string
+  gaslightingName: string
+  gaslightingDesc: string
+  deviceAnomalyName: string
+  deviceAnomalyDesc: string
+  poisoningName: string
+  poisoningDesc: string
+  legalName: string
+  legalDesc: string
+  categoryLabel: string
+  unknown: string
 }

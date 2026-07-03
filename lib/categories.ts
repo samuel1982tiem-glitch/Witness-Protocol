@@ -1,5 +1,11 @@
 import type { Category, CategoryId } from "./types"
 
+// English reference strings. Never displayed directly once wired through
+// categoryName()/categoryDescription() below — the actual displayed text
+// always comes from the i18n dictionary. Kept here so CATEGORIES remains
+// a valid Category[] for any code that reads .name/.description directly,
+// and "Poisoning" internal id is unchanged even though its display name
+// changed to "Poisoning and Threats".
 export const CATEGORIES: Category[] = [
   {
     id: "surveillance",
@@ -23,7 +29,7 @@ export const CATEGORIES: Category[] = [
   },
   {
     id: "poisoning",
-    name: "Poisoning",
+    name: "Poisoning and Threats",
     description: "Suspected contamination of food, water, or environment.",
   },
   {
@@ -41,6 +47,45 @@ export const CATEGORY_MAP: Record<CategoryId, Category> = CATEGORIES.reduce(
   {} as Record<CategoryId, Category>,
 )
 
-export function categoryName(id: CategoryId): string {
-  return CATEGORY_MAP[id]?.name ?? "Unknown"
+const NAME_KEY: Record<CategoryId, string> = {
+  surveillance: "categories.surveillanceName",
+  "personal-tracking": "categories.personalTrackingName",
+  gaslighting: "categories.gaslightingName",
+  "device-anomaly": "categories.deviceAnomalyName",
+  poisoning: "categories.poisoningName",
+  legal: "categories.legalName",
+}
+
+const DESC_KEY: Record<CategoryId, string> = {
+  surveillance: "categories.surveillanceDesc",
+  "personal-tracking": "categories.personalTrackingDesc",
+  gaslighting: "categories.gaslightingDesc",
+  "device-anomaly": "categories.deviceAnomalyDesc",
+  poisoning: "categories.poisoningDesc",
+  legal: "categories.legalDesc",
+}
+
+/**
+ * Translated display name for a category. Always call this instead of
+ * reading Category.name directly — that field holds only the English
+ * reference string.
+ */
+export function categoryName(
+  id: CategoryId,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): string {
+  const key = NAME_KEY[id]
+  return key ? t(key) : t("categories.unknown")
+}
+
+/**
+ * Translated description for a category. Always call this instead of
+ * reading Category.description directly.
+ */
+export function categoryDescription(
+  id: CategoryId,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): string {
+  const key = DESC_KEY[id]
+  return key ? t(key) : ""
 }

@@ -30,7 +30,7 @@ import {
   Textarea,
 } from "@/components/ui/primitives"
 import { useVault } from "@/components/vault-provider"
-import { CATEGORIES, categoryName } from "@/lib/categories"
+import { CATEGORIES, categoryDescription, categoryName } from "@/lib/categories"
 import { fromDateTimeLocal, toDateTimeLocal } from "@/lib/format"
 import { formatCoords, formatDateTime, shortHash } from "@/lib/format"
 import type { CategoryId, GeoLocation } from "@/lib/types"
@@ -251,7 +251,7 @@ const incidentId = searchParams.get("id")
       <header className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge tone="blue">{categoryName(incident.category)}</Badge>
+            <Badge tone="blue">{categoryName(incident.category, t)}</Badge>
             {incident.sealed ? (
               <Badge tone="green">
                 <ShieldCheck className="size-3" aria-hidden="true" />
@@ -297,7 +297,7 @@ const incidentId = searchParams.get("id")
         <Card>
           <CardBody className="space-y-4">
             <div>
-              <Label>Category</Label>
+              <Label>{t("categories.categoryLabel")}</Label>
               <div className="grid grid-cols-2 gap-2">
                 {CATEGORIES.map((c) => (
                   <button
@@ -315,7 +315,7 @@ const incidentId = searchParams.get("id")
                         draftCategory === c.id ? "text-primary" : "text-foreground"
                       }`}
                     >
-                      {c.name}
+                      {categoryName(c.id, t)}
                     </span>
                   </button>
                 ))}

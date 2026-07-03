@@ -25,7 +25,7 @@ export function IncidentCard({ incident }: { incident: Incident }) {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <Badge tone="blue">{categoryName(incident.category)}</Badge>
+            <Badge tone="blue">{categoryName(incident.category, t)}</Badge>
             {incident.sealed ? (
               <Badge tone="green">
                 <Lock className="size-3" aria-hidden="true" />
