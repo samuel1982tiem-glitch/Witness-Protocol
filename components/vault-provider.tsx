@@ -383,8 +383,9 @@ return true
       await repoDeleteIncident(incidentId)
       await refreshIncidents()
       await logAudit("incident_deleted", title)
+      registerActivity()
     },
-    [incidents, refreshIncidents, logAudit],
+    [incidents, refreshIncidents, logAudit, registerActivity],
   )
 
   const sealIncident = React.useCallback(
