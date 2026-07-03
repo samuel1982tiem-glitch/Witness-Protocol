@@ -1,9 +1,38 @@
 import type { Dictionary } from "./types"
 
 /** Spanish — neutral/general, intended to work reasonably across regions. */
+export const incidentFormEs = {
+  category: "Categoría", title: "Título", description: "Descripción",
+  date: "Fecha y hora", gps: "Coordenadas GPS", evidence: "Archivos de evidencia",
+  cancel: "Cancelar", saveIncident: "Guardar incidente",
+}
+
+export const incidentRecordEs = {
+  allRecords: "Todos los registros", sealed: "Sellado", unsealed: "No sellado",
+  description: "Descripción", noDescription: "No se proporcionó descripción.",
+  evidence: "Evidencia", decryptedInMemory: "Descifrado solo en memoria.",
+  noAttachments: "No hay archivos adjuntos en este registro.", sealEvidence: "Sellar evidencia",
+  sealedCannotDelete: "Los registros sellados son permanentes y no se pueden eliminar.",
+  confirmDelete: "Confirmar eliminación", cancel: "Cancelar", deleteRecord: "Eliminar registro",
+  edit: "Editar", saveChanges: "Guardar cambios", pdf: "PDF", exporting: "Exportando…",
+}
+
+export const incidentFormExtraEs = {
+  photo: "Foto", screenshot: "Captura de pantalla", uploadAudio: "Subir archivo de audio",
+  uploadDocument: "Subir documento", capture: "Capturar",
+  removeLocation: "Eliminar ubicación", removeAttachment: "Eliminar archivo adjunto",
+  noLocationAttached: "Sin ubicación adjunta.", locating: "Localizando…",
+  geoNotAvailable: "La geolocalización no está disponible en este dispositivo.",
+  geoPermissionDenied: "Permiso de ubicación denegado o no disponible.",
+  selectCategory: "Selecciona una categoría.", enterTitle: "Ingresa un título.",
+  couldNotSaveIncident: "No se pudo guardar el incidente.", encrypting: "Cifrando…",
+  cancel: "Cancelar",
+}
+
 export const es: Dictionary = {
   incidentForm: incidentFormEs,
   incidentRecord: incidentRecordEs,
+  incidentFormExtra: incidentFormExtraEs,
   common: {
     save: "Guardar",
     cancel: "Cancelar",
@@ -101,18 +130,4 @@ export const es: Dictionary = {
     backupRestored: "Copia de seguridad restaurada",
     backupMerged: "Copia de seguridad fusionada",
   },
-}
-export const incidentFormEs = {
-  category: "Categoría", title: "Título", description: "Descripción",
-  date: "Fecha y hora", gps: "Coordenadas GPS", evidence: "Archivos de evidencia",
-  cancel: "Cancelar", saveIncident: "Guardar incidente",
-}
-export const incidentRecordEs = {
-  allRecords: "Todos los registros", sealed: "Sellado", unsealed: "No sellado",
-  description: "Descripción", noDescription: "No se proporcionó descripción.",
-  evidence: "Evidencia", decryptedInMemory: "Descifrado solo en memoria.",
-  noAttachments: "No hay archivos adjuntos en este registro.", sealEvidence: "Sellar evidencia",
-  sealedCannotDelete: "Los registros sellados son permanentes y no se pueden eliminar.",
-  confirmDelete: "Confirmar eliminación", cancel: "Cancelar", deleteRecord: "Eliminar registro",
-  edit: "Editar", saveChanges: "Guardar cambios", pdf: "PDF", exporting: "Exportando…",
 }

@@ -17,6 +17,7 @@ export type LanguageCode = "en" | "pt-BR" | "es"
 export type LanguagePreference = "system" | LanguageCode
 
 export interface Dictionary {
+  incidentFormExtra: IncidentFormExtraDict
   incidentRecord: IncidentRecordDict
   incidentForm: IncidentFormDict
   common: {
@@ -142,4 +143,23 @@ export interface IncidentRecordDict {
   saveChanges: string
   pdf: string
   exporting: string
+}
+
+export interface IncidentFormExtraDict {
+  photo: string
+  screenshot: string
+  uploadAudio: string
+  uploadDocument: string
+  capture: string
+  removeLocation: string
+  removeAttachment: string
+  noLocationAttached: string
+  locating: string
+  geoNotAvailable: string
+  geoPermissionDenied: string
+  selectCategory: string
+  enterTitle: string
+  couldNotSaveIncident: string
+  encrypting: string
+  cancel: string
 }

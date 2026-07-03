@@ -4,9 +4,38 @@ import type { Dictionary } from "./types"
  * English — canonical dictionary. This is the source of truth for the
  * Dictionary shape; every other language file must match it exactly.
  */
+export const incidentFormEn = {
+  category: "Category", title: "Title", description: "Description",
+  date: "Date and time", gps: "GPS coordinates", evidence: "Evidence attachments",
+  cancel: "Cancel", saveIncident: "Save incident",
+}
+
+export const incidentRecordEn = {
+  allRecords: "All records", sealed: "Sealed", unsealed: "Unsealed",
+  description: "Description", noDescription: "No description provided.",
+  evidence: "Evidence", decryptedInMemory: "Decrypted in memory only.",
+  noAttachments: "No attachments on this record.", sealEvidence: "Seal evidence",
+  sealedCannotDelete: "Sealed records are permanent and cannot be deleted.",
+  confirmDelete: "Confirm delete", cancel: "Cancel", deleteRecord: "Delete record",
+  edit: "Edit", saveChanges: "Save changes", pdf: "PDF", exporting: "Exporting…",
+}
+
+export const incidentFormExtraEn = {
+  photo: "Photo", screenshot: "Screenshot", uploadAudio: "Upload audio file",
+  uploadDocument: "Upload document", capture: "Capture",
+  removeLocation: "Remove location", removeAttachment: "Remove attachment",
+  noLocationAttached: "No location attached.", locating: "Locating…",
+  geoNotAvailable: "Geolocation is not available on this device.",
+  geoPermissionDenied: "Location permission denied or unavailable.",
+  selectCategory: "Select a category.", enterTitle: "Enter a title.",
+  couldNotSaveIncident: "Could not save the incident.", encrypting: "Encrypting…",
+  cancel: "Cancel",
+}
+
 export const en: Dictionary = {
   incidentForm: incidentFormEn,
   incidentRecord: incidentRecordEn,
+  incidentFormExtra: incidentFormExtraEn,
   common: {
     save: "Save",
     cancel: "Cancel",
@@ -102,18 +131,4 @@ export const en: Dictionary = {
     backupRestored: "Backup restored",
     backupMerged: "Backup merged",
   },
-}
-export const incidentFormEn = {
-  category: "Category", title: "Title", description: "Description",
-  date: "Date and time", gps: "GPS coordinates", evidence: "Evidence attachments",
-  cancel: "Cancel", saveIncident: "Save incident",
-}
-export const incidentRecordEn = {
-  allRecords: "All records", sealed: "Sealed", unsealed: "Unsealed",
-  description: "Description", noDescription: "No description provided.",
-  evidence: "Evidence", decryptedInMemory: "Decrypted in memory only.",
-  noAttachments: "No attachments on this record.", sealEvidence: "Seal evidence",
-  sealedCannotDelete: "Sealed records are permanent and cannot be deleted.",
-  confirmDelete: "Confirm delete", cancel: "Cancel", deleteRecord: "Delete record",
-  edit: "Edit", saveChanges: "Save changes", pdf: "PDF", exporting: "Exporting…",
 }

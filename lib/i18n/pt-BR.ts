@@ -1,9 +1,38 @@
 import type { Dictionary } from "./types"
 
 /** Portuguese (Brazil) */
+export const incidentFormPtBR = {
+  category: "Categoria", title: "Título", description: "Descrição",
+  date: "Data e hora", gps: "Coordenadas GPS", evidence: "Anexos de evidência",
+  cancel: "Cancelar", saveIncident: "Salvar incidente",
+}
+
+export const incidentRecordPtBR = {
+  allRecords: "Todos os registros", sealed: "Selado", unsealed: "Não selado",
+  description: "Descrição", noDescription: "Nenhuma descrição fornecida.",
+  evidence: "Evidência", decryptedInMemory: "Descriptografado apenas na memória.",
+  noAttachments: "Nenhum anexo neste registro.", sealEvidence: "Selar evidência",
+  sealedCannotDelete: "Registros selados são permanentes e não podem ser excluídos.",
+  confirmDelete: "Confirmar exclusão", cancel: "Cancelar", deleteRecord: "Excluir registro",
+  edit: "Editar", saveChanges: "Salvar alterações", pdf: "PDF", exporting: "Exportando…",
+}
+
+export const incidentFormExtraPtBR = {
+  photo: "Foto", screenshot: "Captura de tela", uploadAudio: "Enviar arquivo de áudio",
+  uploadDocument: "Enviar documento", capture: "Capturar",
+  removeLocation: "Remover localização", removeAttachment: "Remover anexo",
+  noLocationAttached: "Nenhuma localização anexada.", locating: "Localizando…",
+  geoNotAvailable: "Geolocalização não está disponível neste dispositivo.",
+  geoPermissionDenied: "Permissão de localização negada ou indisponível.",
+  selectCategory: "Selecione uma categoria.", enterTitle: "Digite um título.",
+  couldNotSaveIncident: "Não foi possível salvar o incidente.", encrypting: "Criptografando…",
+  cancel: "Cancelar",
+}
+
 export const ptBR: Dictionary = {
   incidentForm: incidentFormPtBR,
   incidentRecord: incidentRecordPtBR,
+  incidentFormExtra: incidentFormExtraPtBR,
   common: {
     save: "Salvar",
     cancel: "Cancelar",
@@ -100,18 +129,4 @@ export const ptBR: Dictionary = {
     backupRestored: "Backup restaurado",
     backupMerged: "Backup mesclado",
   },
-}
-export const incidentFormPtBR = {
-  category: "Categoria", title: "Título", description: "Descrição",
-  date: "Data e hora", gps: "Coordenadas GPS", evidence: "Anexos de evidência",
-  cancel: "Cancelar", saveIncident: "Salvar incidente",
-}
-export const incidentRecordPtBR = {
-  allRecords: "Todos os registros", sealed: "Selado", unsealed: "Não selado",
-  description: "Descrição", noDescription: "Nenhuma descrição fornecida.",
-  evidence: "Evidência", decryptedInMemory: "Descriptografado apenas na memória.",
-  noAttachments: "Nenhum anexo neste registro.", sealEvidence: "Selar evidência",
-  sealedCannotDelete: "Registros selados são permanentes e não podem ser excluídos.",
-  confirmDelete: "Confirmar exclusão", cancel: "Cancelar", deleteRecord: "Excluir registro",
-  edit: "Editar", saveChanges: "Salvar alterações", pdf: "PDF", exporting: "Exportando…",
 }
