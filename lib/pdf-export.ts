@@ -85,7 +85,7 @@ async function getImageDimensions(
  * Generates a single-incident PDF report with:
  * - Investigator identity header (if filled out)
  * - Incident details, GPS, category
- * - Full evidence list with images embedded (properly scaled and centered)
+ * - Full evidence list with images embedded (properly scaled, centered, and not cut off)
  * - Evidence hashes and metadata
  * - Seal info if sealed
  *
@@ -100,6 +100,8 @@ export async function generateIncidentPdf(
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
   const margin = 48
+  const footerHeight = 30
+  const usableHeight = pageHeight - footerHeight
   let y = margin
 
   function line(height = 16) {
@@ -107,7 +109,7 @@ export async function generateIncidentPdf(
   }
 
   function checkPageBreak(needed = 40) {
-    if (y > pageHeight - needed) {
+    if (y > usableHeight - needed) {
       doc.addPage()
       y = margin
     }
@@ -184,9 +186,8 @@ export async function generateIncidentPdf(
     body("No attachments on this record.")
   } else {
     for (const ev of incident.evidence) {
-      checkPageBreak(60)
-
       // Evidence header with metadata
+      checkPageBreak(40)
       doc.setFont("helvetica", "bold")
       doc.setFontSize(9.5)
       doc.text(`• ${ev.kind}`, margin, y)
@@ -211,19 +212,25 @@ export async function generateIncidentPdf(
       ) {
         try {
           const dataUrl = bytesToDataUrl(evidenceData.data, ev.mimeType)
-          
+
           // Get actual image dimensions
           const imgDims = await getImageDimensions(dataUrl)
-          
-          // Calculate scaled dimensions (max 280pt wide, 200pt tall)
-          const maxImgWidth = 280
-          const maxImgHeight = 200
+
+          // Calculate scaled dimensions (max 280pt wide, 150pt tall to fit on page)
+          const maxImgWidth = pageWidth - margin * 2
+          const maxImgHeight = 150
           const { width: scaledWidth, height: scaledHeight } = calculateImageDimensions(
             imgDims.width,
             imgDims.height,
             maxImgWidth,
             maxImgHeight,
           )
+
+          // Check if image will fit on current page; if not, move to next page
+          if (y + scaledHeight > usableHeight - 20) {
+            doc.addPage()
+            y = margin
+          }
 
           // Center the image horizontally
           const imgX = margin + (pageWidth - margin * 2 - scaledWidth) / 2
