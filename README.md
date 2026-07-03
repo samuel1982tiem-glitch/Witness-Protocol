@@ -76,7 +76,11 @@ samuel.tiem@proton.me
 
 O Witness Protocol não tem a intenção de substituir aconselhamento profissional de segurança ou orientação jurídica. É uma ferramenta de documentação projetada para apoiar indivíduos na preservação de evidências de violações de privacidade digital.
 
+
+
+
 —-----------------------------------------------------------------------------------
+
 Witness Protocol - Privacy & Security Documentation App
 
 Witness Protocol is a mobile application designed to help individuals document and record instances of digital surveillance, harassment, and privacy violations in a secure, offline environment.
