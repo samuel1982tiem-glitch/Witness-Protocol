@@ -35,6 +35,7 @@ import {
   loadAllIncidents,
   loadEvidenceBlobUrl,
   downloadEvidenceFile,
+  decryptEvidenceRaw as repoDecryptEvidenceRaw,
   loadUserProfile,
   logAuditEvent,
   loadAuditLog,
@@ -78,6 +79,8 @@ interface VaultContextValue {
   loadEvidenceUrl: (record: EvidenceRecord) => Promise<{ url: string; name: string }>
   /** Decrypt an evidence file and save it to the device's Documents folder. */
   downloadEvidence: (record: EvidenceRecord) => Promise<string>
+  /** Decrypt evidence raw bytes for PDF embedding. */
+  decryptEvidenceRaw: (record: EvidenceRecord) => Promise<{ name: string; raw: Uint8Array }>
   loadSampleData: () => Promise<void>
   registerActivity: () => void
   exportBackup: () => Promise<string>
@@ -96,7 +99,6 @@ interface VaultContextValue {
   getAuditLog: () => Promise<AuditEntry[]>
   logAudit: (action: AuditAction, detail: string) => Promise<void>
 }
-
 
 
 
@@ -442,6 +444,15 @@ return true
     [],
   )
 
+  const decryptEvidenceRaw = React.useCallback(
+    (record: EvidenceRecord) => {
+      const key = keyRef.current
+      if (!key) throw new Error("Vault is locked.")
+      return repoDecryptEvidenceRaw(key, record)
+    },
+    [],
+  )
+
   const loadSampleData = React.useCallback(async () => {
     const key = keyRef.current
     if (!key) throw new Error("Vault is locked.")
@@ -484,7 +495,7 @@ return true
     } finally {
       setExportProgress(null)
     }
-  }, [])
+  }, [logAudit])
 
 const [mergeProgress, setMergeProgress] = React.useState<MergeProgress | null>(
   null,
@@ -554,6 +565,7 @@ const importBackup = React.useCallback(
     getEvidenceRecords,
     loadEvidenceUrl,
     downloadEvidence,
+    decryptEvidenceRaw,
     loadSampleData,
     registerActivity,
     exportBackup,
