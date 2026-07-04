@@ -10,6 +10,7 @@ import {
   Trash2,
   X,
 } from "lucide-react"
+import { Camera as CapacitorCamera, CameraResultType, CameraSource } from "@capacitor/camera"
 import { useRouter } from "next/navigation"
 import * as React from "react"
 import { useI18n } from "@/components/i18n-provider"
@@ -35,6 +36,7 @@ interface PendingAttachment {
   blob: Blob
   url: string
 }
+
 
 const INCIDENT_DRAFT_KEY = "witness:incident-draft:v1"
 
@@ -67,12 +69,10 @@ export function IncidentForm() {
   const [submitting, setSubmitting] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
 
-  const photoInput = React.useRef<HTMLInputElement>(null)
   const shotInput = React.useRef<HTMLInputElement>(null)
   const audioInput = React.useRef<HTMLInputElement>(null)
   const docInput = React.useRef<HTMLInputElement>(null)
 
-  // Restore draft if Android recreates the WebView / activity during camera capture.
   React.useEffect(() => {
     if (typeof window === "undefined") return
     try {
@@ -92,7 +92,6 @@ export function IncidentForm() {
     }
   }, [])
 
-  // Persist the text/location draft so it survives app recreation.
   React.useEffect(() => {
     if (typeof window === "undefined") return
     try {
@@ -116,10 +115,6 @@ export function IncidentForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Auto-fill GPS coordinates on mount if permission has already been
-  // granted. Uses the Permissions API to check first so we never trigger
-  // an unexpected browser permission prompt — that stays an explicit
-  // action via the Capture button.
   React.useEffect(() => {
     if (typeof navigator === "undefined" || !navigator.geolocation) return
     if (!navigator.permissions?.query) return
@@ -134,8 +129,7 @@ export function IncidentForm() {
         }
       })
       .catch(() => {
-        // Permissions API not supported for geolocation on this device —
-        // silently skip auto-fill, user can still tap Capture manually.
+        // Permissions API not supported for geolocation on this device
       })
 
     return () => {
@@ -176,6 +170,58 @@ export function IncidentForm() {
       })
     })
     setAttachments((prev) => [...prev, ...next])
+  }
+
+  async function capturePhoto() {
+    try {
+      const photo = await CapacitorCamera.getPhoto({
+        resultType: CameraResultType.Uri,
+        source: CameraSource.Camera,
+        quality: 85,
+        allowEditing: false,
+      })
+
+      if (!photo.webPath) return
+
+      const response = await fetch(photo.webPath)
+      const originalBlob = await response.blob()
+
+      const ext =
+        photo.format === "jpeg" || photo.format === "jpg"
+          ? "jpg"
+          : photo.format || extFromMime(originalBlob.type || "image/jpeg")
+
+      const mimeType =
+        originalBlob.type ||
+        (ext === "jpg" ? "image/jpeg" : `image/${ext}`)
+
+      const blob =
+        originalBlob.type
+          ? originalBlob
+          : new Blob([originalBlob], { type: mimeType })
+
+      const attachment: PendingAttachment = {
+        id: pid(),
+        kind: "photo",
+        name: `photo-${Date.now()}.${ext}`,
+        blob,
+        url: URL.createObjectURL(blob),
+      }
+
+      setAttachments((prev) => [...prev, attachment])
+    } catch (err) {
+      const message = (err as Error)?.message || ""
+
+      if (
+        /cancel/i.test(message) ||
+        /user/i.test(message) ||
+        /No image selected/i.test(message)
+      ) {
+        return
+      }
+
+      setError(`Camera failed: ${message || "Could not capture photo"}`)
+    }
   }
 
   function addVoice(blob: Blob) {
@@ -390,7 +436,7 @@ export function IncidentForm() {
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
-            onClick={() => photoInput.current?.click()}
+            onClick={capturePhoto}
             className="flex items-center justify-center gap-2 rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-medium hover:bg-muted"
           >
             <Camera className="size-4" aria-hidden="true" />
@@ -423,17 +469,6 @@ export function IncidentForm() {
           {t("incidentFormExtra.uploadDocument")}
         </button>
 
-        <input
-          ref={photoInput}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="hidden"
-          onChange={(e) => {
-            addFiles(e.target.files, "photo")
-            e.target.value = ""
-          }}
-        />
         <input
           ref={shotInput}
           type="file"
@@ -529,23 +564,23 @@ export function IncidentForm() {
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
       <div className="flex gap-3">
-<Button
-  type="button"
-  variant="outline"
-  size="lg"
-  className="flex-1"
-  onClick={() => {
-    try {
-      localStorage.removeItem(INCIDENT_DRAFT_KEY)
-    } catch {}
-    attachments.forEach((a) => URL.revokeObjectURL(a.url))
-    setAttachments([])
-    router.back()
-  }}
-  disabled={submitting}
->
-  {t("incidentFormExtra.cancel")}
-</Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          className="flex-1"
+          onClick={() => {
+            try {
+              localStorage.removeItem(INCIDENT_DRAFT_KEY)
+            } catch {}
+            attachments.forEach((a) => URL.revokeObjectURL(a.url))
+            setAttachments([])
+            router.back()
+          }}
+          disabled={submitting}
+        >
+          {t("incidentFormExtra.cancel")}
+        </Button>
         <Button type="submit" size="lg" className="flex-1" disabled={submitting}>
           {submitting ? (
             <>
@@ -559,5 +594,4 @@ export function IncidentForm() {
       </div>
     </form>
   )
-
 }
