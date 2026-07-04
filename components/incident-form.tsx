@@ -529,16 +529,23 @@ export function IncidentForm() {
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
       <div className="flex gap-3">
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          className="flex-1"
-          onClick={() => router.back()}
-          disabled={submitting}
-        >
-          {t("incidentFormExtra.cancel")}
-        </Button>
+<Button
+  type="button"
+  variant="outline"
+  size="lg"
+  className="flex-1"
+  onClick={() => {
+    try {
+      localStorage.removeItem(INCIDENT_DRAFT_KEY)
+    } catch {}
+    attachments.forEach((a) => URL.revokeObjectURL(a.url))
+    setAttachments([])
+    router.back()
+  }}
+  disabled={submitting}
+>
+  {t("incidentFormExtra.cancel")}
+</Button>
         <Button type="submit" size="lg" className="flex-1" disabled={submitting}>
           {submitting ? (
             <>
