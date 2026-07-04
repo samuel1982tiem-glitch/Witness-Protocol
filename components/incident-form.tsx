@@ -3,7 +3,7 @@
 import {
   Camera,
   Crosshair,
- Download,
+  Download,
   FileAudio,
   FileImage,
   FileText,
@@ -301,69 +301,13 @@ export function IncidentForm() {
     window.open(url, "_blank")
   }
 
-      const gpsText = location
-        ? `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)} (±${Math.round(
-            location.accuracy ?? 0,
-          )}m)`
-        : "No location attached"
-
-      const evidenceTable =
-        rows.length > 0
-          ? `
-          <table style="width:100%;border-collapse:collapse;margin-top:12px;font-size:12px;">
-            <thead>
-              <tr>
-                <th style="text-align:left;border:1px solid #ccc;padding:6px;">Kind</th>
-                <th style="text-align:left;border:1px solid #ccc;padding:6px;">Name</th>
-                <th style="text-align:left;border:1px solid #ccc;padding:6px;">Size</th>
-                <th style="text-align:left;border:1px solid #ccc;padding:6px;">MIME</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rows
-                .map(
-                  ([kind, name, size, mime]) => `
-                <tr>
-                  <td style="border:1px solid #ccc;padding:6px;">${String(kind)}</td>
-                  <td style="border:1px solid #ccc;padding:6px;">${String(name)}</td>
-                  <td style="border:1px solid #ccc;padding:6px;">${String(size)}</td>
-                  <td style="border:1px solid #ccc;padding:6px;">${String(mime)}</td>
-                </tr>
-              `,
-                )
-                .join("")}
-            </tbody>
-          </table>
-        `
-          : `<p style="font-size:12px;color:#666;">No attachments added.</p>`
-
-      popup.document.write(`
-        <html>
-          <head>
-            <title>Incident Export</title>
-            <meta charset="utf-8" />
-          </head>
-          <body style="font-family:Arial,Helvetica,sans-serif;padding:24px;color:#111;">
-            <h1 style="margin:0 0 12px 0;">Incident Export</h1>
-            <p><strong>Category:</strong> ${category ? categoryName(category, t) : "Not selected"}</p>
-            <p><strong>Title:</strong> ${title || "Untitled"}</p>
-            <p><strong>Date/Time:</strong> ${new Date(incidentDate).toLocaleString()}</p>
-            <p><strong>GPS:</strong> ${gpsText}</p>
-            <h2 style="margin-top:20px;">Description</h2>
-            <div style="white-space:pre-wrap;border:1px solid #ddd;padding:12px;border-radius:8px;">
-              ${description || ""}
-            </div>
-            <h2 style="margin-top:20px;">Evidence</h2>
-            ${evidenceTable}
-          </body>
-        </html>
-      `)
-      popup.document.close()
-      popup.focus()
-      popup.print()
-    } catch (err) {
-      setError((err as Error).message || "Could not export PDF")
-    }
+  function downloadAttachment(attachment: PendingAttachment) {
+    const link = document.createElement("a")
+    link.href = attachment.url
+    link.download = attachment.name
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -425,9 +369,9 @@ export function IncidentForm() {
   return (
     <>
       <form onSubmit={onSubmit} className="space-y-5">
-        {/* Top row: Date + GPS + Export PDF */}
+        {/* Date + GPS - centered */}
         <div className="grid grid-cols-12 gap-3">
-          <div className="col-span-5">
+          <div className="col-span-6">
             <Label htmlFor="occurredAt">{t("incidentForm.date")}</Label>
             <Input
               id="occurredAt"
@@ -437,7 +381,7 @@ export function IncidentForm() {
             />
           </div>
 
-          <div className="col-span-5">
+          <div className="col-span-6">
             <Label>{t("incidentForm.gps")}</Label>
             <Card className="flex min-h-[42px] items-center justify-between gap-2 px-3 py-2">
               {location ? (
@@ -481,17 +425,6 @@ export function IncidentForm() {
                 </button>
               </div>
             </Card>
-          </div>
-
-          <div className="col-span-2 flex items-end">
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={exportPdf}
-            >
-              PDF
-            </Button>
           </div>
         </div>
 
@@ -539,11 +472,11 @@ export function IncidentForm() {
           />
         </div>
 
-        {/* Attachment toolbar */}
+        {/* Attachment toolbar - centered icons */}
         <div className="space-y-3">
           <Label>{t("incidentForm.evidence")}</Label>
 
-          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-2">
+          <div className="flex flex-wrap items-center justify-center gap-2 rounded-xl border border-border bg-card p-2">
             {/* Photo camera */}
             <button
               type="button"
@@ -708,7 +641,7 @@ export function IncidentForm() {
                         </div>
 
                         <div className="mt-2 flex items-center justify-end gap-1">
-<button
+                          <button
                             type="button"
                             onClick={() => removeAttachment(a.id)}
                             className="rounded-md p-1.5 text-muted-foreground hover:bg-muted"
@@ -766,7 +699,7 @@ export function IncidentForm() {
                         )}
 
                         <div className="mt-2 flex items-center justify-end gap-1">
-<button
+                          <button
                             type="button"
                             onClick={() => removeAttachment(a.id)}
                             className="rounded-md p-1.5 text-muted-foreground hover:bg-muted"
