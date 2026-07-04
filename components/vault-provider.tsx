@@ -171,6 +171,7 @@ React.useEffect(() => {
   }, [])
 
   const lock = React.useCallback(() => {
+    console.log("[LOCK DIAG] lock() called. Stack:", new Error().stack)
     if (lockTimer.current) clearTimeout(lockTimer.current)
     clearMemory()
     setStatus((s) => (s === "uninitialized" ? s : "locked"))
