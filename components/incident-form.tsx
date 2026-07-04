@@ -40,12 +40,46 @@ interface PendingAttachment {
 
 const INCIDENT_DRAFT_KEY = "witness:incident-draft:v1"
 
+interface DraftAttachment {
+  id: string
+  kind: EvidenceKind
+  name: string
+  mimeType: string
+  base64: string
+}
+
 interface IncidentDraft {
   category: CategoryId | null
   title: string
   description: string
   occurredAt: string
   location: GeoLocation | null
+  attachments: DraftAttachment[]
+}
+
+/** Convert a Blob to a base64 string (no data: prefix) for localStorage persistence. */
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(reader.error)
+    reader.onload = () => {
+      const result = reader.result as string
+      // Strip the "data:<mime>;base64," prefix, keep only the raw base64
+      const commaIdx = result.indexOf(",")
+      resolve(commaIdx === -1 ? result : result.slice(commaIdx + 1))
+    }
+    reader.readAsDataURL(blob)
+  })
+}
+
+/** Convert a base64 string (no prefix) back into a Blob. */
+function base64ToBlob(base64: string, mimeType: string): Blob {
+  const binary = atob(base64)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i)
+  }
+  return new Blob([bytes], { type: mimeType })
 }
 
 function pid() {
@@ -87,6 +121,19 @@ export function IncidentForm() {
         setOccurredAt(draft.occurredAt)
       }
       if (draft.location) setLocation(draft.location)
+      if (Array.isArray(draft.attachments) && draft.attachments.length > 0) {
+        const restored: PendingAttachment[] = draft.attachments.map((a) => {
+          const blob = base64ToBlob(a.base64, a.mimeType)
+          return {
+            id: a.id,
+            kind: a.kind,
+            name: a.name,
+            blob,
+            url: URL.createObjectURL(blob),
+          }
+        })
+        setAttachments((prev) => [...prev, ...restored])
+      }
     } catch {
       // Ignore corrupt draft
     }
@@ -94,19 +141,36 @@ export function IncidentForm() {
 
   React.useEffect(() => {
     if (typeof window === "undefined") return
-    try {
-      const draft: IncidentDraft = {
-        category,
-        title,
-        description,
-        occurredAt,
-        location,
+    let cancelled = false
+    ;(async () => {
+      try {
+        const attachmentDrafts: DraftAttachment[] = await Promise.all(
+          attachments.map(async (a) => ({
+            id: a.id,
+            kind: a.kind,
+            name: a.name,
+            mimeType: a.blob.type || "application/octet-stream",
+            base64: await blobToBase64(a.blob),
+          })),
+        )
+        if (cancelled) return
+        const draft: IncidentDraft = {
+          category,
+          title,
+          description,
+          occurredAt,
+          location,
+          attachments: attachmentDrafts,
+        }
+        window.localStorage.setItem(INCIDENT_DRAFT_KEY, JSON.stringify(draft))
+      } catch {
+        // Ignore storage failures (e.g. quota exceeded on large photos)
       }
-      window.localStorage.setItem(INCIDENT_DRAFT_KEY, JSON.stringify(draft))
-    } catch {
-      // Ignore storage failures
+    })()
+    return () => {
+      cancelled = true
     }
-  }, [category, title, description, occurredAt, location])
+  }, [category, title, description, occurredAt, location, attachments])
 
   React.useEffect(() => {
     return () => {
@@ -174,31 +238,29 @@ export function IncidentForm() {
 
   async function capturePhoto() {
     try {
+      // Base64 avoids depending on a blob: URL scoped to the current
+      // WebView session. If Android recreates the hosting Activity while
+      // the native camera has focus (common on lower-memory devices),
+      // a Uri-based webPath can become stale or point at a dead session —
+      // this was the root cause of intermittent capture failures.
+      // Base64 comes back as a plain string with no such dependency.
       const photo = await CapacitorCamera.getPhoto({
-        resultType: CameraResultType.Uri,
+        resultType: CameraResultType.Base64,
         source: CameraSource.Camera,
         quality: 85,
         allowEditing: false,
       })
 
-      if (!photo.webPath) return
-
-      const response = await fetch(photo.webPath)
-      const originalBlob = await response.blob()
+      if (!photo.base64String) return
 
       const ext =
         photo.format === "jpeg" || photo.format === "jpg"
           ? "jpg"
-          : photo.format || extFromMime(originalBlob.type || "image/jpeg")
+          : photo.format || "jpg"
 
-      const mimeType =
-        originalBlob.type ||
-        (ext === "jpg" ? "image/jpeg" : `image/${ext}`)
+      const mimeType = ext === "jpg" ? "image/jpeg" : `image/${ext}`
 
-      const blob =
-        originalBlob.type
-          ? originalBlob
-          : new Blob([originalBlob], { type: mimeType })
+      const blob = base64ToBlob(photo.base64String, mimeType)
 
       const attachment: PendingAttachment = {
         id: pid(),
