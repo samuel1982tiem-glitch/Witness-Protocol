@@ -36,6 +36,16 @@ interface PendingAttachment {
   url: string
 }
 
+const INCIDENT_DRAFT_KEY = "witness:incident-draft:v1"
+
+interface IncidentDraft {
+  category: CategoryId | null
+  title: string
+  description: string
+  occurredAt: string
+  location: GeoLocation | null
+}
+
 function pid() {
   return Math.random().toString(36).slice(2)
 }
@@ -61,6 +71,43 @@ export function IncidentForm() {
   const shotInput = React.useRef<HTMLInputElement>(null)
   const audioInput = React.useRef<HTMLInputElement>(null)
   const docInput = React.useRef<HTMLInputElement>(null)
+
+  // Restore draft if Android recreates the WebView / activity during camera capture.
+  React.useEffect(() => {
+    if (typeof window === "undefined") return
+    try {
+      const raw = window.localStorage.getItem(INCIDENT_DRAFT_KEY)
+      if (!raw) return
+      const draft = JSON.parse(raw) as IncidentDraft
+
+      if (draft.category) setCategory(draft.category)
+      if (typeof draft.title === "string") setTitle(draft.title)
+      if (typeof draft.description === "string") setDescription(draft.description)
+      if (typeof draft.occurredAt === "string" && draft.occurredAt) {
+        setOccurredAt(draft.occurredAt)
+      }
+      if (draft.location) setLocation(draft.location)
+    } catch {
+      // Ignore corrupt draft
+    }
+  }, [])
+
+  // Persist the text/location draft so it survives app recreation.
+  React.useEffect(() => {
+    if (typeof window === "undefined") return
+    try {
+      const draft: IncidentDraft = {
+        category,
+        title,
+        description,
+        occurredAt,
+        location,
+      }
+      window.localStorage.setItem(INCIDENT_DRAFT_KEY, JSON.stringify(draft))
+    } catch {
+      // Ignore storage failures
+    }
+  }, [category, title, description, occurredAt, location])
 
   React.useEffect(() => {
     return () => {
@@ -99,11 +146,18 @@ export function IncidentForm() {
 
   function extFromMime(mime: string): string {
     const map: Record<string, string> = {
-      "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp",
-      "image/gif": "gif", "audio/webm": "webm", "audio/mp4": "m4a",
-      "audio/mpeg": "mp3", "application/pdf": "pdf",
-      "text/plain": "txt", "application/msword": "doc",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+      "image/jpeg": "jpg",
+      "image/png": "png",
+      "image/webp": "webp",
+      "image/gif": "gif",
+      "audio/webm": "webm",
+      "audio/mp4": "m4a",
+      "audio/mpeg": "mp3",
+      "application/pdf": "pdf",
+      "text/plain": "txt",
+      "application/msword": "doc",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        "docx",
     }
     return map[mime] || mime.split("/")[1] || "bin"
   }
@@ -208,6 +262,11 @@ export function IncidentForm() {
         },
         evidence,
       )
+
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem(INCIDENT_DRAFT_KEY)
+      }
+
       router.replace("/incidents")
     } catch (err) {
       setError((err as Error).message || t("incidentFormExtra.couldNotSaveIncident"))
@@ -493,4 +552,5 @@ export function IncidentForm() {
       </div>
     </form>
   )
+
 }
