@@ -235,22 +235,30 @@ export function IncidentForm() {
       // this was the root cause of intermittent capture failures.
       // Base64 comes back as a plain string with no such dependency.
       const photo = await CapacitorCamera.getPhoto({
-        resultType: CameraResultType.Base64,
+        resultType: CameraResultType.Uri,
         source: CameraSource.Camera,
         quality: 85,
         allowEditing: false,
       })
 
-      if (!photo.base64String) return
+      if (!photo.webPath) return
+
+      const response = await fetch(photo.webPath)
+      const originalBlob = await response.blob()
 
       const ext =
         photo.format === "jpeg" || photo.format === "jpg"
           ? "jpg"
-          : photo.format || "jpg"
+          : photo.format || extFromMime(originalBlob.type || "image/jpeg")
 
-      const mimeType = ext === "jpg" ? "image/jpeg" : `image/${ext}`
+      const mimeType =
+        originalBlob.type ||
+        (ext === "jpg" ? "image/jpeg" : `image/${ext}`)
 
-      const blob = base64ToBlob(photo.base64String, mimeType)
+      const blob =
+        originalBlob.type
+          ? originalBlob
+          : new Blob([originalBlob], { type: mimeType })
 
       const attachment: PendingAttachment = {
         id: pid(),
