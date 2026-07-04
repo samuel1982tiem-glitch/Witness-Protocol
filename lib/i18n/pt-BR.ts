@@ -75,7 +75,13 @@ export const categoriesPtBR = {
   unknown: "Desconhecido",
 }
 
+export const evidenceHintPtBR = {
+  selectCategoryPlaceholder: "Selecione a categoria",
+  evidenceDisclaimer: "As imagens têm os metadados EXIF removidos, são hasheadas com SHA-256 e criptografadas antes do armazenamento.",
+}
+
 export const ptBR: Dictionary = {
+  evidenceHint: evidenceHintPtBR,
   categories: categoriesPtBR,
   relativeTime: relativeTimePtBR,
   miscUi: miscUiPtBR,
@@ -179,4 +185,6 @@ export const ptBR: Dictionary = {
     backupRestored: "Backup restaurado",
     backupMerged: "Backup mesclado",
   },
+  'incidentForm.selectCategory': 'Selecione a categoria',
+  'incidentForm.evidenceHint': 'As imagens têm os metadados EXIF removidos, são hasheadas com SHA-256 e criptografadas antes do armazenamento.',
 }

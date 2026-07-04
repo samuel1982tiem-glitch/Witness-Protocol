@@ -78,7 +78,13 @@ export const categoriesEn = {
   unknown: "Unknown",
 }
 
+export const evidenceHintEn = {
+  selectCategoryPlaceholder: "Select category",
+  evidenceDisclaimer: "Images are stripped of EXIF metadata, hashed with SHA-256, and encrypted before storage.",
+}
+
 export const en: Dictionary = {
+  evidenceHint: evidenceHintEn,
   categories: categoriesEn,
   relativeTime: relativeTimeEn,
   miscUi: miscUiEn,
@@ -181,4 +187,6 @@ export const en: Dictionary = {
     backupRestored: "Backup restored",
     backupMerged: "Backup merged",
   },
+  'incidentForm.selectCategory': 'Select category',
+  'incidentForm.evidenceHint': 'Images are stripped of EXIF metadata, hashed with SHA-256, and encrypted before storage.',
 }
