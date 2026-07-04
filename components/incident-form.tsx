@@ -301,32 +301,6 @@ export function IncidentForm() {
     window.open(url, "_blank")
   }
 
-  function downloadAttachment(attachment: PendingAttachment) {
-    const link = document.createElement("a")
-    link.href = attachment.url
-    link.download = attachment.name
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
-
-  async function exportPdf() {
-    try {
-      const incidentDate = fromDateTimeLocal(occurredAt)
-      const rows = attachments.map((a) => {
-        return [
-          a.kind,
-          a.name,
-          formatBytes(a.blob.size),
-          a.blob.type || "application/octet-stream",
-        ]
-      })
-
-      const popup = window.open("", "_blank")
-      if (!popup) {
-        throw new Error("Popup blocked")
-      }
-
       const gpsText = location
         ? `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)} (±${Math.round(
             location.accuracy ?? 0,
@@ -734,16 +708,7 @@ export function IncidentForm() {
                         </div>
 
                         <div className="mt-2 flex items-center justify-end gap-1">
-                          <button
-                            type="button"
-                            onClick={() => downloadAttachment(a)}
-                            className="rounded-md p-1.5 text-muted-foreground hover:bg-muted"
-                            aria-label="Download attachment"
-                            title="Download"
-                          >
-                            <Download className="size-4" />
-                          </button>
-                          <button
+<button
                             type="button"
                             onClick={() => removeAttachment(a.id)}
                             className="rounded-md p-1.5 text-muted-foreground hover:bg-muted"
@@ -801,16 +766,7 @@ export function IncidentForm() {
                         )}
 
                         <div className="mt-2 flex items-center justify-end gap-1">
-                          <button
-                            type="button"
-                            onClick={() => downloadAttachment(a)}
-                            className="rounded-md p-1.5 text-muted-foreground hover:bg-muted"
-                            aria-label="Download attachment"
-                            title="Download"
-                          >
-                            <Download className="size-4" />
-                          </button>
-                          <button
+<button
                             type="button"
                             onClick={() => removeAttachment(a.id)}
                             className="rounded-md p-1.5 text-muted-foreground hover:bg-muted"
