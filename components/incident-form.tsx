@@ -440,7 +440,7 @@ export function IncidentForm() {
               }
               className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
             >
-              <option value="">Select category</option>
+              <option value="">{t("evidenceHint.selectCategoryPlaceholder")}</option>
               {CATEGORIES.map((c) => (
                 <option key={c.id} value={c.id}>
                   {categoryName(c.id, t)}
@@ -716,7 +716,7 @@ export function IncidentForm() {
             </div>
           ) : (
             <p className="text-xs leading-relaxed text-muted-foreground">
-              Images are stripped of EXIF metadata, hashed with SHA-256, and encrypted before storage.
+              {t("evidenceHint.evidenceDisclaimer")}
             </p>
           )}
         </div>
