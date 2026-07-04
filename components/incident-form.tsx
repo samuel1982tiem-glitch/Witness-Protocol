@@ -141,36 +141,26 @@ export function IncidentForm() {
 
   React.useEffect(() => {
     if (typeof window === "undefined") return
-    let cancelled = false
-    ;(async () => {
-      try {
-        const attachmentDrafts: DraftAttachment[] = await Promise.all(
-          attachments.map(async (a) => ({
-            id: a.id,
-            kind: a.kind,
-            name: a.name,
-            mimeType: a.blob.type || "application/octet-stream",
-            base64: await blobToBase64(a.blob),
-          })),
-        )
-        if (cancelled) return
-        const draft: IncidentDraft = {
-          category,
-          title,
-          description,
-          occurredAt,
-          location,
-          attachments: attachmentDrafts,
-        }
-        window.localStorage.setItem(INCIDENT_DRAFT_KEY, JSON.stringify(draft))
-      } catch {
-        // Ignore storage failures (e.g. quota exceeded on large photos)
+    try {
+      // NOTE: attachments are intentionally NOT persisted here. Base64-
+      // encoding every photo on every draft save caused repeated large
+      // localStorage writes that appear to have triggered instability/
+      // quota issues with multiple photos. The Base64 capture fix (see
+      // capturePhoto) already solves the main crash; draft recovery for
+      // in-progress photos is not attempted to avoid this regression.
+      const draft: IncidentDraft = {
+        category,
+        title,
+        description,
+        occurredAt,
+        location,
+        attachments: [],
       }
-    })()
-    return () => {
-      cancelled = true
+      window.localStorage.setItem(INCIDENT_DRAFT_KEY, JSON.stringify(draft))
+    } catch {
+      // Ignore storage failures
     }
-  }, [category, title, description, occurredAt, location, attachments])
+  }, [category, title, description, occurredAt, location])
 
   React.useEffect(() => {
     return () => {
