@@ -1,5 +1,5 @@
 "use client"
-import { VideoRecorder } from "cap-video-recorder";
+import { CameraView } from "capacitor-camera-view";
 
 import {
   Camera,
@@ -248,39 +248,28 @@ export function IncidentForm() {
     }
   }
 
-                              async function captureVideo() {
+                                async function captureVideo() {
     try {
-      // Use cap-video-recorder for reliable video recording on Android
-      // Start recording with high quality
-      await VideoRecorder.startRecording({
-        quality: 'high',
-        maxDuration: 30, // 30 seconds max
-        camera: 'back',
-        enableAudio: true,
-        saveToGallery: false // Keep it in the app only
-      });
+      // Start recording with audio
+      await CameraView.startRecording({ enableAudio: true });
 
-      // Show recording status
       setError("🎥 Recording... Tap the video icon again to stop");
 
-      // Wait for user to stop recording (we'll use a timer for now)
-      // You can enhance this with a proper stop button later
+      // Record for 15 seconds
       await new Promise((resolve) => {
-        setTimeout(resolve, 15000); // Record for 15 seconds
+        setTimeout(resolve, 15000);
       });
 
-      // Stop recording and get the video file
-      const video = await VideoRecorder.stopRecording();
+      // Stop recording and get the video
+      const result = await CameraView.stopRecording();
       
-      if (!video || !video.videoPath) {
+      if (!result || !result.webPath) {
         throw new Error("No video captured");
       }
 
-      // Fetch the video file
-      const response = await fetch(video.videoPath);
+      const response = await fetch(result.webPath);
       const blob = await response.blob();
 
-      // Create a proper video file
       const ext = 'mp4';
       const mimeType = blob.type || 'video/mp4';
       const finalBlob = blob.type ? blob : new Blob([blob], { type: mimeType });
@@ -290,7 +279,7 @@ export function IncidentForm() {
         buildAttachment("video", finalBlob, `video-${Date.now()}.${ext}`),
       ]);
 
-      setError(null); // Clear the recording status
+      setError(null);
 
     } catch (err) {
       const message = (err as Error)?.message || "";
@@ -298,10 +287,8 @@ export function IncidentForm() {
         /cancel/i.test(message) ||
         /user/i.test(message) ||
         /No video selected/i.test(message) ||
-        /recording cancelled/i.test(message) ||
-        /stopped/i.test(message)
+        /recording cancelled/i.test(message)
       ) {
-        setError("Recording stopped.");
         return;
       }
       setError(`Video capture failed: ${message || "Could not record video"}`);
