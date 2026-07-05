@@ -253,7 +253,10 @@ function AlertItem({ alert }: { alert: PatternAlert }) {
 
       case "frequency-spike":
         return t("patterns.alertText.frequencySpike", {
-          day: getWeekdayLabel(language, data.day),
+          day:
+            data.day !== undefined && data.day !== null
+              ? t(`patterns.weekdays.${String(data.day)}`)
+              : "",
           count: Number(data.count ?? 0),
         })
 
