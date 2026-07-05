@@ -247,10 +247,9 @@ export function IncidentForm() {
     }
   }
 
-                        async function captureVideo() {
+                          async function captureVideo() {
     try {
-      // First, request camera permission using Capacitor Camera
-      // This ensures the camera permission dialog appears first
+      // Request camera permission using Capacitor Camera
       const permissionStatus = await CapacitorCamera.requestPermissions({
         permissions: ['camera']
       });
@@ -260,8 +259,20 @@ export function IncidentForm() {
         return;
       }
 
-      // Now try to get the camera stream using getUserMedia
-      // This should now work since we have permission
+      // Now request audio permission for recording
+      try {
+        // Audio is optional but recommended
+        const audioPermission = await CapacitorCamera.requestPermissions({
+          permissions: ['microphone']
+        });
+        if (audioPermission.microphone !== 'granted') {
+          console.log('Audio permission denied - video will be recorded without audio');
+        }
+      } catch (audioErr) {
+        console.log('Audio permission not available - continuing without audio');
+      }
+
+      // Now get the camera stream
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: 'environment',
