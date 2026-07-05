@@ -272,6 +272,8 @@ export const es: Dictionary = {
       activityTrendIncreasing: "Tendencia de actividad en aumento",
       activityTrendDecreasing: "Tendencia de actividad en descenso",
       activityTrendStable: "Tendencia de actividad estable",
+      weekdayCluster: "Weekday Cluster",
+      weekdayTimeCluster: "Weekday Time Cluster",
     },
 
     alertText: {
