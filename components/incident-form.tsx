@@ -247,87 +247,37 @@ export function IncidentForm() {
     }
   }
 
-          async function captureVideo() {
+            async function captureVideo() {
     try {
-      // Method 1: Try getVideo first (works on iOS)
-      try {
-        const video = await CapacitorCamera.getVideo({
-          resultType: CameraResultType.Uri,
-          source: CameraSource.Camera,
-          quality: 85,
-          allowEditing: false,
-        });
-        
-        if (video.webPath) {
-          const response = await fetch(video.webPath);
-          const blob = await response.blob();
-          const ext = video.format || 'mp4';
-          const mimeType = blob.type || `video/${ext}`;
-          const finalBlob = blob.type ? blob : new Blob([blob], { type: mimeType });
-          setAttachments((prev) => [
-            ...prev,
-            buildAttachment("video", finalBlob, `video-${Date.now()}.${ext}`),
-          ]);
-          return;
-        }
-      } catch (e) {
-        console.log('getVideo failed, trying alternative...');
+      // Use capacitor-camera-view plugin for efficient video recording
+      await CameraView.startRecording({ enableAudio: true });
+
+      // Record for up to 30 seconds (you can adjust this)
+      // Wait for recording to finish
+      const result = await CameraView.stopRecording();
+      
+      if (!result || !result.webPath) {
+        throw new Error("No video captured");
       }
 
-      // Method 2: Use getPhoto with video quality hint
-      try {
-        const video = await CapacitorCamera.getPhoto({
-          resultType: CameraResultType.Uri,
-          source: CameraSource.Camera,
-          quality: 50, // Lower quality for video
-          allowEditing: false,
-          // On some Android versions, this might still work
-        });
+      const response = await fetch(result.webPath);
+      const blob = await response.blob();
 
-        if (video.webPath) {
-          const response = await fetch(video.webPath);
-          const blob = await response.blob();
-          
-          // Check if it's actually a video file
-          if (blob.type && blob.type.includes('video')) {
-            const ext = 'mp4';
-            const mimeType = blob.type || 'video/mp4';
-            const finalBlob = blob.type ? blob : new Blob([blob], { type: mimeType });
-            setAttachments((prev) => [
-              ...prev,
-              buildAttachment("video", finalBlob, `video-${Date.now()}.${ext}`),
-            ]);
-            return;
-          }
-          
-          // If it's a photo, inform the user and add as photo
-          if (blob.type && blob.type.includes('image')) {
-            setError("Video recording not available on this device. Please use the file picker to select a video.");
-            // Optionally add as photo
-            const ext = 'jpg';
-            const mimeType = blob.type || 'image/jpeg';
-            const finalBlob = blob.type ? blob : new Blob([blob], { type: mimeType });
-            setAttachments((prev) => [
-              ...prev,
-              buildAttachment("photo", finalBlob, `photo-${Date.now()}.${ext}`),
-            ]);
-            return;
-          }
-        }
-      } catch (e) {
-        console.log('getPhoto also failed:', e);
-      }
+      const ext = 'mp4';
+      const mimeType = blob.type || 'video/mp4';
+      const finalBlob = blob.type ? blob : new Blob([blob], { type: mimeType });
 
-      // Method 3: Last resort - open the file picker
-      setError("Video recording not available. Please select a video from your device.");
-      videoFileInput.current?.click();
-
+      setAttachments((prev) => [
+        ...prev,
+        buildAttachment("video", finalBlob, `video-${Date.now()}.${ext}`),
+      ]);
     } catch (err) {
       const message = (err as Error)?.message || "";
       if (
         /cancel/i.test(message) ||
         /user/i.test(message) ||
-        /No video selected/i.test(message)
+        /No video selected/i.test(message) ||
+        /recording cancelled/i.test(message)
       ) {
         return;
       }
