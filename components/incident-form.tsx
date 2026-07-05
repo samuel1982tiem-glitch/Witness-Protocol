@@ -1,5 +1,4 @@
 "use client"
-import { CameraView } from "capacitor-camera-view";
 
 import {
   Camera,
@@ -248,37 +247,59 @@ export function IncidentForm() {
     }
   }
 
-                                async function captureVideo() {
+                                  async function captureVideo() {
     try {
-      // Start recording with audio
-      await CameraView.startRecording({ enableAudio: true });
-
-      setError("🎥 Recording... Tap the video icon again to stop");
-
-      // Record for 15 seconds
-      await new Promise((resolve) => {
-        setTimeout(resolve, 15000);
+      // Request camera permission first
+      const permissionStatus = await CapacitorCamera.requestPermissions({
+        permissions: ['camera']
       });
 
-      // Stop recording and get the video
-      const result = await CameraView.stopRecording();
-      
-      if (!result || !result.webPath) {
+      if (permissionStatus.camera !== 'granted') {
+        setError("Camera permission denied. Please enable camera access in settings.");
+        return;
+      }
+
+      // Use Capacitor Camera to capture video
+      // On Android, this will open the camera app
+      const video = await CapacitorCamera.getPhoto({
+        resultType: CameraResultType.Uri,
+        source: CameraSource.Camera,
+        quality: 85,
+        allowEditing: false,
+        // Note: On Android, this may capture a photo if video is not supported
+      });
+
+      if (!video.webPath) {
         throw new Error("No video captured");
       }
 
-      const response = await fetch(result.webPath);
+      const response = await fetch(video.webPath);
       const blob = await response.blob();
 
-      const ext = 'mp4';
-      const mimeType = blob.type || 'video/mp4';
-      const finalBlob = blob.type ? blob : new Blob([blob], { type: mimeType });
+      // Determine file type
+      let ext = 'mp4';
+      let mimeType = blob.type || 'video/mp4';
+      
+      // If it's a photo, add it as a photo and show message
+      if (mimeType.includes('image')) {
+        setError("Video recording not supported directly. Please use the video file picker.");
+        // Still add as photo
+        const photoExt = 'jpg';
+        const photoMime = blob.type || 'image/jpeg';
+        const finalPhoto = blob.type ? blob : new Blob([blob], { type: photoMime });
+        setAttachments((prev) => [
+          ...prev,
+          buildAttachment("photo", finalPhoto, `photo-${Date.now()}.${photoExt}`),
+        ]);
+        return;
+      }
 
+      // It's a video
+      const finalBlob = blob.type ? blob : new Blob([blob], { type: mimeType });
       setAttachments((prev) => [
         ...prev,
         buildAttachment("video", finalBlob, `video-${Date.now()}.${ext}`),
       ]);
-
       setError(null);
 
     } catch (err) {
@@ -286,12 +307,13 @@ export function IncidentForm() {
       if (
         /cancel/i.test(message) ||
         /user/i.test(message) ||
-        /No video selected/i.test(message) ||
-        /recording cancelled/i.test(message)
+        /No video selected/i.test(message)
       ) {
         return;
       }
-      setError(`Video capture failed: ${message || "Could not record video"}`);
+      // If video capture fails, offer the file picker as fallback
+      setError("Video capture failed. Please select a video from your device.");
+      videoFileInput.current?.click();
     }
   }
 
