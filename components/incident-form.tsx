@@ -248,9 +248,9 @@ export function IncidentForm() {
     }
   }
 
-                                    async function captureVideo() {
+                                      async function captureVideo() {
     try {
-      // Use MediaCapture plugin for reliable video recording on Android
+      // Use MediaCapture plugin for reliable video recording
       const video = await MediaCapture.captureVideo({
         duration: 30, // 30 seconds max
         quality: 1    // High quality
