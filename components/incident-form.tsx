@@ -1,3 +1,4 @@
+import { CameraView } from "capacitor-camera-view";
 "use client"
 
 import {
