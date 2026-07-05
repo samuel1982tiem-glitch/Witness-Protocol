@@ -247,13 +247,14 @@ export function IncidentForm() {
     }
   }
 
-            async function captureVideo() {
+              async function captureVideo() {
     try {
       // Use capacitor-camera-view plugin for efficient video recording
+      // Start recording with audio
       await CameraView.startRecording({ enableAudio: true });
 
-      // Record for up to 30 seconds (you can adjust this)
-      // Wait for recording to finish
+      // Wait for the user to stop recording (the plugin handles this)
+      // The stopRecording() method returns the video file
       const result = await CameraView.stopRecording();
       
       if (!result || !result.webPath) {
