@@ -1,4 +1,3 @@
-import { CameraView } from "capacitor-camera-view";
 "use client"
 
 import {
@@ -248,9 +247,9 @@ export function IncidentForm() {
     }
   }
 
-                  async function captureVideo() {
+                    async function captureVideo() {
     try {
-      // Use getUserMedia API for Android video recording
+      // Android video recording using getUserMedia API
       // This works reliably on Android WebView
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -261,7 +260,6 @@ export function IncidentForm() {
         audio: true
       });
 
-      // Create a media recorder
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'video/mp4'
       });
@@ -276,16 +274,12 @@ export function IncidentForm() {
 
       // Start recording
       mediaRecorder.start();
+      setError("Recording... Tap the video icon again to stop");
 
-      // Show recording UI feedback
-      // You can add a state for recording status later
-      setError("Recording... Tap again to stop");
-
-      // Wait for user to stop recording
-      // For now, we'll record for 15 seconds max
-      // You can enhance this with a proper stop button
+      // Wait for the user to stop recording
+      // For now, record for up to 15 seconds
       await new Promise((resolve) => {
-        setTimeout(resolve, 15000); // 15 seconds max
+        setTimeout(resolve, 15000);
       });
 
       mediaRecorder.stop();
@@ -310,7 +304,7 @@ export function IncidentForm() {
         buildAttachment("video", blob, `video-${Date.now()}.mp4`),
       ]);
 
-      setError(null); // Clear the recording message
+      setError(null);
 
     } catch (err) {
       const message = (err as Error)?.message || "";
