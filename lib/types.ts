@@ -61,34 +61,47 @@ export interface EvidenceSeal {
 
 export type AlertType =
   | "repeated-time"
-  | "repeated-time-block"
-  | "repeated-weekday"
   | "repeated-location"
   | "frequency-spike"
-  | "rolling-spike"
   | "category-cluster"
-  | "category-time-cluster"
-  | "category-location-cluster"
   | "activity-trend"
-  | "category-trend"
+  | "weekday-cluster"
+  | "weekday-time-cluster"
 
 export type AlertSeverity = "info" | "notable" | "high"
+
+export interface PatternAlertData {
+  hour?: number
+  weekday?: number
+  block?: "earlyMorning" | "morning" | "afternoon" | "evening" | "night"
+  category?: CategoryId
+  categoryName?: string
+  count?: number
+  total?: number
+  percentage?: number
+  coordinates?: string
+  day?: string
+  average?: number
+  std?: number
+  direction?: "increasing" | "decreasing" | "stable"
+  perWeek?: number
+  spanDays?: number
+}
 
 export interface PatternAlert {
   id: string
   type: AlertType
   severity: AlertSeverity
-  /** i18n key for the alert title */
-  titleKey: string
-  /** i18n key for the neutral observation text */
-  observationKey: string
-  /** i18n key for supporting detail / metric line */
-  detailKey: string
-  /** Optional interpolation params for translated strings */
-  params?: Record<string, string | number>
+  title: string
+  /** Neutral, observation-only description. No causal claims. */
+  observation: string
+  /** Supporting metric/correlation detail. */
+  detail: string
   /** Incident ids that contributed to this observation. */
   relatedIncidentIds: string[]
   createdAt: number
+  /** Structured payload for translated rendering on the Patterns page. */
+  data?: PatternAlertData
 }
 
 export type VaultStatus =

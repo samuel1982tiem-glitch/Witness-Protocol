@@ -17,6 +17,7 @@ export type LanguageCode = "en" | "pt-BR" | "es"
 export type LanguagePreference = "system" | LanguageCode
 
 export interface Dictionary {
+  patterns: PatternsDict
   evidenceHint: EvidenceHintDict
   categories: CategoryDict
   relativeTime: RelativeTimeDict
@@ -116,6 +117,57 @@ export interface Dictionary {
     backupExported: string
     backupRestored: string
     backupMerged: string
+  }
+}
+
+export interface PatternsDict {
+  title: string
+  description: string
+  analyzed: string
+  run: string
+  runToRefresh: string
+  empty: string
+  disclaimer: string
+  severity: {
+    high: string
+    notable: string
+    info: string
+  }
+  weekdays: {
+    0: string
+    1: string
+    2: string
+    3: string
+    4: string
+    5: string
+    6: string
+  }
+  timeBlocks: {
+    earlyMorning: string
+    morning: string
+    afternoon: string
+    evening: string
+    night: string
+  }
+  alerts: {
+    repeatedTimeTitle: string
+    repeatedTimeObservation: string
+    repeatedLocationTitle: string
+    repeatedLocationObservation: string
+    frequencySpikeTitle: string
+    frequencySpikeObservation: string
+    categoryClusterTitle: string
+    categoryClusterObservation: string
+    activityTrendIncreasingTitle: string
+    activityTrendDecreasingTitle: string
+    activityTrendStableTitle: string
+    activityTrendIncreasingObservation: string
+    activityTrendDecreasingObservation: string
+    activityTrendStableObservation: string
+    weekdayClusterTitle: string
+    weekdayClusterObservation: string
+    weekdayTimeClusterTitle: string
+    weekdayTimeClusterObservation: string
   }
 }
 

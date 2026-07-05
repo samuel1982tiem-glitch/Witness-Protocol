@@ -109,6 +109,80 @@ export const categoriesEn = {
   unknown: "Unknown",
 }
 
+
+export const patternsEn = {
+  title: "Pattern review",
+  description:
+    "Local, on-device analysis of your own records. Observations and correlations only — never claims about cause or intent.",
+  analyzed: "{count} record{plural} analyzed",
+  run: "Run",
+  runToRefresh: "Run analysis to refresh observations.",
+  empty:
+    "No observations yet. Log a few incidents, then run the analysis. Findings will appear here as neutral statistical correlations.",
+  disclaimer:
+    "This tool reports correlations within your own log. It does not identify people, assign blame, or infer external intent. Interpret findings with care.",
+
+  severity: {
+    high: "high",
+    notable: "notable",
+    info: "info",
+  },
+
+  weekdays: {
+    0: "Sunday",
+    1: "Monday",
+    2: "Tuesday",
+    3: "Wednesday",
+    4: "Thursday",
+    5: "Friday",
+    6: "Saturday",
+  },
+
+  timeBlocks: {
+    earlyMorning: "early morning",
+    morning: "morning",
+    afternoon: "afternoon",
+    evening: "evening",
+    night: "night",
+  },
+
+  alerts: {
+    repeatedTimeTitle: "Recurring activity around {time}",
+    repeatedTimeObservation:
+      "{count} of your logged incidents occurred near the {time} hour. This is a timing correlation only.",
+
+    repeatedLocationTitle: "Repeated location",
+    repeatedLocationObservation:
+      "{count} incidents share approximately the same coordinates ({coordinates}). This is a spatial correlation only.",
+
+    frequencySpikeTitle: "Frequency spike",
+    frequencySpikeObservation:
+      "On {day}, you logged {count} incidents — above your typical daily activity. This is a frequency observation only.",
+
+    categoryClusterTitle: "Clustering in {category}",
+    categoryClusterObservation:
+      "{percentage}% of your incidents are categorized as {category}. This is a categorical correlation only.",
+
+    activityTrendIncreasingTitle: "Activity trend increasing",
+    activityTrendDecreasingTitle: "Activity trend decreasing",
+    activityTrendStableTitle: "Stable activity trend",
+    activityTrendIncreasingObservation:
+      "Your logging frequency appears to be increasing over time. This is a trend observation only.",
+    activityTrendDecreasingObservation:
+      "Your logging frequency appears to be decreasing over time. This is a trend observation only.",
+    activityTrendStableObservation:
+      "Your logging frequency has remained roughly steady over the recorded period. This is a trend observation only.",
+
+    weekdayClusterTitle: "Weekday concentration",
+    weekdayClusterObservation:
+      "{count} incidents cluster on {weekday}. This is a scheduling correlation only.",
+
+    weekdayTimeClusterTitle: "Repeated weekday + time pattern",
+    weekdayTimeClusterObservation:
+      "{count} incidents cluster on {weekday} during the {block}. This is a timing correlation only.",
+  },
+}
+
 export const evidenceHintEn = {
   selectCategoryPlaceholder: "Select category",
   evidenceDisclaimer:
@@ -116,6 +190,7 @@ export const evidenceHintEn = {
 }
 
 export const en: Dictionary = {
+  patterns: patternsEn,
   evidenceHint: evidenceHintEn,
   categories: categoriesEn,
   relativeTime: relativeTimeEn,

@@ -111,6 +111,80 @@ export const categoriesPtBR = {
   unknown: "Desconhecido",
 }
 
+
+export const patternsPtBR = {
+  title: "Revisão de padrões",
+  description:
+    "Análise local, no próprio dispositivo, dos seus registros. Apenas observações e correlações — nunca afirmações sobre causa ou intenção.",
+  analyzed: "{count} registro{plural} analisado{plural}",
+  run: "Executar",
+  runToRefresh: "Execute a análise para atualizar as observações.",
+  empty:
+    "Ainda não há observações. Registre alguns incidentes e execute a análise. Os achados aparecerão aqui como correlações estatísticas neutras.",
+  disclaimer:
+    "Esta ferramenta relata correlações dentro do seu próprio histórico. Ela não identifica pessoas, não atribui culpa e não infere intenção externa. Interprete os achados com cautela.",
+
+  severity: {
+    high: "alto",
+    notable: "relevante",
+    info: "informativo",
+  },
+
+  weekdays: {
+    0: "domingo",
+    1: "segunda-feira",
+    2: "terça-feira",
+    3: "quarta-feira",
+    4: "quinta-feira",
+    5: "sexta-feira",
+    6: "sábado",
+  },
+
+  timeBlocks: {
+    earlyMorning: "madrugada",
+    morning: "manhã",
+    afternoon: "tarde",
+    evening: "noite",
+    night: "noite",
+  },
+
+  alerts: {
+    repeatedTimeTitle: "Atividade recorrente por volta de {time}",
+    repeatedTimeObservation:
+      "{count} dos incidentes registrados ocorreram perto do horário de {time}. Isto é apenas uma correlação temporal.",
+
+    repeatedLocationTitle: "Local repetido",
+    repeatedLocationObservation:
+      "{count} incidentes compartilham aproximadamente as mesmas coordenadas ({coordinates}). Isto é apenas uma correlação espacial.",
+
+    frequencySpikeTitle: "Pico de frequência",
+    frequencySpikeObservation:
+      "Em {day}, você registrou {count} incidentes — acima da sua atividade diária típica. Isto é apenas uma observação de frequência.",
+
+    categoryClusterTitle: "Concentração em {category}",
+    categoryClusterObservation:
+      "{percentage}% dos seus incidentes estão categorizados como {category}. Isto é apenas uma correlação categórica.",
+
+    activityTrendIncreasingTitle: "Tendência de atividade em alta",
+    activityTrendDecreasingTitle: "Tendência de atividade em queda",
+    activityTrendStableTitle: "Tendência de atividade estável",
+    activityTrendIncreasingObservation:
+      "Sua frequência de registros parece estar aumentando ao longo do tempo. Isto é apenas uma observação de tendência.",
+    activityTrendDecreasingObservation:
+      "Sua frequência de registros parece estar diminuindo ao longo do tempo. Isto é apenas uma observação de tendência.",
+    activityTrendStableObservation:
+      "Sua frequência de registros permaneceu aproximadamente estável ao longo do período registrado. Isto é apenas uma observação de tendência.",
+
+    weekdayClusterTitle: "Concentração por dia da semana",
+    weekdayClusterObservation:
+      "{count} incidentes se concentram em {weekday}. Isto é apenas uma correlação de agenda.",
+
+    weekdayTimeClusterTitle: "Padrão repetido de dia + período",
+    weekdayTimeClusterObservation:
+      "{count} incidentes se concentram em {weekday}, durante a {block}. Isto é apenas uma correlação temporal.",
+  },
+}
+
 export const evidenceHintPtBR = {
   selectCategoryPlaceholder: "Selecione a categoria",
   evidenceDisclaimer:
@@ -118,6 +192,7 @@ export const evidenceHintPtBR = {
 }
 
 export const ptBR: Dictionary = {
+  patterns: patternsPtBR,
   evidenceHint: evidenceHintPtBR,
   categories: categoriesPtBR,
   relativeTime: relativeTimePtBR,
