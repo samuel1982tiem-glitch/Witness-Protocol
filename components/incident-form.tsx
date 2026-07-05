@@ -1,5 +1,4 @@
 "use client"
-import { MediaCapture } from "capacitor-media-capture";
 
 import {
   Camera,

@@ -18,7 +18,6 @@
     "@capacitor/share": "^8.0.1",
     "@vercel/analytics": "1.6.1",
     "capacitor-camera-view": "^2.4.0",
-    "capacitor-media-capture": "^1.1.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "fflate": "^0.8.3",
