@@ -247,10 +247,10 @@ export function IncidentForm() {
     }
   }
 
-                    async function captureVideo() {
+                      async function captureVideo() {
     try {
       // Android video recording using getUserMedia API
-      // This works reliably on Android WebView
+      // Request camera with audio
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: 'environment',
@@ -259,6 +259,12 @@ export function IncidentForm() {
         },
         audio: true
       });
+
+      // Check if we have video tracks
+      const videoTracks = stream.getVideoTracks();
+      if (videoTracks.length === 0) {
+        throw new Error("No camera access. Please grant camera permission.");
+      }
 
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'video/mp4'
@@ -274,7 +280,7 @@ export function IncidentForm() {
 
       // Start recording
       mediaRecorder.start();
-      setError("Recording... Tap the video icon again to stop");
+      setError("🎥 Recording... Tap video icon again to stop");
 
       // Wait for the user to stop recording
       // For now, record for up to 15 seconds
@@ -313,9 +319,10 @@ export function IncidentForm() {
         /user/i.test(message) ||
         /No video selected/i.test(message) ||
         /not allowed/i.test(message) ||
-        /permission/i.test(message)
+        /permission/i.test(message) ||
+        /denied/i.test(message)
       ) {
-        setError("Camera permission denied. Please enable camera access.");
+        setError("Camera permission denied. Please enable camera access in settings.");
         return;
       }
       setError(`Video capture failed: ${message || "Could not record video"}`);
