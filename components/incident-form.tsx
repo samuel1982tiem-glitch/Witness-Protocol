@@ -248,54 +248,80 @@ export function IncidentForm() {
     }
   }
 
-                async function captureVideo() {
+                  async function captureVideo() {
     try {
-      // Use Capacitor Camera with video support
-      // Note: On Android, this may fall back to photo mode if video is not supported
-      const video = await CapacitorCamera.getPhoto({
-        resultType: CameraResultType.Uri,
-        source: CameraSource.Camera,
-        quality: 85,
-        allowEditing: false,
-        // Some Android versions support video through this method
-        // by detecting the file type after capture
+      // Use getUserMedia API for Android video recording
+      // This works reliably on Android WebView
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'environment',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: true
       });
 
-      if (!video.webPath) {
-        throw new Error("No video captured");
+      // Create a media recorder
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'video/mp4'
+      });
+
+      let chunks: BlobPart[] = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunks.push(event.data);
+        }
+      };
+
+      // Start recording
+      mediaRecorder.start();
+
+      // Show recording UI feedback
+      // You can add a state for recording status later
+      setError("Recording... Tap again to stop");
+
+      // Wait for user to stop recording
+      // For now, we'll record for 15 seconds max
+      // You can enhance this with a proper stop button
+      await new Promise((resolve) => {
+        setTimeout(resolve, 15000); // 15 seconds max
+      });
+
+      mediaRecorder.stop();
+
+      // Wait for the recorder to finish
+      await new Promise((resolve) => {
+        mediaRecorder.onstop = resolve;
+      });
+
+      // Stop all tracks
+      stream.getTracks().forEach(track => track.stop());
+
+      // Create blob from chunks
+      const blob = new Blob(chunks, { type: 'video/mp4' });
+
+      if (blob.size === 0) {
+        throw new Error("No video recorded");
       }
-
-      const response = await fetch(video.webPath);
-      const blob = await response.blob();
-
-      // Check if we got a video or a photo
-      let ext = 'mp4';
-      let mimeType = blob.type || 'video/mp4';
-      
-      // If it's actually a photo, handle it differently
-      if (mimeType.includes('image')) {
-        // Add as photo instead
-        setAttachments((prev) => [
-          ...prev,
-          buildAttachment("photo", blob, `photo-${Date.now()}.${extFromMime(mimeType)}`),
-        ]);
-        setError("Note: Camera captured a photo instead of video. Try using the video file picker instead.");
-        return;
-      }
-
-      const finalBlob = blob.type ? blob : new Blob([blob], { type: mimeType });
 
       setAttachments((prev) => [
         ...prev,
-        buildAttachment("video", finalBlob, `video-${Date.now()}.${ext}`),
+        buildAttachment("video", blob, `video-${Date.now()}.mp4`),
       ]);
+
+      setError(null); // Clear the recording message
+
     } catch (err) {
       const message = (err as Error)?.message || "";
       if (
         /cancel/i.test(message) ||
         /user/i.test(message) ||
-        /No video selected/i.test(message)
+        /No video selected/i.test(message) ||
+        /not allowed/i.test(message) ||
+        /permission/i.test(message)
       ) {
+        setError("Camera permission denied. Please enable camera access.");
         return;
       }
       setError(`Video capture failed: ${message || "Could not record video"}`);
