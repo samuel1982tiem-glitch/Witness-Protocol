@@ -247,10 +247,42 @@ export function IncidentForm() {
     }
   }
 
-  async function captureVideo() {
-    // Placeholder until you wire a native video capture plugin / input flow.
-    // For now, route users to the file picker for video if camera capture isn't available.
-    videoFileInput.current?.click()
+    async function captureVideo() {
+    try {
+      // Use Capacitor Camera to record video
+      const video = await CapacitorCamera.getVideo({
+        resultType: CameraResultType.Uri,
+        source: CameraSource.Camera,
+        quality: 85,
+        allowEditing: false,
+      });
+
+      if (!video.webPath) return;
+
+      const response = await fetch(video.webPath);
+      const blob = await response.blob();
+
+      // Determine video format
+      const ext = video.format || 'mp4';
+      const mimeType = blob.type || `video/${ext}`;
+
+      const finalBlob = blob.type ? blob : new Blob([blob], { type: mimeType });
+
+      setAttachments((prev) => [
+        ...prev,
+        buildAttachment("video", finalBlob, `video-${Date.now()}.${ext}`),
+      ]);
+    } catch (err) {
+      const message = (err as Error)?.message || "";
+      if (
+        /cancel/i.test(message) ||
+        /user/i.test(message) ||
+        /No video selected/i.test(message)
+      ) {
+        return;
+      }
+      setError(`Video capture failed: ${message || "Could not record video"}`);
+    }
   }
 
   function addVoice(blob: Blob) {
