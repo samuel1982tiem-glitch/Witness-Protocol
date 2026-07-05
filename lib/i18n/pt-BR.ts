@@ -89,7 +89,6 @@ export const ptBR: Dictionary = {
   incidentForm: incidentFormPtBR,
   incidentRecord: incidentRecordPtBR,
   incidentFormExtra: incidentFormExtraPtBR,
-
   common: {
     save: "Salvar",
     cancel: "Cancelar",
@@ -232,6 +231,8 @@ export const ptBR: Dictionary = {
       activityTrendIncreasing: "Tendência de atividade em alta",
       activityTrendDecreasing: "Tendência de atividade em queda",
       activityTrendStable: "Tendência de atividade estável",
+      weekdayCluster: "Padrão repetido por dia da semana",
+      weekdayTimeCluster: "Padrão repetido por dia/horário",
     },
 
     alertText: {
@@ -249,6 +250,10 @@ export const ptBR: Dictionary = {
         "Os registros recentes sugerem uma tendência de queda na frequência dos relatos.",
       activityTrendStable:
         "Os registros recentes sugerem uma tendência estável na frequência dos relatos.",
+      weekdayCluster:
+        "{count} registros foram anotados em {day}.",
+      weekdayTimeCluster:
+        "{count} registros foram anotados em {day}, no período da {block}.",
     },
   },
 }

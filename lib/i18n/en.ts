@@ -92,7 +92,6 @@ export const en: Dictionary = {
   incidentForm: incidentFormEn,
   incidentRecord: incidentRecordEn,
   incidentFormExtra: incidentFormExtraEn,
-
   common: {
     save: "Save",
     cancel: "Cancel",
@@ -234,6 +233,8 @@ export const en: Dictionary = {
       activityTrendIncreasing: "Activity trend increasing",
       activityTrendDecreasing: "Activity trend decreasing",
       activityTrendStable: "Stable activity trend",
+      weekdayCluster: "Repeated weekday pattern",
+      weekdayTimeCluster: "Repeated weekday/time pattern",
     },
 
     alertText: {
@@ -251,6 +252,10 @@ export const en: Dictionary = {
         "Recent records suggest a downward trend in logging frequency.",
       activityTrendStable:
         "Recent records suggest a stable logging frequency trend.",
+      weekdayCluster:
+        "{count} records were logged on {day}.",
+      weekdayTimeCluster:
+        "{count} records were logged on {day} during the {block} time block.",
     },
   },
 }
