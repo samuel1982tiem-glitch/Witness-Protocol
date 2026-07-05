@@ -2,41 +2,73 @@ import type { Dictionary } from "./types"
 
 /** Portuguese (Brazil) */
 export const incidentFormPtBR = {
-  category: "Categoria", title: "Título", description: "Descrição",
-  date: "Data e hora", gps: "Coordenadas GPS", evidence: "Anexos de evidência",
-  cancel: "Cancelar", saveIncident: "Salvar incidente",
+  category: "Categoria",
+  title: "Título",
+  description: "Descrição",
+  date: "Data e hora",
+  gps: "Coordenadas GPS",
+  evidence: "Anexos de evidência",
+  cancel: "Cancelar",
+  saveIncident: "Salvar incidente",
 }
 
 export const incidentRecordPtBR = {
-  allRecords: "Todos os registros", sealed: "Selado", unsealed: "Não selado",
-  description: "Descrição", noDescription: "Nenhuma descrição fornecida.",
-  evidence: "Evidência", decryptedInMemory: "Descriptografado apenas na memória.",
-  noAttachments: "Nenhum anexo neste registro.", sealEvidence: "Selar evidência",
-  sealedCannotDelete: "Registros selados são permanentes e não podem ser excluídos.",
-  confirmDelete: "Confirmar exclusão", cancel: "Cancelar", deleteRecord: "Excluir registro",
-  edit: "Editar", saveChanges: "Salvar alterações", pdf: "PDF", exporting: "Exportando…",
+  allRecords: "Todos os registros",
+  sealed: "Selado",
+  unsealed: "Não selado",
+  description: "Descrição",
+  noDescription: "Nenhuma descrição fornecida.",
+  evidence: "Evidência",
+  decryptedInMemory: "Descriptografado apenas na memória.",
+  noAttachments: "Nenhum anexo neste registro.",
+  sealEvidence: "Selar evidência",
+  sealedCannotDelete:
+    "Registros selados são permanentes e não podem ser excluídos.",
+  confirmDelete: "Confirmar exclusão",
+  cancel: "Cancelar",
+  deleteRecord: "Excluir registro",
+  edit: "Editar",
+  saveChanges: "Salvar alterações",
+  pdf: "PDF",
+  exporting: "Exportando…",
 }
 
 export const incidentFormExtraPtBR = {
-  photo: "Foto", screenshot: "Captura de tela", uploadAudio: "Enviar arquivo de áudio",
-  uploadDocument: "Enviar documento", capture: "Capturar",
-  removeLocation: "Remover localização", removeAttachment: "Remover anexo",
-  noLocationAttached: "Nenhuma localização anexada.", locating: "Localizando…",
+  photo: "Foto",
+  screenshot: "Captura de tela",
+  uploadAudio: "Enviar arquivo de áudio",
+  uploadDocument: "Enviar documento",
+  capture: "Capturar",
+  removeLocation: "Remover localização",
+  removeAttachment: "Remover anexo",
+  noLocationAttached: "Nenhuma localização anexada.",
+  locating: "Localizando…",
   geoNotAvailable: "Geolocalização não está disponível neste dispositivo.",
   geoPermissionDenied: "Permissão de localização negada ou indisponível.",
-  selectCategory: "Selecione uma categoria.", enterTitle: "Digite um título.",
-  couldNotSaveIncident: "Não foi possível salvar o incidente.", encrypting: "Criptografando…",
+  selectCategory: "Selecione uma categoria.",
+  enterTitle: "Digite um título.",
+  couldNotSaveIncident: "Não foi possível salvar o incidente.",
+  encrypting: "Criptografando…",
   cancel: "Cancelar",
 }
 
 export const recordsPagePtBR = {
-  title: "Registros", searchPlaceholder: "Buscar título ou descrição",
-  toggleFilters: "Alternar filtros", category: "Categoria", allCategories: "Todas as categorias",
-  from: "De", to: "Até", sealedStatus: "Status de selo", all: "Todos",
-  sealedOnly: "Apenas selados", unsealedOnly: "Apenas não selados",
-  onlyGpsRecords: "Apenas registros com localização GPS", clearFilters: "Limpar filtros",
+  title: "Registros",
+  searchPlaceholder: "Buscar título ou descrição",
+  toggleFilters: "Alternar filtros",
+  category: "Categoria",
+  allCategories: "Todas as categorias",
+  from: "De",
+  to: "Até",
+  sealedStatus: "Status de selo",
+  all: "Todos",
+  sealedOnly: "Apenas selados",
+  unsealedOnly: "Apenas não selados",
+  onlyGpsRecords: "Apenas registros com localização GPS",
+  clearFilters: "Limpar filtros",
   noIncidentsYet: "Nenhum incidente registrado ainda.",
-  noRecordsMatchFilters: "Nenhum registro corresponde aos filtros atuais.",
+  noRecordsMatchFilters:
+    "Nenhum registro corresponde aos filtros atuais.",
 }
 
 export const miscUiPtBR = {
@@ -44,7 +76,8 @@ export const miscUiPtBR = {
   gpsTagged: "GPS marcado",
   stopRecording: "Parar gravação",
   logIncidentTitle: "Registrar incidente",
-  logIncidentDescription: "Documente um evento. Todos os campos permanecem neste dispositivo e são criptografados antes do armazenamento.",
+  logIncidentDescription:
+    "Documente um evento. Todos os campos permanecem neste dispositivo e são criptografados antes do armazenamento.",
   shortSummaryPlaceholder: "Breve resumo do incidente",
   recordVoiceNote: "Gravar nota de voz",
   sealed: "Selado",
@@ -62,13 +95,16 @@ export const categoriesPtBR = {
   surveillanceName: "Vigilância",
   surveillanceDesc: "Observação, gravação ou atividade de monitoramento.",
   personalTrackingName: "Rastreamento Pessoal",
-  personalTrackingDesc: "Seguimento, rastreamento de localização ou monitoramento de movimento.",
+  personalTrackingDesc:
+    "Seguimento, rastreamento de localização ou monitoramento de movimento.",
   gaslightingName: "Gaslighting",
   gaslightingDesc: "Manipulação, negação ou distorção de eventos.",
   deviceAnomalyName: "Anomalia de Dispositivo",
-  deviceAnomalyDesc: "Comportamento inesperado do dispositivo ou irregularidades técnicas.",
+  deviceAnomalyDesc:
+    "Comportamento inesperado do dispositivo ou irregularidades técnicas.",
   poisoningName: "Envenenamento e Ameaças",
-  poisoningDesc: "Suspeita de contaminação de alimentos, água ou ambiente.",
+  poisoningDesc:
+    "Suspeita de contaminação de alimentos, água ou ambiente.",
   legalName: "Jurídico",
   legalDesc: "Documentos legais, notificações ou processos.",
   categoryLabel: "Categoria",
@@ -77,7 +113,8 @@ export const categoriesPtBR = {
 
 export const evidenceHintPtBR = {
   selectCategoryPlaceholder: "Selecione a categoria",
-  evidenceDisclaimer: "As imagens têm os metadados EXIF removidos, são hasheadas com SHA-256 e criptografadas antes do armazenamento.",
+  evidenceDisclaimer:
+    "As imagens têm os metadados EXIF removidos, são hasheadas com SHA-256 e criptografadas antes do armazenamento.",
 }
 
 export const ptBR: Dictionary = {
@@ -89,6 +126,7 @@ export const ptBR: Dictionary = {
   incidentForm: incidentFormPtBR,
   incidentRecord: incidentRecordPtBR,
   incidentFormExtra: incidentFormExtraPtBR,
+
   common: {
     save: "Salvar",
     cancel: "Cancelar",
@@ -134,7 +172,8 @@ export const ptBR: Dictionary = {
     autoLockDescription:
       "O cofre bloqueia automaticamente após {minutes} minuto{plural}.",
     sealAllTitle: "Selar todos os registros não selados",
-    sealAllDescription: "{count} incidente{plural} ainda não selado{plural}.",
+    sealAllDescription:
+      "{count} incidente{plural} ainda não selado{plural}.",
     sealAllButton: "Selar todos ({count})",
     sealAllNoneUnsealed: "Todos os incidentes estão selados.",
     sealingProgress: "Selando {processed} de {total}",
@@ -149,17 +188,21 @@ export const ptBR: Dictionary = {
     restoring: "Restaurando…",
     restoreTitle: "Restaurar backup",
     mergeTitle: "Mesclar backup",
-    restoreSubtitle: "Digite o PIN do cofre usado para criar este backup.",
+    restoreSubtitle:
+      "Digite o PIN do cofre usado para criar este backup.",
     mergeSubtitle:
       "Digite o PIN usado para criar o backup que você está mesclando.",
     backupSaved: "Backup salvo:\n{fileName}",
     backupRestored: "Backup restaurado com sucesso.",
     mergeComplete: "Mesclagem concluída",
-    mergeAdded: "{count} novo{plural} registro{plural} adicionado{plural}",
-    mergeDuplicates: "{count} duplicata{plural} ignorada{plural}",
+    mergeAdded:
+      "{count} novo{plural} registro{plural} adicionado{plural}",
+    mergeDuplicates:
+      "{count} duplicata{plural} ignorada{plural}",
     mergeDiverged:
       "{count} registro{plural} adicionado{plural} como novo (mesmo ID, conteúdo diferente)",
-    mergeEvidenceAdded: "{count} arquivo{plural} de evidência importado{plural}",
+    mergeEvidenceAdded:
+      "{count} arquivo{plural} de evidência importado{plural}",
     dismiss: "Dispensar",
     stagePreparing: "Preparando…",
     stageMetadata: "Exportando metadados…",
@@ -184,5 +227,37 @@ export const ptBR: Dictionary = {
     backupExported: "Backup exportado",
     backupRestored: "Backup restaurado",
     backupMerged: "Backup mesclado",
+  },
+
+  patterns: {
+    title: "Revisão de padrões",
+    description:
+      "Análise local, no próprio dispositivo, dos seus registros. Apenas observações e correlações — nunca afirmações sobre causa ou intenção.",
+    recordsAnalyzed: "{count} registro{plural} analisado{plural}",
+    runAnalysis: "Executar análise",
+    running: "Analisando…",
+    noFindings:
+      "Ainda não há observações. Registre alguns incidentes e execute a análise. Os achados aparecerão aqui como correlações estatísticas neutras.",
+    disclaimer:
+      "Esta ferramenta relata correlações dentro do seu próprio histórico. Ela não identifica pessoas, não atribui culpa e não infere intenção externa. Interprete os achados com cautela.",
+    lastRun: "Última execução {time}",
+    neverRun: "Execute a análise para atualizar as observações.",
+    severity: {
+      high: "alto",
+      notable: "relevante",
+      info: "informativo",
+    },
+    types: {
+      "repeated-time": "Horário recorrente",
+      "repeated-location": "Local repetido",
+      "frequency-spike": "Pico de frequência",
+      "category-cluster": "Concentração por categoria",
+      "activity-trend": "Tendência de atividade",
+      "weekday-pattern": "Concentração por dia da semana",
+      "time-window-cluster": "Concentração por faixa de horário",
+      "rapid-repeat": "Incidentes repetidos em curto intervalo",
+      "location-category-cluster": "Categoria repetida no mesmo local",
+      "title-keyword-cluster": "Padrão repetido de título / palavras-chave",
+    },
   },
 }

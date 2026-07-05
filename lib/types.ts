@@ -61,10 +61,16 @@ export interface EvidenceSeal {
 
 export type AlertType =
   | "repeated-time"
+  | "repeated-time-block"
+  | "repeated-weekday"
   | "repeated-location"
   | "frequency-spike"
+  | "rolling-spike"
   | "category-cluster"
+  | "category-time-cluster"
+  | "category-location-cluster"
   | "activity-trend"
+  | "category-trend"
 
 export type AlertSeverity = "info" | "notable" | "high"
 
@@ -72,11 +78,14 @@ export interface PatternAlert {
   id: string
   type: AlertType
   severity: AlertSeverity
-  title: string
-  /** Neutral, observation-only description. No causal claims. */
-  observation: string
-  /** Supporting metric/correlation detail. */
-  detail: string
+  /** i18n key for the alert title */
+  titleKey: string
+  /** i18n key for the neutral observation text */
+  observationKey: string
+  /** i18n key for supporting detail / metric line */
+  detailKey: string
+  /** Optional interpolation params for translated strings */
+  params?: Record<string, string | number>
   /** Incident ids that contributed to this observation. */
   relatedIncidentIds: string[]
   createdAt: number

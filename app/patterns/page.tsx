@@ -57,21 +57,24 @@ export default function PatternsPage() {
   return (
     <div className="space-y-5">
       <SectionTitle
-        title="Pattern review"
-        description="Local, on-device analysis of your own records. Observations and correlations only — never claims about cause or intent."
+        title={t("patterns.title")}
+        description={t("patterns.description")}
       />
 
       <Card className="bg-primary/5">
         <CardBody className="flex items-center justify-between gap-4">
           <div className="text-sm">
             <p className="font-medium text-foreground">
-              {incidents.length} record{incidents.length === 1 ? "" : "s"}{" "}
-              analyzed
+              {t("patterns.recordsAnalyzed", {
+                count: incidents.length,
+              })}
             </p>
             <p className="text-muted-foreground">
               {lastRun
-                ? `Last run ${relativeTime(lastRun, t)}`
-                : "Run analysis to refresh observations."}
+                ? t("patterns.lastRun", {
+                    time: relativeTime(lastRun, t),
+                  })
+                : t("patterns.runToRefresh")}
             </p>
           </div>
           <Button onClick={handleRun} disabled={running || busy}>
@@ -79,7 +82,7 @@ export default function PatternsPage() {
               className={running ? "size-4 animate-spin" : "size-4"}
               aria-hidden="true"
             />
-            Run
+            {t("patterns.run")}
           </Button>
         </CardBody>
       </Card>
@@ -87,10 +90,12 @@ export default function PatternsPage() {
       {alerts.length === 0 ? (
         <Card>
           <CardBody className="flex items-start gap-3 text-sm text-muted-foreground">
-            <Info className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+            <Info
+              className="mt-0.5 size-4 shrink-0 text-primary"
+              aria-hidden="true"
+            />
             <p className="text-pretty leading-relaxed">
-              No observations yet. Log a few incidents, then run the analysis.
-              Findings will appear here as neutral statistical correlations.
+              {t("patterns.empty")}
             </p>
           </CardBody>
         </Card>
@@ -103,16 +108,119 @@ export default function PatternsPage() {
       )}
 
       <p className="px-1 text-xs leading-relaxed text-muted-foreground">
-        This tool reports correlations within your own log. It does not identify
-        people, assign blame, or infer external intent. Interpret findings with
-        care.
+        {t("patterns.disclaimer")}
       </p>
     </div>
   )
 }
 
 function AlertItem({ alert }: { alert: PatternAlert }) {
+  const { t } = useI18n()
   const Icon = TYPE_ICON[alert.type]
+
+  const translatedTitle = React.useMemo(() => {
+    const data = alert.data ?? {}
+
+    switch (alert.type) {
+      case "repeated-time": {
+        const weekday =
+          typeof data.weekday === "number"
+            ? t(`patterns.weekdays.${data.weekday}`)
+            : String(data.weekday ?? "")
+        const block =
+          typeof data.block === "string"
+            ? t(`patterns.timeBlocks.${data.block}`)
+            : String(data.block ?? "")
+        return t("patterns.alerts.repeatedTime.title", { weekday, block })
+      }
+
+      case "repeated-location":
+        return t("patterns.alerts.repeatedLocation.title")
+
+      case "frequency-spike": {
+        const date = String(data.date ?? "")
+        return t("patterns.alerts.frequencySpike.title", { date })
+      }
+
+      case "category-cluster": {
+        const category = String(data.categoryLabel ?? alert.title ?? "")
+        return t("patterns.alerts.categoryCluster.title", { category })
+      }
+
+      case "activity-trend": {
+        const direction =
+          data.direction === "down"
+            ? t("patterns.trendDirection.down")
+            : t("patterns.trendDirection.up")
+        return t("patterns.alerts.activityTrend.title", { direction })
+      }
+
+      default:
+        return alert.title
+    }
+  }, [alert, t])
+
+  const translatedObservation = React.useMemo(() => {
+    const data = alert.data ?? {}
+
+    switch (alert.type) {
+      case "repeated-time": {
+        const count = Number(data.count ?? 0)
+        const weekday =
+          typeof data.weekday === "number"
+            ? t(`patterns.weekdays.${data.weekday}`)
+            : String(data.weekday ?? "")
+        const block =
+          typeof data.block === "string"
+            ? t(`patterns.timeBlocks.${data.block}`)
+            : String(data.block ?? "")
+        return t("patterns.alerts.repeatedTime.observation", {
+          count,
+          weekday,
+          block,
+        })
+      }
+
+      case "repeated-location": {
+        const count = Number(data.count ?? 0)
+        return t("patterns.alerts.repeatedLocation.observation", { count })
+      }
+
+      case "frequency-spike": {
+        const count = Number(data.count ?? 0)
+        const date = String(data.date ?? "")
+        return t("patterns.alerts.frequencySpike.observation", {
+          count,
+          date,
+        })
+      }
+
+      case "category-cluster": {
+        const count = Number(data.count ?? 0)
+        const category = String(data.categoryLabel ?? "")
+        return t("patterns.alerts.categoryCluster.observation", {
+          count,
+          category,
+        })
+      }
+
+      case "activity-trend": {
+        const direction =
+          data.direction === "down"
+            ? t("patterns.trendDirection.down")
+            : t("patterns.trendDirection.up")
+        const percent = Number(data.percent ?? 0)
+        return t("patterns.alerts.activityTrend.observation", {
+          direction,
+          percent,
+        })
+      }
+
+      default:
+        return alert.observation
+    }
+  }, [alert, t])
+
   return (
     <li>
       <Card>
@@ -123,15 +231,21 @@ function AlertItem({ alert }: { alert: PatternAlert }) {
                 <Icon className="size-4" />
               </span>
               <h3 className="text-balance font-medium text-foreground">
-                {alert.title}
+                {translatedTitle}
               </h3>
             </div>
-            <Badge tone={SEVERITY_TONE[alert.severity]}>{alert.severity}</Badge>
+            <Badge tone={SEVERITY_TONE[alert.severity]}>
+              {t(`patterns.severity.${alert.severity}`)}
+            </Badge>
           </div>
+
           <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
-            {alert.observation}
+            {translatedObservation}
           </p>
-          <p className="text-xs font-medium text-foreground/70">{alert.detail}</p>
+
+          <p className="text-xs font-medium text-foreground/70">
+            {alert.detail}
+          </p>
         </CardBody>
       </Card>
     </li>
