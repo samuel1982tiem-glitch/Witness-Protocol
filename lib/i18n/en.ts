@@ -5,69 +5,39 @@ import type { Dictionary } from "./types"
  * Dictionary shape; every other language file must match it exactly.
  */
 export const incidentFormEn = {
-  category: "Category",
-  title: "Title",
-  description: "Description",
-  date: "Date and time",
-  gps: "GPS coordinates",
-  evidence: "Evidence attachments",
-  cancel: "Cancel",
-  saveIncident: "Save incident",
+  category: "Category", title: "Title", description: "Description",
+  date: "Date and time", gps: "GPS coordinates", evidence: "Evidence attachments",
+  cancel: "Cancel", saveIncident: "Save incident",
 }
 
 export const incidentRecordEn = {
-  allRecords: "All records",
-  sealed: "Sealed",
-  unsealed: "Unsealed",
-  description: "Description",
-  noDescription: "No description provided.",
-  evidence: "Evidence",
-  decryptedInMemory: "Decrypted in memory only.",
-  noAttachments: "No attachments on this record.",
-  sealEvidence: "Seal evidence",
+  allRecords: "All records", sealed: "Sealed", unsealed: "Unsealed",
+  description: "Description", noDescription: "No description provided.",
+  evidence: "Evidence", decryptedInMemory: "Decrypted in memory only.",
+  noAttachments: "No attachments on this record.", sealEvidence: "Seal evidence",
   sealedCannotDelete: "Sealed records are permanent and cannot be deleted.",
-  confirmDelete: "Confirm delete",
-  cancel: "Cancel",
-  deleteRecord: "Delete record",
-  edit: "Edit",
-  saveChanges: "Save changes",
-  pdf: "PDF",
-  exporting: "Exporting…",
+  confirmDelete: "Confirm delete", cancel: "Cancel", deleteRecord: "Delete record",
+  edit: "Edit", saveChanges: "Save changes", pdf: "PDF", exporting: "Exporting…",
 }
 
 export const incidentFormExtraEn = {
-  photo: "Photo",
-  screenshot: "Screenshot",
-  uploadAudio: "Upload audio file",
-  uploadDocument: "Upload document",
-  capture: "Capture",
-  removeLocation: "Remove location",
-  removeAttachment: "Remove attachment",
-  noLocationAttached: "No location attached.",
-  locating: "Locating…",
+  photo: "Photo", screenshot: "Screenshot", uploadAudio: "Upload audio file",
+  uploadDocument: "Upload document", capture: "Capture",
+  removeLocation: "Remove location", removeAttachment: "Remove attachment",
+  noLocationAttached: "No location attached.", locating: "Locating…",
   geoNotAvailable: "Geolocation is not available on this device.",
   geoPermissionDenied: "Location permission denied or unavailable.",
-  selectCategory: "Select a category.",
-  enterTitle: "Enter a title.",
-  couldNotSaveIncident: "Could not save the incident.",
-  encrypting: "Encrypting…",
+  selectCategory: "Select a category.", enterTitle: "Enter a title.",
+  couldNotSaveIncident: "Could not save the incident.", encrypting: "Encrypting…",
   cancel: "Cancel",
 }
 
 export const recordsPageEn = {
-  title: "Records",
-  searchPlaceholder: "Search title or description",
-  toggleFilters: "Toggle filters",
-  category: "Category",
-  allCategories: "All categories",
-  from: "From",
-  to: "To",
-  sealedStatus: "Sealed status",
-  all: "All",
-  sealedOnly: "Sealed only",
-  unsealedOnly: "Unsealed only",
-  onlyGpsRecords: "Only records with GPS location",
-  clearFilters: "Clear filters",
+  title: "Records", searchPlaceholder: "Search title or description",
+  toggleFilters: "Toggle filters", category: "Category", allCategories: "All categories",
+  from: "From", to: "To", sealedStatus: "Sealed status", all: "All",
+  sealedOnly: "Sealed only", unsealedOnly: "Unsealed only",
+  onlyGpsRecords: "Only records with GPS location", clearFilters: "Clear filters",
   noIncidentsYet: "No incidents recorded yet.",
   noRecordsMatchFilters: "No records match the current filters.",
 }
@@ -77,8 +47,7 @@ export const miscUiEn = {
   gpsTagged: "GPS tagged",
   stopRecording: "Stop recording",
   logIncidentTitle: "Log incident",
-  logIncidentDescription:
-    "Document an event. All fields stay on this device and are encrypted before storage.",
+  logIncidentDescription: "Document an event. All fields stay on this device and are encrypted before storage.",
   shortSummaryPlaceholder: "Short summary of the incident",
   recordVoiceNote: "Record voice note",
   sealed: "Sealed",
@@ -109,88 +78,12 @@ export const categoriesEn = {
   unknown: "Unknown",
 }
 
-
-export const patternsEn = {
-  title: "Pattern review",
-  description:
-    "Local, on-device analysis of your own records. Observations and correlations only — never claims about cause or intent.",
-  analyzed: "{count} record{plural} analyzed",
-  run: "Run",
-  runToRefresh: "Run analysis to refresh observations.",
-  empty:
-    "No observations yet. Log a few incidents, then run the analysis. Findings will appear here as neutral statistical correlations.",
-  disclaimer:
-    "This tool reports correlations within your own log. It does not identify people, assign blame, or infer external intent. Interpret findings with care.",
-
-  severity: {
-    high: "high",
-    notable: "notable",
-    info: "info",
-  },
-
-  weekdays: {
-    0: "Sunday",
-    1: "Monday",
-    2: "Tuesday",
-    3: "Wednesday",
-    4: "Thursday",
-    5: "Friday",
-    6: "Saturday",
-  },
-
-  timeBlocks: {
-    earlyMorning: "early morning",
-    morning: "morning",
-    afternoon: "afternoon",
-    evening: "evening",
-    night: "night",
-  },
-
-  alerts: {
-    repeatedTimeTitle: "Recurring activity around {time}",
-    repeatedTimeObservation:
-      "{count} of your logged incidents occurred near the {time} hour. This is a timing correlation only.",
-
-    repeatedLocationTitle: "Repeated location",
-    repeatedLocationObservation:
-      "{count} incidents share approximately the same coordinates ({coordinates}). This is a spatial correlation only.",
-
-    frequencySpikeTitle: "Frequency spike",
-    frequencySpikeObservation:
-      "On {day}, you logged {count} incidents — above your typical daily activity. This is a frequency observation only.",
-
-    categoryClusterTitle: "Clustering in {category}",
-    categoryClusterObservation:
-      "{percentage}% of your incidents are categorized as {category}. This is a categorical correlation only.",
-
-    activityTrendIncreasingTitle: "Activity trend increasing",
-    activityTrendDecreasingTitle: "Activity trend decreasing",
-    activityTrendStableTitle: "Stable activity trend",
-    activityTrendIncreasingObservation:
-      "Your logging frequency appears to be increasing over time. This is a trend observation only.",
-    activityTrendDecreasingObservation:
-      "Your logging frequency appears to be decreasing over time. This is a trend observation only.",
-    activityTrendStableObservation:
-      "Your logging frequency has remained roughly steady over the recorded period. This is a trend observation only.",
-
-    weekdayClusterTitle: "Weekday concentration",
-    weekdayClusterObservation:
-      "{count} incidents cluster on {weekday}. This is a scheduling correlation only.",
-
-    weekdayTimeClusterTitle: "Repeated weekday + time pattern",
-    weekdayTimeClusterObservation:
-      "{count} incidents cluster on {weekday} during the {block}. This is a timing correlation only.",
-  },
-}
-
 export const evidenceHintEn = {
   selectCategoryPlaceholder: "Select category",
-  evidenceDisclaimer:
-    "Images are stripped of EXIF metadata, hashed with SHA-256, and encrypted before storage.",
+  evidenceDisclaimer: "Images are stripped of EXIF metadata, hashed with SHA-256, and encrypted before storage.",
 }
 
 export const en: Dictionary = {
-  patterns: patternsEn,
   evidenceHint: evidenceHintEn,
   categories: categoriesEn,
   relativeTime: relativeTimeEn,
@@ -277,8 +170,7 @@ export const en: Dictionary = {
     stageEvidence: "Encrypting evidence…",
     stageFinishing: "Building ZIP…",
     stageSaving: "Saving file…",
-    incorrectPasscodeOrCorrupted:
-      "Incorrect passcode or corrupted backup file.",
+    incorrectPasscodeOrCorrupted: "Incorrect passcode or corrupted backup file.",
   },
 
   auditLog: {
@@ -302,30 +194,63 @@ export const en: Dictionary = {
     description:
       "Local, on-device analysis of your own records. Observations and correlations only — never claims about cause or intent.",
     recordsAnalyzed: "{count} record{plural} analyzed",
-    runAnalysis: "Run analysis",
-    running: "Running…",
-    noFindings:
-      "No observations yet. Log a few incidents, then run the analysis. Findings will appear here as neutral statistical correlations.",
-    disclaimer:
-      "This tool reports correlations within your own log. It does not identify people, assign blame, or infer external intent. Interpret findings with care.",
-    lastRun: "Last run {time}",
     neverRun: "Run analysis to refresh observations.",
+    lastRun: "Last run {time}",
+    run: "Run",
+    empty:
+      "No observations yet. Log a few incidents, then run the analysis. Findings will appear here as neutral statistical correlations.",
+    caution:
+      "This tool reports correlations within your own log. It does not identify people, assign blame, or infer external intent. Interpret findings with care.",
+
     severity: {
-      high: "high",
-      notable: "notable",
       info: "info",
+      notable: "notable",
+      high: "high",
     },
-    types: {
-      "repeated-time": "Recurring time",
-      "repeated-location": "Repeated location",
-      "frequency-spike": "Frequency spike",
-      "category-cluster": "Category cluster",
-      "activity-trend": "Activity trend",
-      "weekday-pattern": "Weekday concentration",
-      "time-window-cluster": "Time window cluster",
-      "rapid-repeat": "Rapid repeat incidents",
-      "location-category-cluster": "Category repeated at same location",
-      "title-keyword-cluster": "Repeated title / keyword pattern",
+
+    weekdays: {
+      "0": "Sunday",
+      "1": "Monday",
+      "2": "Tuesday",
+      "3": "Wednesday",
+      "4": "Thursday",
+      "5": "Friday",
+      "6": "Saturday",
+    },
+
+    timeBlocks: {
+      dawn: "dawn",
+      morning: "morning",
+      afternoon: "afternoon",
+      evening: "evening",
+      night: "night",
+    },
+
+    alertTitles: {
+      repeatedTime: "Repeated time pattern",
+      repeatedLocation: "Repeated location pattern",
+      frequencySpike: "Frequency spike",
+      categoryCluster: "Category cluster",
+      activityTrendIncreasing: "Activity trend increasing",
+      activityTrendDecreasing: "Activity trend decreasing",
+      activityTrendStable: "Stable activity trend",
+    },
+
+    alertText: {
+      repeatedTime:
+        "{count} records were logged during the {block} time block.",
+      repeatedLocation:
+        "{count} records were logged in the same approximate location cell ({cell}).",
+      frequencySpike:
+        "A spike was detected on {day}, with {count} records logged.",
+      categoryCluster:
+        "{category} represents {share}% of all logged records.",
+      activityTrendIncreasing:
+        "Recent records suggest an upward trend in logging frequency.",
+      activityTrendDecreasing:
+        "Recent records suggest a downward trend in logging frequency.",
+      activityTrendStable:
+        "Recent records suggest a stable logging frequency trend.",
     },
   },
 }
