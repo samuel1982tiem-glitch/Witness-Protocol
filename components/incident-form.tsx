@@ -1,4 +1,5 @@
 "use client"
+import { VideoRecorder } from "cap-video-recorder";
 
 import {
   Camera,
@@ -247,53 +248,41 @@ export function IncidentForm() {
     }
   }
 
-                            async function captureVideo() {
+                              async function captureVideo() {
     try {
-      // First, request camera permission
-      const permissionStatus = await CapacitorCamera.requestPermissions({
-        permissions: ['camera']
+      // Use cap-video-recorder for reliable video recording on Android
+      // Start recording with high quality
+      await VideoRecorder.startRecording({
+        quality: 'high',
+        maxDuration: 30, // 30 seconds max
+        camera: 'back',
+        enableAudio: true,
+        saveToGallery: false // Keep it in the app only
       });
 
-      if (permissionStatus.camera !== 'granted') {
-        setError("Camera permission denied. Please enable camera access in settings.");
-        return;
-      }
+      // Show recording status
+      setError("🎥 Recording... Tap the video icon again to stop");
 
-      // Use Capacitor Camera's getPhoto with video quality
-      // This opens the native camera app
-      const video = await CapacitorCamera.getPhoto({
-        resultType: CameraResultType.Uri,
-        source: CameraSource.Camera,
-        quality: 85,
-        allowEditing: false,
+      // Wait for user to stop recording (we'll use a timer for now)
+      // You can enhance this with a proper stop button later
+      await new Promise((resolve) => {
+        setTimeout(resolve, 15000); // Record for 15 seconds
       });
 
-      if (!video.webPath) {
+      // Stop recording and get the video file
+      const video = await VideoRecorder.stopRecording();
+      
+      if (!video || !video.videoPath) {
         throw new Error("No video captured");
       }
 
-      // Fetch the file
-      const response = await fetch(video.webPath);
+      // Fetch the video file
+      const response = await fetch(video.videoPath);
       const blob = await response.blob();
 
-      // Check if it's a video file
-      let ext = 'mp4';
-      let mimeType = blob.type || 'video/mp4';
-      
-      // If it's actually a photo, inform the user
-      if (mimeType.includes('image')) {
-        setError("Camera captured a photo instead of video. Please use the video file picker instead.");
-        // Optionally add as photo
-        const photoExt = 'jpg';
-        const photoMime = blob.type || 'image/jpeg';
-        const finalPhoto = blob.type ? blob : new Blob([blob], { type: photoMime });
-        setAttachments((prev) => [
-          ...prev,
-          buildAttachment("photo", finalPhoto, `photo-${Date.now()}.${photoExt}`),
-        ]);
-        return;
-      }
-
+      // Create a proper video file
+      const ext = 'mp4';
+      const mimeType = blob.type || 'video/mp4';
       const finalBlob = blob.type ? blob : new Blob([blob], { type: mimeType });
 
       setAttachments((prev) => [
@@ -301,21 +290,18 @@ export function IncidentForm() {
         buildAttachment("video", finalBlob, `video-${Date.now()}.${ext}`),
       ]);
 
-      setError(null);
+      setError(null); // Clear the recording status
 
     } catch (err) {
       const message = (err as Error)?.message || "";
       if (
         /cancel/i.test(message) ||
         /user/i.test(message) ||
-        /No video selected/i.test(message)
+        /No video selected/i.test(message) ||
+        /recording cancelled/i.test(message) ||
+        /stopped/i.test(message)
       ) {
-        return;
-      }
-      // If the error is about getPhoto not supporting video, fall back to file picker
-      if (message.includes('not implemented') || message.includes('video')) {
-        setError("Video recording not available. Please select a video from your device.");
-        videoFileInput.current?.click();
+        setError("Recording stopped.");
         return;
       }
       setError(`Video capture failed: ${message || "Could not record video"}`);
