@@ -38,6 +38,17 @@ const SEVERITY_TONE = {
   info: "blue",
 } as const
 
+type AlertData = Record<string, string | number | boolean | null | undefined>
+
+function parseAlertData(detail: string): AlertData {
+  try {
+    const parsed = JSON.parse(detail)
+    return parsed && typeof parsed === "object" ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
 export default function PatternsPage() {
   const { t } = useI18n()
   const { alerts, incidents, runAnalysis, busy } = useVault()
@@ -45,6 +56,7 @@ export default function PatternsPage() {
   const [lastRun, setLastRun] = React.useState<number | null>(null)
 
   async function handleRun() {
+    if (incidents.length === 0) return
     setRunning(true)
     try {
       await runAnalysis()
@@ -53,6 +65,19 @@ export default function PatternsPage() {
       setRunning(false)
     }
   }
+
+  const analyzedLabel = React.useMemo(() => {
+    const plural = incidents.length === 1 ? "" : "s"
+    return t("patterns.recordsAnalyzed", {
+      count: incidents.length,
+      plural,
+    })
+  }, [incidents.length, t])
+
+  const lastRunLabel = React.useMemo(() => {
+    if (!lastRun) return t("patterns.neverRun")
+    return t("patterns.lastRun", { time: relativeTime(lastRun, t) })
+  }, [lastRun, t])
 
   return (
     <div className="space-y-5">
@@ -64,20 +89,13 @@ export default function PatternsPage() {
       <Card className="bg-primary/5">
         <CardBody className="flex items-center justify-between gap-4">
           <div className="text-sm">
-            <p className="font-medium text-foreground">
-              {t("patterns.recordsAnalyzed", {
-                count: incidents.length,
-              })}
-            </p>
-            <p className="text-muted-foreground">
-              {lastRun
-                ? t("patterns.lastRun", {
-                    time: relativeTime(lastRun, t),
-                  })
-                : t("patterns.runToRefresh")}
-            </p>
+            <p className="font-medium text-foreground">{analyzedLabel}</p>
+            <p className="text-muted-foreground">{lastRunLabel}</p>
           </div>
-          <Button onClick={handleRun} disabled={running || busy}>
+          <Button
+            onClick={handleRun}
+            disabled={running || busy || incidents.length === 0}
+          >
             <RefreshCw
               className={running ? "size-4 animate-spin" : "size-4"}
               aria-hidden="true"
@@ -94,9 +112,7 @@ export default function PatternsPage() {
               className="mt-0.5 size-4 shrink-0 text-primary"
               aria-hidden="true"
             />
-            <p className="text-pretty leading-relaxed">
-              {t("patterns.empty")}
-            </p>
+            <p className="text-pretty leading-relaxed">{t("patterns.empty")}</p>
           </CardBody>
         </Card>
       ) : (
@@ -108,7 +124,7 @@ export default function PatternsPage() {
       )}
 
       <p className="px-1 text-xs leading-relaxed text-muted-foreground">
-        {t("patterns.disclaimer")}
+        {t("patterns.caution")}
       </p>
     </div>
   )
@@ -117,109 +133,84 @@ export default function PatternsPage() {
 function AlertItem({ alert }: { alert: PatternAlert }) {
   const { t } = useI18n()
   const Icon = TYPE_ICON[alert.type]
+  const data = React.useMemo(() => parseAlertData(alert.detail), [alert.detail])
 
   const translatedTitle = React.useMemo(() => {
-    const data = alert.data ?? {}
-
     switch (alert.type) {
-      case "repeated-time": {
-        const weekday =
-          typeof data.weekday === "number"
-            ? t(`patterns.weekdays.${data.weekday}`)
-            : String(data.weekday ?? "")
-        const block =
-          typeof data.block === "string"
-            ? t(`patterns.timeBlocks.${data.block}`)
-            : String(data.block ?? "")
-        return t("patterns.alerts.repeatedTime.title", { weekday, block })
-      }
-
+      case "repeated-time":
+        return t("patterns.alertTitles.repeatedTime")
       case "repeated-location":
-        return t("patterns.alerts.repeatedLocation.title")
-
-      case "frequency-spike": {
-        const date = String(data.date ?? "")
-        return t("patterns.alerts.frequencySpike.title", { date })
-      }
-
-      case "category-cluster": {
-        const category = String(data.categoryLabel ?? alert.title ?? "")
-        return t("patterns.alerts.categoryCluster.title", { category })
-      }
-
+        return t("patterns.alertTitles.repeatedLocation")
+      case "frequency-spike":
+        return t("patterns.alertTitles.frequencySpike")
+      case "category-cluster":
+        return t("patterns.alertTitles.categoryCluster")
       case "activity-trend": {
-        const direction =
-          data.direction === "down"
-            ? t("patterns.trendDirection.down")
-            : t("patterns.trendDirection.up")
-        return t("patterns.alerts.activityTrend.title", { direction })
+        const direction = String(data.direction ?? "")
+        if (direction === "increasing") {
+          return t("patterns.alertTitles.activityTrendIncreasing")
+        }
+        if (direction === "decreasing") {
+          return t("patterns.alertTitles.activityTrendDecreasing")
+        }
+        return t("patterns.alertTitles.activityTrendStable")
       }
-
       default:
         return alert.title
     }
-  }, [alert, t])
+  }, [alert.type, alert.title, data.direction, t])
 
   const translatedObservation = React.useMemo(() => {
-    const data = alert.data ?? {}
-
     switch (alert.type) {
-      case "repeated-time": {
-        const count = Number(data.count ?? 0)
-        const weekday =
-          typeof data.weekday === "number"
-            ? t(`patterns.weekdays.${data.weekday}`)
-            : String(data.weekday ?? "")
-        const block =
-          typeof data.block === "string"
-            ? t(`patterns.timeBlocks.${data.block}`)
-            : String(data.block ?? "")
-        return t("patterns.alerts.repeatedTime.observation", {
-          count,
-          weekday,
-          block,
+      case "repeated-time":
+        return t("patterns.alertText.repeatedTime", {
+          count: Number(data.count ?? 0),
+          block:
+            typeof data.block === "string"
+              ? t(`patterns.timeBlocks.${data.block}`)
+              : "",
         })
-      }
 
-      case "repeated-location": {
-        const count = Number(data.count ?? 0)
-        return t("patterns.alerts.repeatedLocation.observation", { count })
-      }
-
-      case "frequency-spike": {
-        const count = Number(data.count ?? 0)
-        const date = String(data.date ?? "")
-        return t("patterns.alerts.frequencySpike.observation", {
-          count,
-          date,
+      case "repeated-location":
+        return t("patterns.alertText.repeatedLocation", {
+          count: Number(data.count ?? 0),
+          cell: String(data.cell ?? ""),
         })
-      }
 
-      case "category-cluster": {
-        const count = Number(data.count ?? 0)
-        const category = String(data.categoryLabel ?? "")
-        return t("patterns.alerts.categoryCluster.observation", {
-          count,
-          category,
+      case "frequency-spike":
+        return t("patterns.alertText.frequencySpike", {
+          day: String(data.day ?? ""),
+          count: Number(data.count ?? 0),
         })
-      }
+
+      case "category-cluster":
+        return t("patterns.alertText.categoryCluster", {
+          share: Number(data.share ?? 0),
+          category: String(data.categoryLabel ?? ""),
+        })
 
       case "activity-trend": {
-        const direction =
-          data.direction === "down"
-            ? t("patterns.trendDirection.down")
-            : t("patterns.trendDirection.up")
-        const percent = Number(data.percent ?? 0)
-        return t("patterns.alerts.activityTrend.observation", {
-          direction,
-          percent,
-        })
+        const direction = String(data.direction ?? "")
+        if (direction === "increasing") {
+          return t("patterns.alertText.activityTrendIncreasing")
+        }
+        if (direction === "decreasing") {
+          return t("patterns.alertText.activityTrendDecreasing")
+        }
+        return t("patterns.alertText.activityTrendStable")
       }
 
       default:
         return alert.observation
     }
-  }, [alert, t])
+  }, [alert.type, alert.observation, data, t])
+
+  const severityLabel =
+    alert.severity === "high"
+      ? t("patterns.severity.high")
+      : alert.severity === "notable"
+      ? t("patterns.severity.notable")
+      : t("patterns.severity.info")
 
   return (
     <li>
@@ -234,18 +225,14 @@ function AlertItem({ alert }: { alert: PatternAlert }) {
                 {translatedTitle}
               </h3>
             </div>
-            <Badge tone={SEVERITY_TONE[alert.severity]}>
-              {t(`patterns.severity.${alert.severity}`)}
-            </Badge>
+            <Badge tone={SEVERITY_TONE[alert.severity]}>{severityLabel}</Badge>
           </div>
 
           <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
             {translatedObservation}
           </p>
 
-          <p className="text-xs font-medium text-foreground/70">
-            {alert.detail}
-          </p>
+          <p className="text-xs font-medium text-foreground/70">{alert.detail}</p>
         </CardBody>
       </Card>
     </li>
