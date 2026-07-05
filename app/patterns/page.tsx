@@ -49,6 +49,82 @@ function parseAlertData(detail: string): AlertData {
   }
 }
 
+function getTimeBlockLabel(
+  language: string,
+  block: string | undefined,
+): string {
+  if (!block) return ""
+  const maps: Record<string, Record<string, string>> = {
+    en: {
+      early_morning: "early morning",
+      morning: "morning",
+      afternoon: "afternoon",
+      evening: "evening",
+      night: "night",
+      late_night: "late night",
+    },
+    "pt-BR": {
+      early_morning: "madrugada",
+      morning: "manhã",
+      afternoon: "tarde",
+      evening: "fim da tarde",
+      night: "noite",
+      late_night: "alta noite",
+    },
+    es: {
+      early_morning: "madrugada",
+      morning: "mañana",
+      afternoon: "tarde",
+      evening: "atardecer",
+      night: "noche",
+      late_night: "noche avanzada",
+    },
+  }
+
+  return maps[language]?.[block] ?? maps.en[block] ?? block
+}
+
+function getWeekdayLabel(
+  language: string,
+  day: string | number | undefined,
+): string {
+  if (day === undefined || day === null || day === "") return ""
+  const idx = Number(day)
+  if (Number.isNaN(idx) || idx < 0 || idx > 6) return String(day)
+
+  const maps: Record<string, string[]> = {
+    en: [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ],
+    "pt-BR": [
+      "domingo",
+      "segunda-feira",
+      "terça-feira",
+      "quarta-feira",
+      "quinta-feira",
+      "sexta-feira",
+      "sábado",
+    ],
+    es: [
+      "domingo",
+      "lunes",
+      "martes",
+      "miércoles",
+      "jueves",
+      "viernes",
+      "sábado",
+    ],
+  }
+
+  return maps[language]?.[idx] ?? maps.en[idx] ?? String(day)
+}
+
 export default function PatternsPage() {
   const { t } = useI18n()
   const { alerts, incidents, runAnalysis, busy } = useVault()
@@ -132,7 +208,7 @@ export default function PatternsPage() {
 }
 
 function AlertItem({ alert }: { alert: PatternAlert }) {
-  const { t } = useI18n()
+  const { t, language } = useI18n()
   const Icon = TYPE_ICON[alert.type]
   const data = React.useMemo(() => parseAlertData(alert.detail), [alert.detail])
 
@@ -166,10 +242,7 @@ function AlertItem({ alert }: { alert: PatternAlert }) {
       case "repeated-time":
         return t("patterns.alertText.repeatedTime", {
           count: Number(data.count ?? 0),
-          block:
-            typeof data.block === "string"
-              ? t(`patterns.timeBlocks.${data.block}`)
-              : "",
+          block: getTimeBlockLabel(language, String(data.block ?? "")),
         })
 
       case "repeated-location":
@@ -180,7 +253,7 @@ function AlertItem({ alert }: { alert: PatternAlert }) {
 
       case "frequency-spike":
         return t("patterns.alertText.frequencySpike", {
-          day: String(data.day ?? ""),
+          day: getWeekdayLabel(language, data.day),
           count: Number(data.count ?? 0),
         })
 
@@ -204,7 +277,7 @@ function AlertItem({ alert }: { alert: PatternAlert }) {
       default:
         return alert.observation
     }
-  }, [alert.type, alert.observation, data, t])
+  }, [alert.type, alert.observation, data, t, language])
 
   const severityLabel =
     alert.severity === "high"
