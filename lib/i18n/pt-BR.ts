@@ -185,6 +185,4 @@ export const ptBR: Dictionary = {
     backupRestored: "Backup restaurado",
     backupMerged: "Backup mesclado",
   },
-  'incidentForm.selectCategory': 'Selecione a categoria',
-  'incidentForm.evidenceHint': 'As imagens têm os metadados EXIF removidos, são hasheadas com SHA-256 e criptografadas antes do armazenamento.',
 }

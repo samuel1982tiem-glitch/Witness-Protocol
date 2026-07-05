@@ -187,6 +187,4 @@ export const en: Dictionary = {
     backupRestored: "Backup restored",
     backupMerged: "Backup merged",
   },
-  'incidentForm.selectCategory': 'Select category',
-  'incidentForm.evidenceHint': 'Images are stripped of EXIF metadata, hashed with SHA-256, and encrypted before storage.',
 }

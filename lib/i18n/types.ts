@@ -17,6 +17,7 @@ export type LanguageCode = "en" | "pt-BR" | "es"
 export type LanguagePreference = "system" | LanguageCode
 
 export interface Dictionary {
+  evidenceHint: EvidenceHintDict
   categories: CategoryDict
   relativeTime: RelativeTimeDict
   miscUi: MiscUiDict
@@ -220,4 +221,9 @@ export interface CategoryDict {
   legalDesc: string
   categoryLabel: string
   unknown: string
+}
+
+export interface EvidenceHintDict {
+  selectCategoryPlaceholder: string
+  evidenceDisclaimer: string
 }

@@ -186,6 +186,4 @@ export const es: Dictionary = {
     backupRestored: "Copia de seguridad restaurada",
     backupMerged: "Copia de seguridad fusionada",
   },
-  'incidentForm.selectCategory': 'Selecciona la categoría',
-  'incidentForm.evidenceHint': 'Las imágenes se despojan de metadatos EXIF, se procesan con SHA-256 y se cifran antes de almacenarse.',
 }

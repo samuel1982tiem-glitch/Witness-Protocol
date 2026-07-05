@@ -14,7 +14,7 @@ export interface Category {
   description: string
 }
 
-export type EvidenceKind = "photo" | "screenshot" | "voice" | "document"
+export type EvidenceKind = "photo" | "screenshot" | "voice" | "document" | "video"
 
 /** Decrypted, in-memory representation of an evidence file. */
 export interface EvidenceMeta {
