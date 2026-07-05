@@ -247,28 +247,44 @@ export function IncidentForm() {
     }
   }
 
-      async function captureVideo() {
+        async function captureVideo() {
     try {
-      // On Android, getVideo() may not be implemented.
-      // Use getPhoto() with video support instead - it works on both platforms.
-      const video = await CapacitorCamera.getPhoto({
-        resultType: CameraResultType.Uri,
-        source: CameraSource.Camera,
-        quality: 85,
-        allowEditing: false,
-      });
+      // Try using getVideo first (works on iOS and some Android versions)
+      // If it fails, fall back to getPhoto with video support
+      let video;
+      try {
+        video = await CapacitorCamera.getVideo({
+          resultType: CameraResultType.Uri,
+          source: CameraSource.Camera,
+          quality: 85,
+          allowEditing: false,
+        });
+      } catch (firstError) {
+        // If getVideo fails (e.g., not implemented on Android),
+        // try using getPhoto with video mode
+        console.log('getVideo failed, trying getPhoto with video...');
+        video = await CapacitorCamera.getPhoto({
+          resultType: CameraResultType.Uri,
+          source: CameraSource.Camera,
+          quality: 85,
+          allowEditing: false,
+          // Note: Some Android versions support video through getPhoto
+          // by specifying the correct format
+        });
+      }
 
       if (!video.webPath) return;
 
       const response = await fetch(video.webPath);
       const blob = await response.blob();
 
-      // Determine format - check if it's a video
+      // Determine video format
       let ext = 'mp4';
       let mimeType = blob.type || 'video/mp4';
       
-      // If the blob type doesn't indicate video, check the webPath
+      // If it's not a video, try to force it
       if (!mimeType.includes('video')) {
+        // The webPath might have the extension
         const pathExt = video.webPath.split('.').pop()?.toLowerCase() || 'mp4';
         ext = pathExt;
         mimeType = `video/${ext}`;
@@ -278,10 +294,20 @@ export function IncidentForm() {
 
       const finalBlob = blob.type ? blob : new Blob([blob], { type: mimeType });
 
-      setAttachments((prev) => [
-        ...prev,
-        buildAttachment("video", finalBlob, `video-${Date.now()}.${ext}`),
-      ]);
+      // Only add if it's a video file
+      if (mimeType.includes('video')) {
+        setAttachments((prev) => [
+          ...prev,
+          buildAttachment("video", finalBlob, `video-${Date.now()}.${ext}`),
+        ]);
+      } else {
+        // If it's not a video, treat it as a photo (don't add to video list)
+        setAttachments((prev) => [
+          ...prev,
+          buildAttachment("photo", finalBlob, `photo-${Date.now()}.${ext}`),
+        ]);
+        setError("Note: Captured as photo instead of video");
+      }
     } catch (err) {
       const message = (err as Error)?.message || "";
       if (
