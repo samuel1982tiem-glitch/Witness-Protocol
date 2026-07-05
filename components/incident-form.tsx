@@ -247,10 +247,21 @@ export function IncidentForm() {
     }
   }
 
-                      async function captureVideo() {
+                        async function captureVideo() {
     try {
-      // Android video recording using getUserMedia API
-      // Request camera with audio
+      // First, request camera permission using Capacitor Camera
+      // This ensures the camera permission dialog appears first
+      const permissionStatus = await CapacitorCamera.requestPermissions({
+        permissions: ['camera']
+      });
+
+      if (permissionStatus.camera !== 'granted') {
+        setError("Camera permission denied. Please enable camera access in settings.");
+        return;
+      }
+
+      // Now try to get the camera stream using getUserMedia
+      // This should now work since we have permission
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: 'environment',
@@ -260,7 +271,6 @@ export function IncidentForm() {
         audio: true
       });
 
-      // Check if we have video tracks
       const videoTracks = stream.getVideoTracks();
       if (videoTracks.length === 0) {
         throw new Error("No camera access. Please grant camera permission.");
@@ -278,27 +288,22 @@ export function IncidentForm() {
         }
       };
 
-      // Start recording
       mediaRecorder.start();
       setError("🎥 Recording... Tap video icon again to stop");
 
-      // Wait for the user to stop recording
-      // For now, record for up to 15 seconds
+      // Record for up to 15 seconds
       await new Promise((resolve) => {
         setTimeout(resolve, 15000);
       });
 
       mediaRecorder.stop();
 
-      // Wait for the recorder to finish
       await new Promise((resolve) => {
         mediaRecorder.onstop = resolve;
       });
 
-      // Stop all tracks
       stream.getTracks().forEach(track => track.stop());
 
-      // Create blob from chunks
       const blob = new Blob(chunks, { type: 'video/mp4' });
 
       if (blob.size === 0) {
