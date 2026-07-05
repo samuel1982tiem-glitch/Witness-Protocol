@@ -93,6 +93,7 @@ export default function PatternsPage() {
             <p className="text-muted-foreground">{lastRunLabel}</p>
           </div>
           <Button
+            type="button"
             onClick={handleRun}
             disabled={running || busy || incidents.length === 0}
           >
