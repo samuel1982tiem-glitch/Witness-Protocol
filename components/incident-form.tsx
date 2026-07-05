@@ -826,16 +826,7 @@ export function IncidentForm() {
                 </p>
               </div>
 
-              <div className="flex justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => downloadAttachment(previewAttachment)}
-                >
-                  <Download className="size-4" />
-                  Download
-                </Button>
-              </div>
+              
             </div>
           </div>
         </div>
