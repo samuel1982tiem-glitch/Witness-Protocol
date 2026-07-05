@@ -247,9 +247,9 @@ export function IncidentForm() {
     }
   }
 
-                          async function captureVideo() {
+                            async function captureVideo() {
     try {
-      // Request camera permission using Capacitor Camera
+      // First, request camera permission
       const permissionStatus = await CapacitorCamera.requestPermissions({
         permissions: ['camera']
       });
@@ -259,71 +259,46 @@ export function IncidentForm() {
         return;
       }
 
-      // Now request audio permission for recording
-      try {
-        // Audio is optional but recommended
-        const audioPermission = await CapacitorCamera.requestPermissions({
-          permissions: ['microphone']
-        });
-        if (audioPermission.microphone !== 'granted') {
-          console.log('Audio permission denied - video will be recorded without audio');
-        }
-      } catch (audioErr) {
-        console.log('Audio permission not available - continuing without audio');
+      // Use Capacitor Camera's getPhoto with video quality
+      // This opens the native camera app
+      const video = await CapacitorCamera.getPhoto({
+        resultType: CameraResultType.Uri,
+        source: CameraSource.Camera,
+        quality: 85,
+        allowEditing: false,
+      });
+
+      if (!video.webPath) {
+        throw new Error("No video captured");
       }
 
-      // Now get the camera stream
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        },
-        audio: true
-      });
+      // Fetch the file
+      const response = await fetch(video.webPath);
+      const blob = await response.blob();
 
-      const videoTracks = stream.getVideoTracks();
-      if (videoTracks.length === 0) {
-        throw new Error("No camera access. Please grant camera permission.");
+      // Check if it's a video file
+      let ext = 'mp4';
+      let mimeType = blob.type || 'video/mp4';
+      
+      // If it's actually a photo, inform the user
+      if (mimeType.includes('image')) {
+        setError("Camera captured a photo instead of video. Please use the video file picker instead.");
+        // Optionally add as photo
+        const photoExt = 'jpg';
+        const photoMime = blob.type || 'image/jpeg';
+        const finalPhoto = blob.type ? blob : new Blob([blob], { type: photoMime });
+        setAttachments((prev) => [
+          ...prev,
+          buildAttachment("photo", finalPhoto, `photo-${Date.now()}.${photoExt}`),
+        ]);
+        return;
       }
 
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'video/mp4'
-      });
-
-      let chunks: BlobPart[] = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunks.push(event.data);
-        }
-      };
-
-      mediaRecorder.start();
-      setError("🎥 Recording... Tap video icon again to stop");
-
-      // Record for up to 15 seconds
-      await new Promise((resolve) => {
-        setTimeout(resolve, 15000);
-      });
-
-      mediaRecorder.stop();
-
-      await new Promise((resolve) => {
-        mediaRecorder.onstop = resolve;
-      });
-
-      stream.getTracks().forEach(track => track.stop());
-
-      const blob = new Blob(chunks, { type: 'video/mp4' });
-
-      if (blob.size === 0) {
-        throw new Error("No video recorded");
-      }
+      const finalBlob = blob.type ? blob : new Blob([blob], { type: mimeType });
 
       setAttachments((prev) => [
         ...prev,
-        buildAttachment("video", blob, `video-${Date.now()}.mp4`),
+        buildAttachment("video", finalBlob, `video-${Date.now()}.${ext}`),
       ]);
 
       setError(null);
@@ -333,12 +308,14 @@ export function IncidentForm() {
       if (
         /cancel/i.test(message) ||
         /user/i.test(message) ||
-        /No video selected/i.test(message) ||
-        /not allowed/i.test(message) ||
-        /permission/i.test(message) ||
-        /denied/i.test(message)
+        /No video selected/i.test(message)
       ) {
-        setError("Camera permission denied. Please enable camera access in settings.");
+        return;
+      }
+      // If the error is about getPhoto not supporting video, fall back to file picker
+      if (message.includes('not implemented') || message.includes('video')) {
+        setError("Video recording not available. Please select a video from your device.");
+        videoFileInput.current?.click();
         return;
       }
       setError(`Video capture failed: ${message || "Could not record video"}`);
