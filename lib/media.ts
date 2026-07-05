@@ -66,15 +66,69 @@ export async function processMedia(
   file: Blob,
   isImage: boolean,
 ): Promise<ProcessedMedia> {
-  const cleaned = isImage ? await stripImageMetadata(file) : file
-  const bytes = await cleaned.arrayBuffer()
-  const sha256 = await sha256Hex(bytes)
+  // Check if it's a video file
+  const isVideo = file.type?.startsWith('video/') || false;
+  
+  // For videos, use chunked processing to avoid memory issues
+  if (isVideo) {
+    try {
+      // For large videos, process in chunks
+      const chunkSize = 1024 * 1024; // 1MB chunks
+      const totalSize = file.size;
+      const chunks: Uint8Array[] = [];
+      let offset = 0;
+      
+      // Read the file in chunks
+      while (offset < totalSize) {
+        const chunk = file.slice(offset, Math.min(offset + chunkSize, totalSize));
+        const buffer = await chunk.arrayBuffer();
+        chunks.push(new Uint8Array(buffer));
+        offset += chunkSize;
+      }
+      
+      // Combine all chunks
+      const combinedLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+      const combined = new Uint8Array(combinedLength);
+      let position = 0;
+      for (const chunk of chunks) {
+        combined.set(chunk, position);
+        position += chunk.length;
+      }
+      
+      // Compute SHA-256 hash
+      const sha256 = await sha256Hex(combined.buffer);
+      
+      return {
+        bytes: combined.buffer,
+        mimeType: file.type || 'video/mp4',
+        size: file.size,
+        sha256,
+      };
+    } catch (error) {
+      console.error('Video processing error:', error);
+      // Fallback: try processing without chunking
+      const bytes = await file.arrayBuffer();
+      const sha256 = await sha256Hex(bytes);
+      return {
+        bytes,
+        mimeType: file.type || 'video/mp4',
+        size: file.size,
+        sha256,
+      };
+    }
+  }
+  
+  // For images, strip metadata and process normally
+  const cleaned = isImage ? await stripImageMetadata(file) : file;
+  const bytes = await cleaned.arrayBuffer();
+  const sha256 = await sha256Hex(bytes);
+  
   return {
     bytes,
-    mimeType: cleaned.type || file.type || "application/octet-stream",
+    mimeType: cleaned.type || file.type || 'application/octet-stream',
     size: bytes.byteLength,
     sha256,
-  }
+  };
 }
 
 export function formatBytes(size: number): string {
