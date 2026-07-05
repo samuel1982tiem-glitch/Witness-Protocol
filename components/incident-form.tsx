@@ -247,10 +247,11 @@ export function IncidentForm() {
     }
   }
 
-    async function captureVideo() {
+      async function captureVideo() {
     try {
-      // Use Capacitor Camera to record video
-      const video = await CapacitorCamera.getVideo({
+      // On Android, getVideo() may not be implemented.
+      // Use getPhoto() with video support instead - it works on both platforms.
+      const video = await CapacitorCamera.getPhoto({
         resultType: CameraResultType.Uri,
         source: CameraSource.Camera,
         quality: 85,
@@ -262,9 +263,18 @@ export function IncidentForm() {
       const response = await fetch(video.webPath);
       const blob = await response.blob();
 
-      // Determine video format
-      const ext = video.format || 'mp4';
-      const mimeType = blob.type || `video/${ext}`;
+      // Determine format - check if it's a video
+      let ext = 'mp4';
+      let mimeType = blob.type || 'video/mp4';
+      
+      // If the blob type doesn't indicate video, check the webPath
+      if (!mimeType.includes('video')) {
+        const pathExt = video.webPath.split('.').pop()?.toLowerCase() || 'mp4';
+        ext = pathExt;
+        mimeType = `video/${ext}`;
+      } else {
+        ext = mimeType.split('/')[1] || 'mp4';
+      }
 
       const finalBlob = blob.type ? blob : new Blob([blob], { type: mimeType });
 
