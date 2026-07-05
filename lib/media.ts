@@ -62,21 +62,6 @@ export async function stripImageMetadata(file: Blob): Promise<Blob> {
  * Prepare a file for encrypted storage:
  * strips metadata from images, then computes a SHA-256 hash of the bytes.
  */
-export async function processMedia(
-  file: Blob,
-  isImage: boolean,
-): Promise<ProcessedMedia> {
-  const cleaned = isImage ? await stripImageMetadata(file) : file
-  const bytes = await cleaned.arrayBuffer()
-  const sha256 = await sha256Hex(bytes)
-  return {
-    bytes,
-    mimeType: cleaned.type || file.type || "application/octet-stream",
-    size: bytes.byteLength,
-    sha256,
-  }
-}
-
 export function formatBytes(size: number): string {
   if (size < 1024) return `${size} B`
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
