@@ -539,16 +539,7 @@ export function IncidentForm() {
               <FileImage className="size-4" />
             </button>
 
-            {/* Video camera */}
-            <button
-              type="button"
-              onClick={captureVideo}
-              className="rounded-lg border border-border bg-background p-2 hover:bg-muted"
-              aria-label="Capture video"
-              title="Capture video"
-            >
-              <Video className="size-4" />
-            </button>
+            
 
             {/* Video file */}
             <button
