@@ -248,25 +248,41 @@ export function IncidentForm() {
     }
   }
 
-              async function captureVideo() {
+                async function captureVideo() {
     try {
-      // Use capacitor-camera-view plugin for efficient video recording
-      // Start recording with audio
-      await CameraView.startRecording({ enableAudio: true });
+      // Use Capacitor Camera with video support
+      // Note: On Android, this may fall back to photo mode if video is not supported
+      const video = await CapacitorCamera.getPhoto({
+        resultType: CameraResultType.Uri,
+        source: CameraSource.Camera,
+        quality: 85,
+        allowEditing: false,
+        // Some Android versions support video through this method
+        // by detecting the file type after capture
+      });
 
-      // Wait for the user to stop recording (the plugin handles this)
-      // The stopRecording() method returns the video file
-      const result = await CameraView.stopRecording();
-      
-      if (!result || !result.webPath) {
+      if (!video.webPath) {
         throw new Error("No video captured");
       }
 
-      const response = await fetch(result.webPath);
+      const response = await fetch(video.webPath);
       const blob = await response.blob();
 
-      const ext = 'mp4';
-      const mimeType = blob.type || 'video/mp4';
+      // Check if we got a video or a photo
+      let ext = 'mp4';
+      let mimeType = blob.type || 'video/mp4';
+      
+      // If it's actually a photo, handle it differently
+      if (mimeType.includes('image')) {
+        // Add as photo instead
+        setAttachments((prev) => [
+          ...prev,
+          buildAttachment("photo", blob, `photo-${Date.now()}.${extFromMime(mimeType)}`),
+        ]);
+        setError("Note: Camera captured a photo instead of video. Try using the video file picker instead.");
+        return;
+      }
+
       const finalBlob = blob.type ? blob : new Blob([blob], { type: mimeType });
 
       setAttachments((prev) => [
@@ -278,8 +294,7 @@ export function IncidentForm() {
       if (
         /cancel/i.test(message) ||
         /user/i.test(message) ||
-        /No video selected/i.test(message) ||
-        /recording cancelled/i.test(message)
+        /No video selected/i.test(message)
       ) {
         return;
       }
