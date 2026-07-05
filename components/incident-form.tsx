@@ -247,67 +247,81 @@ export function IncidentForm() {
     }
   }
 
-        async function captureVideo() {
+          async function captureVideo() {
     try {
-      // Try using getVideo first (works on iOS and some Android versions)
-      // If it fails, fall back to getPhoto with video support
-      let video;
+      // Method 1: Try getVideo first (works on iOS)
       try {
-        video = await CapacitorCamera.getVideo({
+        const video = await CapacitorCamera.getVideo({
           resultType: CameraResultType.Uri,
           source: CameraSource.Camera,
           quality: 85,
           allowEditing: false,
         });
-      } catch (firstError) {
-        // If getVideo fails (e.g., not implemented on Android),
-        // try using getPhoto with video mode
-        console.log('getVideo failed, trying getPhoto with video...');
-        video = await CapacitorCamera.getPhoto({
+        
+        if (video.webPath) {
+          const response = await fetch(video.webPath);
+          const blob = await response.blob();
+          const ext = video.format || 'mp4';
+          const mimeType = blob.type || `video/${ext}`;
+          const finalBlob = blob.type ? blob : new Blob([blob], { type: mimeType });
+          setAttachments((prev) => [
+            ...prev,
+            buildAttachment("video", finalBlob, `video-${Date.now()}.${ext}`),
+          ]);
+          return;
+        }
+      } catch (e) {
+        console.log('getVideo failed, trying alternative...');
+      }
+
+      // Method 2: Use getPhoto with video quality hint
+      try {
+        const video = await CapacitorCamera.getPhoto({
           resultType: CameraResultType.Uri,
           source: CameraSource.Camera,
-          quality: 85,
+          quality: 50, // Lower quality for video
           allowEditing: false,
-          // Note: Some Android versions support video through getPhoto
-          // by specifying the correct format
+          // On some Android versions, this might still work
         });
+
+        if (video.webPath) {
+          const response = await fetch(video.webPath);
+          const blob = await response.blob();
+          
+          // Check if it's actually a video file
+          if (blob.type && blob.type.includes('video')) {
+            const ext = 'mp4';
+            const mimeType = blob.type || 'video/mp4';
+            const finalBlob = blob.type ? blob : new Blob([blob], { type: mimeType });
+            setAttachments((prev) => [
+              ...prev,
+              buildAttachment("video", finalBlob, `video-${Date.now()}.${ext}`),
+            ]);
+            return;
+          }
+          
+          // If it's a photo, inform the user and add as photo
+          if (blob.type && blob.type.includes('image')) {
+            setError("Video recording not available on this device. Please use the file picker to select a video.");
+            // Optionally add as photo
+            const ext = 'jpg';
+            const mimeType = blob.type || 'image/jpeg';
+            const finalBlob = blob.type ? blob : new Blob([blob], { type: mimeType });
+            setAttachments((prev) => [
+              ...prev,
+              buildAttachment("photo", finalBlob, `photo-${Date.now()}.${ext}`),
+            ]);
+            return;
+          }
+        }
+      } catch (e) {
+        console.log('getPhoto also failed:', e);
       }
 
-      if (!video.webPath) return;
+      // Method 3: Last resort - open the file picker
+      setError("Video recording not available. Please select a video from your device.");
+      videoFileInput.current?.click();
 
-      const response = await fetch(video.webPath);
-      const blob = await response.blob();
-
-      // Determine video format
-      let ext = 'mp4';
-      let mimeType = blob.type || 'video/mp4';
-      
-      // If it's not a video, try to force it
-      if (!mimeType.includes('video')) {
-        // The webPath might have the extension
-        const pathExt = video.webPath.split('.').pop()?.toLowerCase() || 'mp4';
-        ext = pathExt;
-        mimeType = `video/${ext}`;
-      } else {
-        ext = mimeType.split('/')[1] || 'mp4';
-      }
-
-      const finalBlob = blob.type ? blob : new Blob([blob], { type: mimeType });
-
-      // Only add if it's a video file
-      if (mimeType.includes('video')) {
-        setAttachments((prev) => [
-          ...prev,
-          buildAttachment("video", finalBlob, `video-${Date.now()}.${ext}`),
-        ]);
-      } else {
-        // If it's not a video, treat it as a photo (don't add to video list)
-        setAttachments((prev) => [
-          ...prev,
-          buildAttachment("photo", finalBlob, `photo-${Date.now()}.${ext}`),
-        ]);
-        setError("Note: Captured as photo instead of video");
-      }
     } catch (err) {
       const message = (err as Error)?.message || "";
       if (
