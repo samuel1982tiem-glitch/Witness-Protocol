@@ -1,4 +1,5 @@
 "use client"
+import { MediaCapture } from "capacitor-media-capture";
 
 import {
   Camera,
@@ -247,59 +248,34 @@ export function IncidentForm() {
     }
   }
 
-                                  async function captureVideo() {
+                                    async function captureVideo() {
     try {
-      // Request camera permission first
-      const permissionStatus = await CapacitorCamera.requestPermissions({
-        permissions: ['camera']
+      // Use MediaCapture plugin for reliable video recording on Android
+      const video = await MediaCapture.captureVideo({
+        duration: 30, // 30 seconds max
+        quality: 1    // High quality
       });
 
-      if (permissionStatus.camera !== 'granted') {
-        setError("Camera permission denied. Please enable camera access in settings.");
-        return;
-      }
-
-      // Use Capacitor Camera to capture video
-      // On Android, this will open the camera app
-      const video = await CapacitorCamera.getPhoto({
-        resultType: CameraResultType.Uri,
-        source: CameraSource.Camera,
-        quality: 85,
-        allowEditing: false,
-        // Note: On Android, this may capture a photo if video is not supported
-      });
-
-      if (!video.webPath) {
+      if (!video || !video.files || video.files.length === 0) {
         throw new Error("No video captured");
       }
 
-      const response = await fetch(video.webPath);
+      // Get the first video file
+      const videoFile = video.files[0];
+      
+      // Fetch the video file
+      const response = await fetch(videoFile.fullPath);
       const blob = await response.blob();
 
-      // Determine file type
-      let ext = 'mp4';
-      let mimeType = blob.type || 'video/mp4';
-      
-      // If it's a photo, add it as a photo and show message
-      if (mimeType.includes('image')) {
-        setError("Video recording not supported directly. Please use the video file picker.");
-        // Still add as photo
-        const photoExt = 'jpg';
-        const photoMime = blob.type || 'image/jpeg';
-        const finalPhoto = blob.type ? blob : new Blob([blob], { type: photoMime });
-        setAttachments((prev) => [
-          ...prev,
-          buildAttachment("photo", finalPhoto, `photo-${Date.now()}.${photoExt}`),
-        ]);
-        return;
-      }
-
-      // It's a video
+      const ext = 'mp4';
+      const mimeType = blob.type || 'video/mp4';
       const finalBlob = blob.type ? blob : new Blob([blob], { type: mimeType });
+
       setAttachments((prev) => [
         ...prev,
         buildAttachment("video", finalBlob, `video-${Date.now()}.${ext}`),
       ]);
+
       setError(null);
 
     } catch (err) {
