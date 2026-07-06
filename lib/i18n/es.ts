@@ -272,8 +272,8 @@ export const es: Dictionary = {
       activityTrendIncreasing: "Tendencia de actividad en aumento",
       activityTrendDecreasing: "Tendencia de actividad en descenso",
       activityTrendStable: "Tendencia de actividad estable",
-      weekdayCluster: "Weekday Cluster",
-      weekdayTimeCluster: "Weekday Time Cluster",
+      weekdayCluster: "Concentración por día de la semana",
+      weekdayTimeCluster: "Concentración por día/horario",
     },
 
     alertText: {
@@ -295,6 +295,21 @@ export const es: Dictionary = {
         "{count} registros fueron anotados el {day}.",
       weekdayTimeCluster:
         "{count} registros fueron anotados el {day} durante el bloque horario de {block}.",
+    },
+
+    alertDetail: {
+      repeatedTime: "{share}% de todos los incidentes ocurren en esta franja horaria.",
+      repeatedLocation: "Coordenadas redondeadas a ~110m de precisión.",
+      frequencySpike: "El promedio diario es {average} (±{std}).",
+      categoryCluster: "{count} de {total} incidentes en total.",
+      weekdayCluster: "{share}% de todos los incidentes ocurren el mismo día de la semana.",
+      weekdayTimeCluster:
+        "{count} incidentes ({share}% del registro) comparten este día/horario.",
+      activityTrendIncreasing:
+        "Cambio estimado de {perWeek} incidentes/semana durante {spanDays} días.",
+      activityTrendDecreasing:
+        "Cambio estimado de {perWeek} incidentes/semana durante {spanDays} días.",
+      activityTrendStable: "Cambio de {perWeek} incidentes/semana.",
     },
   },
 }

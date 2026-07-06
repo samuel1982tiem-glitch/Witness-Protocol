@@ -255,5 +255,20 @@ export const ptBR: Dictionary = {
       weekdayTimeCluster:
         "{count} registros foram anotados em {day}, no período da {block}.",
     },
+
+    alertDetail: {
+      repeatedTime: "{share}% de todos os incidentes ocorrem nesta janela de horário.",
+      repeatedLocation: "Coordenadas arredondadas para ~110m de precisão.",
+      frequencySpike: "A média diária é {average} (±{std}).",
+      categoryCluster: "{count} de {total} incidentes no total.",
+      weekdayCluster: "{share}% de todos os incidentes ocorrem no mesmo dia da semana.",
+      weekdayTimeCluster:
+        "{count} incidentes ({share}% do registro) compartilham este dia da semana/horário.",
+      activityTrendIncreasing:
+        "Mudança estimada de {perWeek} incidentes/semana ao longo de {spanDays} dias.",
+      activityTrendDecreasing:
+        "Mudança estimada de {perWeek} incidentes/semana ao longo de {spanDays} dias.",
+      activityTrendStable: "Mudança de {perWeek} incidentes/semana.",
+    },
   },
 }

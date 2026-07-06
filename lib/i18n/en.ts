@@ -257,5 +257,20 @@ export const en: Dictionary = {
       weekdayTimeCluster:
         "{count} records were logged on {day} during the {block} time block.",
     },
+
+    alertDetail: {
+      repeatedTime: "{share}% of all incidents fall in this hour window.",
+      repeatedLocation: "Coordinates rounded to ~110m precision.",
+      frequencySpike: "Daily average is {average} (±{std}).",
+      categoryCluster: "{count} of {total} total incidents.",
+      weekdayCluster: "{share}% of all incidents fall on the same weekday.",
+      weekdayTimeCluster:
+        "{count} incidents ({share}% of the log) share this weekday/time block.",
+      activityTrendIncreasing:
+        "Estimated change of {perWeek} incidents/week across {spanDays} days.",
+      activityTrendDecreasing:
+        "Estimated change of {perWeek} incidents/week across {spanDays} days.",
+      activityTrendStable: "Change of {perWeek} incidents/week.",
+    },
   },
 }
