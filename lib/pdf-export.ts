@@ -19,6 +19,16 @@ interface EvidenceWithData {
   mimeType: string
 }
 
+/**
+ * Fetches + decrypts a single evidence file's bytes on demand. Used by
+ * the bulk exporter so it never holds more than one photo's decrypted
+ * bytes in memory at a time, regardless of how many photos a single
+ * incident has.
+ */
+type DecryptEvidenceFn = (
+  evidenceId: string,
+) => Promise<{ data: Uint8Array; mimeType: string } | null>
+
 function hasProfileContent(profile: InvestigatorProfile | null): boolean {
   if (!profile) return false
   return Boolean(
@@ -30,9 +40,6 @@ function hasProfileContent(profile: InvestigatorProfile | null): boolean {
   )
 }
 
-/**
- * Converts raw image bytes to a data URL for embedding in PDF.
- */
 function bytesToDataUrl(data: Uint8Array, mimeType: string): string {
   let binary = ""
   const chunkSize = 0x8000
@@ -44,9 +51,6 @@ function bytesToDataUrl(data: Uint8Array, mimeType: string): string {
   return `data:${mimeType};base64,${base64}`
 }
 
-/**
- * Calculate image dimensions that preserve aspect ratio while fitting in max width/height.
- */
 function calculateImageDimensions(
   origWidth: number,
   origHeight: number,
@@ -55,7 +59,7 @@ function calculateImageDimensions(
 ): { width: number; height: number } {
   const widthRatio = maxWidth / origWidth
   const heightRatio = maxHeight / origHeight
-  const ratio = Math.min(widthRatio, heightRatio, 1) // don't upscale
+  const ratio = Math.min(widthRatio, heightRatio, 1)
 
   return {
     width: origWidth * ratio,
@@ -63,9 +67,6 @@ function calculateImageDimensions(
   }
 }
 
-/**
- * Get image dimensions from a Blob/data URL by decoding the image.
- */
 async function getImageDimensions(
   dataUrl: string,
 ): Promise<{ width: number; height: number }> {
@@ -96,10 +97,6 @@ interface PdfLayout {
   resetY: () => void
 }
 
-/**
- * Creates the shared layout/drawing helpers used by both the single-incident
- * and bulk exports, so both stay pixel-identical for the parts they share.
- */
 function createPdfLayout(doc: jsPDF): PdfLayout {
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
@@ -195,18 +192,24 @@ function renderInvestigatorHeader(
 }
 
 /**
- * Renders one incident's content (header, description, evidence w/ embedded
- * images, seal info) onto the current page of an already-created layout.
- * Shared by both the single-incident and bulk exporters.
+ * Renders one incident's content onto the current page of an already-created
+ * layout. Photo/screenshot evidence is resolved either from a pre-supplied
+ * `evidenceWithData` array (single-incident export path, where the caller
+ * already decrypted everything) OR, one at a time on demand, via a
+ * `decryptEvidence` callback (bulk export path). The callback path never
+ * holds more than one photo's decrypted bytes in memory at once -- an
+ * incident with many photos will not accumulate them.
  */
 async function renderIncidentBody(
   layout: PdfLayout,
   incident: Incident,
-  evidenceWithData?: EvidenceWithData[],
+  options?: {
+    evidenceWithData?: EvidenceWithData[]
+    decryptEvidence?: DecryptEvidenceFn
+  },
 ) {
   const { doc, margin, pageWidth, usableHeight } = layout
 
-  // --- Incident header ---
   layout.heading(incident.title || "Untitled incident", 16)
 
   layout.labelValue("Category:", CATEGORY_MAP[incident.category]?.name ?? "Unknown")
@@ -221,12 +224,10 @@ async function renderIncidentBody(
   }
   layout.line(10)
 
-  // --- Description ---
   layout.heading("Description", 12)
   layout.body(incident.description?.trim() || "No description provided.")
   layout.line(10)
 
-  // --- Evidence with images ---
   layout.heading(`Evidence (${incident.evidence.length})`, 12)
   if (incident.evidence.length === 0) {
     layout.body("No attachments on this record.")
@@ -235,27 +236,45 @@ async function renderIncidentBody(
       layout.checkPageBreak(40)
       doc.setFont("helvetica", "bold")
       doc.setFontSize(9.5)
-      doc.text(`• ${ev.kind}`, margin, layout.y)
+      doc.text(`\u2022 ${ev.kind}`, margin, layout.y)
       layout.line(13)
       doc.setFont("helvetica", "normal")
       doc.setFontSize(8.5)
       doc.setTextColor(90)
       doc.text(
-        `SHA-256: ${shortHash(ev.sha256, 16)}  ·  ${ev.mimeType}  ·  ${new Date(ev.createdAt).toLocaleString()}`,
+        `SHA-256: ${shortHash(ev.sha256, 16)}  \u00b7  ${ev.mimeType}  \u00b7  ${new Date(ev.createdAt).toLocaleString()}`,
         margin + 12,
         layout.y,
       )
       doc.setTextColor(0)
       layout.line(16)
 
-      const evidenceData = evidenceWithData?.find((e) => e.meta.id === ev.id)
-      if (
-        evidenceData &&
-        evidenceData.data &&
-        (ev.kind === "photo" || ev.kind === "screenshot")
-      ) {
+      let data: Uint8Array | undefined
+      let mimeType = ev.mimeType
+
+      if (ev.kind === "photo" || ev.kind === "screenshot") {
+        const preloaded = options?.evidenceWithData?.find(
+          (e) => e.meta.id === ev.id,
+        )
+        if (preloaded?.data) {
+          data = preloaded.data
+          mimeType = preloaded.mimeType
+        } else if (options?.decryptEvidence) {
+          try {
+            const decrypted = await options.decryptEvidence(ev.id)
+            if (decrypted) {
+              data = decrypted.data
+              mimeType = decrypted.mimeType
+            }
+          } catch (err) {
+            console.error(`Failed to decrypt evidence ${ev.id}:`, err)
+          }
+        }
+      }
+
+      if (data) {
         try {
-          const dataUrl = bytesToDataUrl(evidenceData.data, ev.mimeType)
+          const dataUrl = bytesToDataUrl(data, mimeType)
           const imgDims = await getImageDimensions(dataUrl)
 
           const maxImgWidth = pageWidth - margin * 2
@@ -292,6 +311,10 @@ async function renderIncidentBody(
           doc.text("[Image could not be embedded]", margin, layout.y)
           doc.setTextColor(0)
           layout.line(15)
+        } finally {
+          // Release this photo's decrypted bytes before moving to the
+          // next evidence item -- critical for incidents with many photos.
+          data = undefined
         }
       } else if (ev.kind === "document") {
         doc.setFontSize(8)
@@ -312,7 +335,6 @@ async function renderIncidentBody(
   }
   layout.line(10)
 
-  // --- Seal info ---
   if (incident.sealed && incident.seal) {
     layout.heading("Evidence Seal", 12)
     layout.labelValue("Sealed at:", formatDateTime(incident.seal.sealedAt))
@@ -327,7 +349,7 @@ function addFooter(doc: jsPDF, layout: PdfLayout) {
     doc.setFontSize(7.5)
     doc.setTextColor(150)
     doc.text(
-      `Generated by Witness Protocol · ${new Date().toLocaleString()} · Page ${p} of ${pageCount}`,
+      `Generated by Witness Protocol \u00b7 ${new Date().toLocaleString()} \u00b7 Page ${p} of ${pageCount}`,
       layout.margin,
       layout.pageHeight - 20,
     )
@@ -336,57 +358,50 @@ function addFooter(doc: jsPDF, layout: PdfLayout) {
 }
 
 /**
- * Generates a single-incident PDF report with:
- * - Investigator identity header (if filled out)
- * - Incident details, GPS, category
- * - Full evidence list with images embedded (properly scaled, centered, and not cut off)
- * - Evidence hashes and metadata
- * - Seal info if sealed
- *
- * Returns the PDF as a Blob for saving or sharing.
+ * Generates a single-incident PDF report. Caller pre-decrypts evidence
+ * (this is fine for single-incident use -- it's not the bulk-export path
+ * that runs into memory pressure across many incidents/photos).
  */
 export async function generateIncidentPdf(
   incident: Incident,
   profile: InvestigatorProfile | null,
   evidenceWithData?: EvidenceWithData[],
 ): Promise<Blob> {
-  const doc = new jsPDF({ unit: "pt", format: "a4" })
+  const doc = new jsPDF({ unit: "pt", format: "a4", compress: true })
   const layout = createPdfLayout(doc)
 
   renderInvestigatorHeader(layout, profile)
-  await renderIncidentBody(layout, incident, evidenceWithData)
+  await renderIncidentBody(layout, incident, { evidenceWithData })
   addFooter(doc, layout)
 
   return doc.output("blob")
 }
 
 /**
- * Generates a single PDF containing every incident passed in, one per page,
- * with one shared investigator identity header and a combined page-numbered
- * footer across the whole document. Evidence for each incident is fetched
- * lazily via `getEvidenceForIncident` and processed one incident at a time
- * (not all up front) to keep peak memory bounded on large exports.
+ * Generates a single PDF containing every incident passed in, one per page.
+ * Evidence photos are decrypted ONE AT A TIME via `decryptEvidence`, right
+ * before each is embedded, and released immediately after -- so an
+ * incident with many photos never holds more than one decrypted photo in
+ * memory at once. This replaced an earlier version that pre-decrypted all
+ * of an incident's evidence into an array up front, which crashed on
+ * incidents with a large number of photos.
  */
 export async function generateBulkIncidentsPdf(
   incidents: Incident[],
   profile: InvestigatorProfile | null,
-  getEvidenceForIncident: (incident: Incident) => Promise<EvidenceWithData[]>,
+  decryptEvidence: DecryptEvidenceFn,
 ): Promise<Blob> {
   const doc = new jsPDF({ unit: "pt", format: "a4", compress: true })
   const layout = createPdfLayout(doc)
 
   renderInvestigatorHeader(layout, profile)
-  layout.heading(`Incident Report — ${incidents.length} record(s)`, 14)
+  layout.heading(`Incident Report \u2014 ${incidents.length} record(s)`, 14)
   layout.body(`Generated ${new Date().toLocaleString()}`)
 
   for (const incident of incidents) {
     doc.addPage()
     layout.resetY()
-    let evidenceWithData = await getEvidenceForIncident(incident)
-    await renderIncidentBody(layout, incident, evidenceWithData)
-    // Drop this incident's decrypted image bytes before moving to the
-    // next one so peak memory doesn't grow across a large export.
-    evidenceWithData = []
+    await renderIncidentBody(layout, incident, { decryptEvidence })
   }
 
   addFooter(doc, layout)

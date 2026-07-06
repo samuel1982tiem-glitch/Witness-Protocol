@@ -86,42 +86,28 @@ export default function IncidentsPage() {
 
   const EXPORT_BATCH_SIZE = 15
 
-  async function getEvidenceForIncident(incident: (typeof incidents)[number]) {
-    const evidenceRecords = await getEvidenceRecords(incident.id)
-    // Only photo/screenshot evidence is ever embedded in the PDF
-    // (see renderIncidentBody). Skip decrypting video/voice/document
-    // bytes entirely -- with 100+ incidents, decrypting full video
-    // files that are never used was a major cause of out-of-memory
-    // crashes during bulk export.
-    const embeddable = evidenceRecords.filter(
-      (record) => record.kind === "photo" || record.kind === "screenshot",
-    )
-    // Sequential, not Promise.all: decrypting many images in parallel
-    // multiplies peak memory. One at a time keeps it bounded.
-    const results: any[] = []
-    for (const record of embeddable) {
-      try {
-        const { name, raw } = await decryptEvidenceRaw(record)
-        results.push({
-          meta: {
-            id: record.id,
-            incidentId: record.incidentId,
-            kind: record.kind,
-            name: name || "",
-            mimeType: record.mimeType,
-            size: record.size,
-            sha256: record.sha256,
-            createdAt: record.createdAt,
-          },
-          record,
-          data: raw,
-          mimeType: record.mimeType,
-        })
-      } catch (err) {
-        console.error(`Failed to decrypt evidence ${record.id}:`, err)
-      }
+  // Decrypts exactly ONE evidence file on demand, given only its id.
+  // Passed into generateBulkIncidentsPdf so it can fetch+decrypt+embed
+  // photos one at a time instead of pre-loading an entire incident's
+  // evidence into memory up front -- an incident with many photos was
+  // crashing the export before this change.
+  async function decryptSinglePhoto(
+    evidenceId: string,
+  ): Promise<{ data: Uint8Array; mimeType: string } | null> {
+    try {
+      const { getRecord, STORES } = await import("@/lib/db")
+      const record = await getRecord<import("@/lib/db").EvidenceRecord>(
+        STORES.evidenceFiles,
+        evidenceId,
+      )
+      if (!record) return null
+      if (record.kind !== "photo" && record.kind !== "screenshot") return null
+      const { raw } = await decryptEvidenceRaw(record)
+      return { data: raw, mimeType: record.mimeType }
+    } catch (err) {
+      console.error(`Failed to decrypt evidence ${evidenceId}:`, err)
+      return null
     }
-    return results
   }
 
   // Writes a batch PDF to disk and returns its file:// URI, WITHOUT
@@ -176,7 +162,7 @@ export default function IncidentsPage() {
         let blob: Blob | null = await generateBulkIncidentsPdf(
           batch,
           profile,
-          getEvidenceForIncident,
+          decryptSinglePhoto,
         )
         const safeName =
           totalBatches > 1
