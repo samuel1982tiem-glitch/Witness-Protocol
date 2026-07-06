@@ -187,6 +187,7 @@ export interface RecordsPageDict {
   noRecordsMatchFilters: string
   exportAllPdf: string
   exportingAllPdf: string
+  exportingAllPdfProgress: string
   exportAllPdfFailed: string
 }
 

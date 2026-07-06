@@ -39,6 +39,7 @@ export const recordsPagePtBR = {
   noRecordsMatchFilters: "Nenhum registro corresponde aos filtros atuais.",
   exportAllPdf: "Exportar tudo como PDF",
   exportingAllPdf: "Exportando incidentes…",
+  exportingAllPdfProgress: "Exportando lote {current} de {total}…",
   exportAllPdfFailed: "Falha ao exportar o PDF: {error}",
 }
 

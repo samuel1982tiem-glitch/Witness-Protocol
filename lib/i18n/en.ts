@@ -42,6 +42,7 @@ export const recordsPageEn = {
   noRecordsMatchFilters: "No records match the current filters.",
   exportAllPdf: "Export all as PDF",
   exportingAllPdf: "Exporting incidents…",
+  exportingAllPdfProgress: "Exporting batch {current} of {total}…",
   exportAllPdfFailed: "PDF export failed: {error}",
 }
 

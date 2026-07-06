@@ -41,6 +41,10 @@ export default function IncidentsPage() {
   const [filters, setFilters] = React.useState<IncidentFilters>(EMPTY_FILTERS)
   const [showFilters, setShowFilters] = React.useState(false)
   const [exportingAll, setExportingAll] = React.useState(false)
+  const [exportBatchProgress, setExportBatchProgress] = React.useState<{
+    current: number
+    total: number
+  } | null>(null)
 
   function update<K extends keyof IncidentFilters>(
     key: K,
@@ -80,84 +84,109 @@ export default function IncidentsPage() {
     (filters.hasLocation ? 1 : 0) +
     (filters.sealed !== "all" ? 1 : 0)
 
-  async function handleExportAllPdf() {
-    setExportingAll(true)
-    try {
-      const blob = await generateBulkIncidentsPdf(
-        incidents,
-        profile,
-        async (incident) => {
-          const evidenceRecords = await getEvidenceRecords(incident.id)
-          // Only photo/screenshot evidence is ever embedded in the PDF
-          // (see renderIncidentBody). Skip decrypting video/voice/document
-          // bytes entirely -- with 100+ incidents, decrypting full video
-          // files that are never used was the main cause of out-of-memory
-          // crashes during bulk export.
-          const embeddable = evidenceRecords.filter(
-            (record) => record.kind === "photo" || record.kind === "screenshot",
-          )
-          // Sequential, not Promise.all: decrypting many images in parallel
-          // multiplies peak memory. One at a time keeps it bounded.
-          const results: any[] = []
-          for (const record of embeddable) {
-            try {
-              const { name, raw } = await decryptEvidenceRaw(record)
-              results.push({
-                meta: {
-                  id: record.id,
-                  incidentId: record.incidentId,
-                  kind: record.kind,
-                  name: name || "",
-                  mimeType: record.mimeType,
-                  size: record.size,
-                  sha256: record.sha256,
-                  createdAt: record.createdAt,
-                },
-                record,
-                data: raw,
-                mimeType: record.mimeType,
-              })
-            } catch (err) {
-              console.error(`Failed to decrypt evidence ${record.id}:`, err)
-            }
-          }
-          return results
-        },
-      )
+  const EXPORT_BATCH_SIZE = 15
 
+  async function getEvidenceForIncident(incident: (typeof incidents)[number]) {
+    const evidenceRecords = await getEvidenceRecords(incident.id)
+    // Only photo/screenshot evidence is ever embedded in the PDF
+    // (see renderIncidentBody). Skip decrypting video/voice/document
+    // bytes entirely -- with 100+ incidents, decrypting full video
+    // files that are never used was a major cause of out-of-memory
+    // crashes during bulk export.
+    const embeddable = evidenceRecords.filter(
+      (record) => record.kind === "photo" || record.kind === "screenshot",
+    )
+    // Sequential, not Promise.all: decrypting many images in parallel
+    // multiplies peak memory. One at a time keeps it bounded.
+    const results: any[] = []
+    for (const record of embeddable) {
+      try {
+        const { name, raw } = await decryptEvidenceRaw(record)
+        results.push({
+          meta: {
+            id: record.id,
+            incidentId: record.incidentId,
+            kind: record.kind,
+            name: name || "",
+            mimeType: record.mimeType,
+            size: record.size,
+            sha256: record.sha256,
+            createdAt: record.createdAt,
+          },
+          record,
+          data: raw,
+          mimeType: record.mimeType,
+        })
+      } catch (err) {
+        console.error(`Failed to decrypt evidence ${record.id}:`, err)
+      }
+    }
+    return results
+  }
+
+  async function writeAndShareBlob(blob: Blob, safeName: string) {
+    return new Promise<void>((resolve, reject) => {
       const reader = new FileReader()
       reader.onload = async () => {
         try {
           const base64 = (reader.result as string).split(",")[1]
-
           const { Filesystem, Directory } = await import("@capacitor/filesystem")
-          const safeName = `witness-protocol-export-${incidents.length}-incidents-${Date.now()}.pdf`
-
           await Filesystem.writeFile({
             path: safeName,
             data: base64,
             directory: Directory.Cache,
             recursive: true,
           })
-
           const { Share } = await import("@capacitor/share")
           const uriResult = await Filesystem.getUri({ path: safeName, directory: Directory.Cache })
           await Share.share({ url: uriResult.uri, title: safeName })
-          await logAudit("bulk_pdf_exported", `${incidents.length} incidents`)
+          resolve()
         } catch (err) {
-          alert(t("recordsPage.exportAllPdfFailed", { error: (err as Error).message }))
-        } finally {
-          setExportingAll(false)
+          reject(err)
         }
       }
-      reader.onerror = () => {
-        alert(t("recordsPage.exportAllPdfFailed", { error: "Could not read blob" }))
-        setExportingAll(false)
-      }
+      reader.onerror = () => reject(new Error("Could not read blob"))
       reader.readAsDataURL(blob)
+    })
+  }
+
+  async function handleExportAllPdf() {
+    setExportingAll(true)
+    // Split into batches so each jsPDF document (and its embedded images)
+    // is generated, written, shared, and discarded before the next batch
+    // starts. A single 100+ incident PDF held everything in memory at
+    // once and crashed the app; this bounds peak memory to one batch.
+    const batches: (typeof incidents)[] = []
+    for (let i = 0; i < incidents.length; i += EXPORT_BATCH_SIZE) {
+      batches.push(incidents.slice(i, i + EXPORT_BATCH_SIZE))
+    }
+    const totalBatches = batches.length
+    const exportRunId = Date.now()
+
+    try {
+      for (let i = 0; i < batches.length; i++) {
+        setExportBatchProgress({ current: i + 1, total: totalBatches })
+        const batch = batches[i]
+        const blob = await generateBulkIncidentsPdf(
+          batch,
+          profile,
+          getEvidenceForIncident,
+        )
+        const safeName =
+          totalBatches > 1
+            ? `witness-protocol-export-${exportRunId}-part${i + 1}-of-${totalBatches}.pdf`
+            : `witness-protocol-export-${incidents.length}-incidents-${exportRunId}.pdf`
+        await writeAndShareBlob(blob, safeName)
+      }
+      await logAudit(
+        "bulk_pdf_exported",
+        `${incidents.length} incidents (${totalBatches} file${totalBatches === 1 ? "" : "s"})`,
+      )
     } catch (err) {
       alert(t("recordsPage.exportAllPdfFailed", { error: (err as Error).message }))
+    } finally {
       setExportingAll(false)
+      setExportBatchProgress(null)
     }
   }
 
@@ -180,7 +209,14 @@ export default function IncidentsPage() {
           onClick={handleExportAllPdf}
         >
           <FileDown className="size-4" aria-hidden="true" />
-          {exportingAll ? t("recordsPage.exportingAllPdf") : t("recordsPage.exportAllPdf")}
+          {exportingAll
+            ? exportBatchProgress
+              ? t("recordsPage.exportingAllPdfProgress", {
+                  current: exportBatchProgress.current,
+                  total: exportBatchProgress.total,
+                })
+              : t("recordsPage.exportingAllPdf")
+            : t("recordsPage.exportAllPdf")}
         </Button>
       ) : null}
 

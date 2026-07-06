@@ -71,6 +71,7 @@ export const recordsPageEs = {
     "Ningún registro coincide con los filtros actuales.",
   exportAllPdf: "Exportar todo como PDF",
   exportingAllPdf: "Exportando incidentes…",
+  exportingAllPdfProgress: "Exportando lote {current} de {total}…",
   exportAllPdfFailed: "Error al exportar el PDF: {error}",
 }
 
