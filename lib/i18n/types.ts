@@ -185,6 +185,9 @@ export interface RecordsPageDict {
   clearFilters: string
   noIncidentsYet: string
   noRecordsMatchFilters: string
+  exportAllPdf: string
+  exportingAllPdf: string
+  exportAllPdfFailed: string
 }
 
 export interface MiscUiDict {

@@ -1,10 +1,11 @@
 "use client"
 
-import { Search, SlidersHorizontal, X } from "lucide-react"
+import { FileDown, Search, SlidersHorizontal, X } from "lucide-react"
 import * as React from "react"
 import { useRouter } from "next/navigation"
 
 import { IncidentCard } from "@/components/incident-card"
+import { Button } from "@/components/ui/button"
 import {
   Card,
   Input,
@@ -15,6 +16,7 @@ import {
 import { useVault } from "@/components/vault-provider"
 import { useI18n } from "@/components/i18n-provider"
 import { CATEGORIES, categoryDescription, categoryName } from "@/lib/categories"
+import { generateBulkIncidentsPdf } from "@/lib/pdf-export"
 import type { IncidentFilters } from "@/lib/types"
 
 const EMPTY_FILTERS: IncidentFilters = {
@@ -28,10 +30,17 @@ const EMPTY_FILTERS: IncidentFilters = {
 
 export default function IncidentsPage() {
   const router = useRouter()
-  const { incidents } = useVault()
+  const {
+    incidents,
+    getEvidenceRecords,
+    decryptEvidenceRaw,
+    profile,
+    logAudit,
+  } = useVault()
   const { t } = useI18n()
   const [filters, setFilters] = React.useState<IncidentFilters>(EMPTY_FILTERS)
   const [showFilters, setShowFilters] = React.useState(false)
+  const [exportingAll, setExportingAll] = React.useState(false)
 
   function update<K extends keyof IncidentFilters>(
     key: K,
@@ -71,6 +80,79 @@ export default function IncidentsPage() {
     (filters.hasLocation ? 1 : 0) +
     (filters.sealed !== "all" ? 1 : 0)
 
+  async function handleExportAllPdf() {
+    setExportingAll(true)
+    try {
+      const blob = await generateBulkIncidentsPdf(
+        incidents,
+        profile,
+        async (incident) => {
+          const evidenceRecords = await getEvidenceRecords(incident.id)
+          const results = await Promise.all(
+            evidenceRecords.map(async (record) => {
+              try {
+                const { name, raw } = await decryptEvidenceRaw(record)
+                return {
+                  meta: {
+                    id: record.id,
+                    incidentId: record.incidentId,
+                    kind: record.kind,
+                    name: name || "",
+                    mimeType: record.mimeType,
+                    size: record.size,
+                    sha256: record.sha256,
+                    createdAt: record.createdAt,
+                  },
+                  record,
+                  data: raw,
+                  mimeType: record.mimeType,
+                }
+              } catch (err) {
+                console.error(`Failed to decrypt evidence ${record.id}:`, err)
+                return null
+              }
+            }),
+          )
+          return results.filter((r) => r !== null) as any
+        },
+      )
+
+      const reader = new FileReader()
+      reader.onload = async () => {
+        try {
+          const base64 = (reader.result as string).split(",")[1]
+
+          const { Filesystem, Directory } = await import("@capacitor/filesystem")
+          const safeName = `witness-protocol-export-${incidents.length}-incidents-${Date.now()}.pdf`
+
+          await Filesystem.writeFile({
+            path: safeName,
+            data: base64,
+            directory: Directory.Cache,
+            recursive: true,
+          })
+
+          const { Share } = await import("@capacitor/share")
+          const uriResult = await Filesystem.getUri({ path: safeName, directory: Directory.Cache })
+          await Share.share({ url: uriResult.uri, title: safeName })
+          await logAudit("bulk_pdf_exported", `${incidents.length} incidents`)
+        } catch (err) {
+          alert(t("recordsPage.exportAllPdfFailed", { error: (err as Error).message }))
+        } finally {
+          setExportingAll(false)
+        }
+      }
+      reader.onerror = () => {
+        alert(t("recordsPage.exportAllPdfFailed", { error: "Could not read blob" }))
+        setExportingAll(false)
+      }
+      reader.readAsDataURL(blob)
+    } catch (err) {
+      alert(t("recordsPage.exportAllPdfFailed", { error: (err as Error).message }))
+      setExportingAll(false)
+    }
+  }
+
   return (
     <div className="space-y-5">
       <SectionTitle
@@ -79,6 +161,20 @@ export default function IncidentsPage() {
           incidents.length === 1 ? "incident" : "incidents"
         } on this device.`}
       />
+
+      {incidents.length > 0 ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full"
+          disabled={exportingAll}
+          onClick={handleExportAllPdf}
+        >
+          <FileDown className="size-4" aria-hidden="true" />
+          {exportingAll ? t("recordsPage.exportingAllPdf") : t("recordsPage.exportAllPdf")}
+        </Button>
+      ) : null}
 
       <div className="flex items-center gap-2">
         <div className="relative flex-1">

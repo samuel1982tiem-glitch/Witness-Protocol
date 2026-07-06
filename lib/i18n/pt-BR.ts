@@ -37,6 +37,9 @@ export const recordsPagePtBR = {
   onlyGpsRecords: "Apenas registros com localização GPS", clearFilters: "Limpar filtros",
   noIncidentsYet: "Nenhum incidente registrado ainda.",
   noRecordsMatchFilters: "Nenhum registro corresponde aos filtros atuais.",
+  exportAllPdf: "Exportar tudo como PDF",
+  exportingAllPdf: "Exportando incidentes…",
+  exportAllPdfFailed: "Falha ao exportar o PDF: {error}",
 }
 
 export const miscUiPtBR = {

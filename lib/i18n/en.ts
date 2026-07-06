@@ -40,6 +40,9 @@ export const recordsPageEn = {
   onlyGpsRecords: "Only records with GPS location", clearFilters: "Clear filters",
   noIncidentsYet: "No incidents recorded yet.",
   noRecordsMatchFilters: "No records match the current filters.",
+  exportAllPdf: "Export all as PDF",
+  exportingAllPdf: "Exporting incidents…",
+  exportAllPdfFailed: "PDF export failed: {error}",
 }
 
 export const miscUiEn = {

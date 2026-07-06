@@ -69,6 +69,9 @@ export const recordsPageEs = {
   noIncidentsYet: "Aún no hay incidentes registrados.",
   noRecordsMatchFilters:
     "Ningún registro coincide con los filtros actuales.",
+  exportAllPdf: "Exportar todo como PDF",
+  exportingAllPdf: "Exportando incidentes…",
+  exportAllPdfFailed: "Error al exportar el PDF: {error}",
 }
 
 export const miscUiEs = {

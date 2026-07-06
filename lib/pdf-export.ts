@@ -81,22 +81,26 @@ async function getImageDimensions(
   })
 }
 
+interface PdfLayout {
+  doc: jsPDF
+  pageWidth: number
+  pageHeight: number
+  margin: number
+  usableHeight: number
+  y: number
+  line: (height?: number) => void
+  checkPageBreak: (needed?: number) => void
+  heading: (text: string, size?: number) => void
+  body: (text: string, size?: number) => void
+  labelValue: (label: string, value: string) => void
+  resetY: () => void
+}
+
 /**
- * Generates a single-incident PDF report with:
- * - Investigator identity header (if filled out)
- * - Incident details, GPS, category
- * - Full evidence list with images embedded (properly scaled, centered, and not cut off)
- * - Evidence hashes and metadata
- * - Seal info if sealed
- *
- * Returns the PDF as a Blob for saving or sharing.
+ * Creates the shared layout/drawing helpers used by both the single-incident
+ * and bulk exports, so both stay pixel-identical for the parts they share.
  */
-export async function generateIncidentPdf(
-  incident: Incident,
-  profile: InvestigatorProfile | null,
-  evidenceWithData?: EvidenceWithData[],
-): Promise<Blob> {
-  const doc = new jsPDF({ unit: "pt", format: "a4" })
+function createPdfLayout(doc: jsPDF): PdfLayout {
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
   const margin = 48
@@ -144,66 +148,106 @@ export async function generateIncidentPdf(
     line(15)
   }
 
-  // --- Investigator identity header (only if any field is filled) ---
-  if (hasProfileContent(profile)) {
-    heading("Investigator Identity", 11)
-    if (profile?.name?.trim()) labelValue("Name:", profile.name.trim())
-    if (profile?.governmentId?.trim())
-      labelValue("Government ID:", profile.governmentId.trim())
-    if (profile?.organization?.trim())
-      labelValue("Organization:", profile.organization.trim())
-    if (profile?.phone?.trim()) labelValue("Phone:", profile.phone.trim())
-    if (profile?.email?.trim()) labelValue("Email:", profile.email.trim())
-    line(10)
-    doc.setDrawColor(200)
-    doc.line(margin, y, pageWidth - margin, y)
-    line(20)
+  function resetY() {
+    y = margin
   }
 
-  // --- Incident header ---
-  heading(incident.title || "Untitled incident", 16)
+  return {
+    doc,
+    pageWidth,
+    pageHeight,
+    margin,
+    usableHeight,
+    get y() {
+      return y
+    },
+    set y(value: number) {
+      y = value
+    },
+    line,
+    checkPageBreak,
+    heading,
+    body,
+    labelValue,
+    resetY,
+  }
+}
 
-  labelValue("Category:", CATEGORY_MAP[incident.category]?.name ?? "Unknown")
-  labelValue("Occurred:", formatDateTime(incident.occurredAt))
-  labelValue("Logged:", formatDateTime(incident.createdAt))
-  labelValue("Status:", incident.sealed ? "Sealed" : "Unsealed")
+function renderInvestigatorHeader(
+  layout: PdfLayout,
+  profile: InvestigatorProfile | null,
+) {
+  if (!hasProfileContent(profile)) return
+  const { doc, margin, pageWidth } = layout
+
+  layout.heading("Investigator Identity", 11)
+  if (profile?.name?.trim()) layout.labelValue("Name:", profile.name.trim())
+  if (profile?.governmentId?.trim())
+    layout.labelValue("Government ID:", profile.governmentId.trim())
+  if (profile?.organization?.trim())
+    layout.labelValue("Organization:", profile.organization.trim())
+  if (profile?.phone?.trim()) layout.labelValue("Phone:", profile.phone.trim())
+  if (profile?.email?.trim()) layout.labelValue("Email:", profile.email.trim())
+  layout.line(10)
+  doc.setDrawColor(200)
+  doc.line(margin, layout.y, pageWidth - margin, layout.y)
+  layout.line(20)
+}
+
+/**
+ * Renders one incident's content (header, description, evidence w/ embedded
+ * images, seal info) onto the current page of an already-created layout.
+ * Shared by both the single-incident and bulk exporters.
+ */
+async function renderIncidentBody(
+  layout: PdfLayout,
+  incident: Incident,
+  evidenceWithData?: EvidenceWithData[],
+) {
+  const { doc, margin, pageWidth, usableHeight } = layout
+
+  // --- Incident header ---
+  layout.heading(incident.title || "Untitled incident", 16)
+
+  layout.labelValue("Category:", CATEGORY_MAP[incident.category]?.name ?? "Unknown")
+  layout.labelValue("Occurred:", formatDateTime(incident.occurredAt))
+  layout.labelValue("Logged:", formatDateTime(incident.createdAt))
+  layout.labelValue("Status:", incident.sealed ? "Sealed" : "Unsealed")
   if (incident.location) {
-    labelValue(
+    layout.labelValue(
       "GPS:",
       formatCoords(incident.location.latitude, incident.location.longitude),
     )
   }
-  line(10)
+  layout.line(10)
 
   // --- Description ---
-  heading("Description", 12)
-  body(incident.description?.trim() || "No description provided.")
-  line(10)
+  layout.heading("Description", 12)
+  layout.body(incident.description?.trim() || "No description provided.")
+  layout.line(10)
 
   // --- Evidence with images ---
-  heading(`Evidence (${incident.evidence.length})`, 12)
+  layout.heading(`Evidence (${incident.evidence.length})`, 12)
   if (incident.evidence.length === 0) {
-    body("No attachments on this record.")
+    layout.body("No attachments on this record.")
   } else {
     for (const ev of incident.evidence) {
-      // Evidence header with metadata
-      checkPageBreak(40)
+      layout.checkPageBreak(40)
       doc.setFont("helvetica", "bold")
       doc.setFontSize(9.5)
-      doc.text(`• ${ev.kind}`, margin, y)
-      line(13)
+      doc.text(`• ${ev.kind}`, margin, layout.y)
+      layout.line(13)
       doc.setFont("helvetica", "normal")
       doc.setFontSize(8.5)
       doc.setTextColor(90)
       doc.text(
         `SHA-256: ${shortHash(ev.sha256, 16)}  ·  ${ev.mimeType}  ·  ${new Date(ev.createdAt).toLocaleString()}`,
         margin + 12,
-        y,
+        layout.y,
       )
       doc.setTextColor(0)
-      line(16)
+      layout.line(16)
 
-      // Embed image if available and is an image type
       const evidenceData = evidenceWithData?.find((e) => e.meta.id === ev.id)
       if (
         evidenceData &&
@@ -212,11 +256,8 @@ export async function generateIncidentPdf(
       ) {
         try {
           const dataUrl = bytesToDataUrl(evidenceData.data, ev.mimeType)
-
-          // Get actual image dimensions
           const imgDims = await getImageDimensions(dataUrl)
 
-          // Calculate scaled dimensions (max 280pt wide, 150pt tall to fit on page)
           const maxImgWidth = pageWidth - margin * 2
           const maxImgHeight = 150
           const { width: scaledWidth, height: scaledHeight } = calculateImageDimensions(
@@ -226,61 +267,60 @@ export async function generateIncidentPdf(
             maxImgHeight,
           )
 
-          // Check if image will fit on current page; if not, move to next page
-          if (y + scaledHeight > usableHeight - 20) {
+          if (layout.y + scaledHeight > usableHeight - 20) {
             doc.addPage()
-            y = margin
+            layout.resetY()
           }
 
-          // Center the image horizontally
           const imgX = margin + (pageWidth - margin * 2 - scaledWidth) / 2
 
           doc.addImage(
             dataUrl,
             "JPEG",
             imgX,
-            y,
+            layout.y,
             scaledWidth,
             scaledHeight,
             undefined,
             "NONE",
           )
-          line(scaledHeight + 10)
+          layout.line(scaledHeight + 10)
         } catch (err) {
           console.error(`Failed to embed image for evidence ${ev.id}:`, err)
           doc.setFontSize(8)
           doc.setTextColor(200)
-          doc.text("[Image could not be embedded]", margin, y)
+          doc.text("[Image could not be embedded]", margin, layout.y)
           doc.setTextColor(0)
-          line(15)
+          layout.line(15)
         }
       } else if (ev.kind === "document") {
         doc.setFontSize(8)
         doc.setTextColor(150)
-        doc.text("[Document - see separate file export]", margin, y)
+        doc.text("[Document - see separate file export]", margin, layout.y)
         doc.setTextColor(0)
-        line(15)
+        layout.line(15)
       } else if (ev.kind === "voice") {
         doc.setFontSize(8)
         doc.setTextColor(150)
-        doc.text("[Voice recording - see separate file export]", margin, y)
+        doc.text("[Voice recording - see separate file export]", margin, layout.y)
         doc.setTextColor(0)
-        line(15)
+        layout.line(15)
       }
 
-      line(5)
+      layout.line(5)
     }
   }
-  line(10)
+  layout.line(10)
 
   // --- Seal info ---
   if (incident.sealed && incident.seal) {
-    heading("Evidence Seal", 12)
-    labelValue("Sealed at:", formatDateTime(incident.seal.sealedAt))
-    body(`SHA-256 (canonical hash): ${incident.seal.hash}`, 8.5)
+    layout.heading("Evidence Seal", 12)
+    layout.labelValue("Sealed at:", formatDateTime(incident.seal.sealedAt))
+    layout.body(`SHA-256 (canonical hash): ${incident.seal.hash}`, 8.5)
   }
+}
 
-  // --- Footer with generation timestamp ---
+function addFooter(doc: jsPDF, layout: PdfLayout) {
   const pageCount = doc.internal.pages.length - 1
   for (let p = 1; p <= pageCount; p++) {
     doc.setPage(p)
@@ -288,11 +328,65 @@ export async function generateIncidentPdf(
     doc.setTextColor(150)
     doc.text(
       `Generated by Witness Protocol · ${new Date().toLocaleString()} · Page ${p} of ${pageCount}`,
-      margin,
-      pageHeight - 20,
+      layout.margin,
+      layout.pageHeight - 20,
     )
     doc.setTextColor(0)
   }
+}
+
+/**
+ * Generates a single-incident PDF report with:
+ * - Investigator identity header (if filled out)
+ * - Incident details, GPS, category
+ * - Full evidence list with images embedded (properly scaled, centered, and not cut off)
+ * - Evidence hashes and metadata
+ * - Seal info if sealed
+ *
+ * Returns the PDF as a Blob for saving or sharing.
+ */
+export async function generateIncidentPdf(
+  incident: Incident,
+  profile: InvestigatorProfile | null,
+  evidenceWithData?: EvidenceWithData[],
+): Promise<Blob> {
+  const doc = new jsPDF({ unit: "pt", format: "a4" })
+  const layout = createPdfLayout(doc)
+
+  renderInvestigatorHeader(layout, profile)
+  await renderIncidentBody(layout, incident, evidenceWithData)
+  addFooter(doc, layout)
+
+  return doc.output("blob")
+}
+
+/**
+ * Generates a single PDF containing every incident passed in, one per page,
+ * with one shared investigator identity header and a combined page-numbered
+ * footer across the whole document. Evidence for each incident is fetched
+ * lazily via `getEvidenceForIncident` and processed one incident at a time
+ * (not all up front) to keep peak memory bounded on large exports.
+ */
+export async function generateBulkIncidentsPdf(
+  incidents: Incident[],
+  profile: InvestigatorProfile | null,
+  getEvidenceForIncident: (incident: Incident) => Promise<EvidenceWithData[]>,
+): Promise<Blob> {
+  const doc = new jsPDF({ unit: "pt", format: "a4" })
+  const layout = createPdfLayout(doc)
+
+  renderInvestigatorHeader(layout, profile)
+  layout.heading(`Incident Report — ${incidents.length} record(s)`, 14)
+  layout.body(`Generated ${new Date().toLocaleString()}`)
+
+  for (const incident of incidents) {
+    doc.addPage()
+    layout.resetY()
+    const evidenceWithData = await getEvidenceForIncident(incident)
+    await renderIncidentBody(layout, incident, evidenceWithData)
+  }
+
+  addFooter(doc, layout)
 
   return doc.output("blob")
 }
