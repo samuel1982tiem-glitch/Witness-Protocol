@@ -129,6 +129,12 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
 React.useEffect(() => {
   let active = true
 
+  try {
+    const bootCount = Number(sessionStorage.getItem("wp_boot_count") ?? "0") + 1
+    sessionStorage.setItem("wp_boot_count", String(bootCount))
+    sessionStorage.setItem("wp_last_boot_at", String(Date.now()))
+  } catch {}
+
   ;(async () => {
     console.log("[VAULT] init start")
 
