@@ -220,42 +220,42 @@ export function IncidentForm() {
       // Rapid confirm-tapping after capture was outrunning the encode of
       // the full-resolution image; this keeps the working set small and
       // finishes fast enough that there's no window to interrupt.
-      const originalBlob = await new Promise<Blob>((resolve, reject) => {
-        const img = new Image()
-        const objectUrl = URL.createObjectURL(rawBlob)
-        img.onload = () => {
-          const maxDim = 1600
-          let { width, height } = img
-          if (width > maxDim || height > maxDim) {
-            const scale = maxDim / Math.max(width, height)
-            width = Math.round(width * scale)
-            height = Math.round(height * scale)
-          }
+      const originalBlob = await (async () => {
+        const maxDim = 1600
+        try {
+          // createImageBitmap decodes directly at target size when a
+          // resize option is given — much lower peak memory than
+          // decoding full-resolution into an <img> then a <canvas>.
+          if (typeof createImageBitmap !== "function") return rawBlob
+          const probe = await createImageBitmap(rawBlob)
+          const scale = Math.min(1, maxDim / Math.max(probe.width, probe.height))
+          const width = Math.round(probe.width * scale)
+          const height = Math.round(probe.height * scale)
+          probe.close?.()
+
+          const bitmap = await createImageBitmap(rawBlob, {
+            resizeWidth: width,
+            resizeHeight: height,
+            resizeQuality: "medium",
+          })
           const canvas = document.createElement("canvas")
           canvas.width = width
           canvas.height = height
           const ctx = canvas.getContext("2d")
           if (!ctx) {
-            URL.revokeObjectURL(objectUrl)
-            resolve(rawBlob)
-            return
+            bitmap.close?.()
+            return rawBlob
           }
-          ctx.drawImage(img, 0, 0, width, height)
-          canvas.toBlob(
-            (b) => {
-              URL.revokeObjectURL(objectUrl)
-              resolve(b || rawBlob)
-            },
-            "image/jpeg",
-            0.75,
+          ctx.drawImage(bitmap, 0, 0)
+          bitmap.close?.()
+          const blob: Blob | null = await new Promise((res) =>
+            canvas.toBlob(res, "image/jpeg", 0.75),
           )
+          return blob || rawBlob
+        } catch {
+          return rawBlob
         }
-        img.onerror = () => {
-          URL.revokeObjectURL(objectUrl)
-          resolve(rawBlob)
-        }
-        img.src = objectUrl
-      })
+      })()
 
       const ext =
         photo.format === "jpeg" || photo.format === "jpg"
