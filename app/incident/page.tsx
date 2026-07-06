@@ -468,10 +468,10 @@ const incidentId = searchParams.get("id")
           <CardBody className="space-y-1">
             <div className="flex items-center gap-2 text-sm font-medium text-emerald-800">
               <ShieldCheck className="size-4" aria-hidden="true" />
-              Evidence seal
+              {t("incidentRecord.evidenceSeal")}
             </div>
             <p className="text-xs text-emerald-700/90">
-              Sealed {formatDateTime(incident.seal.sealedAt)}
+              {t("incidentRecord.sealedAt", { time: formatDateTime(incident.seal.sealedAt) })}
             </p>
             <p className="break-all font-mono text-xs text-emerald-700/90">
               SHA-256 {shortHash(incident.seal.hash, 16)}
