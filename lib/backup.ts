@@ -28,6 +28,7 @@ import {
   type VaultRecord,
   type IncidentRecord,
   type EvidenceRecord,
+  type SealRecord,
 } from "./db"
 
 // ---------------------------------------------------------------------------
@@ -437,6 +438,7 @@ interface ParsedBackup {
   sourceKey: CryptoKey
   incidents: IncidentRecord[]
   evidence: EvidenceRecord[]
+  seals: SealRecord[]
 }
 
 async function parseVaultBackupV3(
@@ -470,6 +472,7 @@ async function parseVaultBackupV3(
     sourceKey,
     incidents: revived.incidents as unknown as IncidentRecord[],
     evidence: revived.evidence as unknown as EvidenceRecord[],
+    seals: (revived.seals ?? []) as unknown as SealRecord[],
   }
 }
 
@@ -559,6 +562,7 @@ async function parseVaultBackupV4(
     sourceKey,
     incidents: (meta.incidents ?? []) as unknown as IncidentRecord[],
     evidence: evidenceRecords,
+    seals: (meta.seals ?? []) as unknown as SealRecord[],
   }
 }
 
@@ -609,8 +613,8 @@ export async function mergeVaultBackup(
     currentKey,
     parsed.incidents,
     parsed.evidence,
+    parsed.seals,
     onProgress,
-
   )
 }
 // ---------------------------------------------------------------------------

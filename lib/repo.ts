@@ -633,8 +633,10 @@ export async function mergeIncidentRecords(
   currentKey: CryptoKey,
   sourceIncidents: IncidentRecord[],
   sourceEvidence: EvidenceRecord[],
+  sourceSeals: SealRecord[] = [],
   onProgress?: (progress: MergeProgress) => void,
 ): Promise<MergeResult> {
+  const sealBySourceIncidentId = new Map(sourceSeals.map((s) => [s.incidentId, s]))
   const result: MergeResult = {
     added: 0,
     duplicates: 0,
@@ -707,9 +709,21 @@ export async function mergeIncidentRecords(
       {
         id: targetId,
         createdAt: sourceRecord.createdAt,
-        sealed: false,
+        sealed: sourceRecord.sealed,
       },
     )
+
+    if (sourceRecord.sealed) {
+      const sourceSeal = sealBySourceIncidentId.get(sourceRecord.id)
+      if (sourceSeal) {
+        await putRecord<SealRecord>(STORES.evidenceSeals, {
+          id: genId("seal"),
+          incidentId: newId,
+          hash: sourceSeal.hash,
+          sealedAt: sourceSeal.sealedAt,
+        })
+      }
+    }
 
     for (const evRecord of sourceEvidenceForThis) {
       let rawBytes: ArrayBuffer
