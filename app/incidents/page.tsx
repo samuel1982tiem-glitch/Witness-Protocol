@@ -88,32 +88,40 @@ export default function IncidentsPage() {
         profile,
         async (incident) => {
           const evidenceRecords = await getEvidenceRecords(incident.id)
-          const results = await Promise.all(
-            evidenceRecords.map(async (record) => {
-              try {
-                const { name, raw } = await decryptEvidenceRaw(record)
-                return {
-                  meta: {
-                    id: record.id,
-                    incidentId: record.incidentId,
-                    kind: record.kind,
-                    name: name || "",
-                    mimeType: record.mimeType,
-                    size: record.size,
-                    sha256: record.sha256,
-                    createdAt: record.createdAt,
-                  },
-                  record,
-                  data: raw,
-                  mimeType: record.mimeType,
-                }
-              } catch (err) {
-                console.error(`Failed to decrypt evidence ${record.id}:`, err)
-                return null
-              }
-            }),
+          // Only photo/screenshot evidence is ever embedded in the PDF
+          // (see renderIncidentBody). Skip decrypting video/voice/document
+          // bytes entirely -- with 100+ incidents, decrypting full video
+          // files that are never used was the main cause of out-of-memory
+          // crashes during bulk export.
+          const embeddable = evidenceRecords.filter(
+            (record) => record.kind === "photo" || record.kind === "screenshot",
           )
-          return results.filter((r) => r !== null) as any
+          // Sequential, not Promise.all: decrypting many images in parallel
+          // multiplies peak memory. One at a time keeps it bounded.
+          const results: any[] = []
+          for (const record of embeddable) {
+            try {
+              const { name, raw } = await decryptEvidenceRaw(record)
+              results.push({
+                meta: {
+                  id: record.id,
+                  incidentId: record.incidentId,
+                  kind: record.kind,
+                  name: name || "",
+                  mimeType: record.mimeType,
+                  size: record.size,
+                  sha256: record.sha256,
+                  createdAt: record.createdAt,
+                },
+                record,
+                data: raw,
+                mimeType: record.mimeType,
+              })
+            } catch (err) {
+              console.error(`Failed to decrypt evidence ${record.id}:`, err)
+            }
+          }
+          return results
         },
       )
 

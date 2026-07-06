@@ -372,7 +372,7 @@ export async function generateBulkIncidentsPdf(
   profile: InvestigatorProfile | null,
   getEvidenceForIncident: (incident: Incident) => Promise<EvidenceWithData[]>,
 ): Promise<Blob> {
-  const doc = new jsPDF({ unit: "pt", format: "a4" })
+  const doc = new jsPDF({ unit: "pt", format: "a4", compress: true })
   const layout = createPdfLayout(doc)
 
   renderInvestigatorHeader(layout, profile)
@@ -382,8 +382,11 @@ export async function generateBulkIncidentsPdf(
   for (const incident of incidents) {
     doc.addPage()
     layout.resetY()
-    const evidenceWithData = await getEvidenceForIncident(incident)
+    let evidenceWithData = await getEvidenceForIncident(incident)
     await renderIncidentBody(layout, incident, evidenceWithData)
+    // Drop this incident's decrypted image bytes before moving to the
+    // next one so peak memory doesn't grow across a large export.
+    evidenceWithData = []
   }
 
   addFooter(doc, layout)
