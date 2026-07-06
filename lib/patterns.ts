@@ -49,10 +49,8 @@ function repeatedTimes(incidents: Incident[]): PatternAlert[] {
         type: "repeated-time",
         severity: list.length >= 5 ? "high" : "notable",
         title: `Recurring activity around ${timeBucketLabel(hour)}`,
-        observation: `${list.length} of your logged incidents occurred near the ${timeBucketLabel(
-          hour,
-        )} hour. This is a timing correlation only.`,
-        detail: t("patterns.alertText.detailHourWindow", { share }),
+        observation: `${list.length} incidents cluster near ${timeBucketLabel(hour)}.`,
+        detail: `${share}% of incidents fall in this hour window.`,
         relatedIncidentIds: list.map((i) => i.id),
         createdAt: Date.now(),
         data: {
@@ -87,9 +85,8 @@ function repeatedWeekdays(incidents: Incident[]): PatternAlert[] {
         type: "weekday-cluster",
         severity: list.length >= 5 ? "high" : "notable",
         title: "Weekday concentration",
-        observation:
-          "A larger share of incidents appears on the same day of the week. This is a scheduling correlation only.",
-        detail: t("patterns.alertText.detailSameWeekday", { share }),
+        observation: `${list.length} incidents cluster on the same weekday.`,
+        detail: `${share}% of incidents fall on the same weekday.`,
         relatedIncidentIds: list.map((i) => i.id),
         createdAt: Date.now(),
         data: {
@@ -130,9 +127,8 @@ function weekdayTimeClusters(incidents: Incident[]): PatternAlert[] {
         type: "weekday-time-cluster",
         severity: list.length >= 5 ? "high" : "notable",
         title: "Repeated weekday + time pattern",
-        observation:
-          "Several incidents are clustering on the same weekday and part of the day. This is a timing correlation only.",
-        detail: t("patterns.alertText.detailWeekdayTimeBlock", { count: list.length, share }),
+        observation: `${list.length} incidents cluster on the same weekday and time block.`,
+        detail: `${list.length} incidents (${share}% of the log) share this weekday/time block.`,
         relatedIncidentIds: list.map((i) => i.id),
         createdAt: Date.now(),
         data: {
@@ -175,12 +171,13 @@ function repeatedLocations(incidents: Incident[]): PatternAlert[] {
         type: "repeated-location",
         severity: list.length >= 4 ? "high" : "notable",
         title: "Repeated location",
-        observation: `${list.length} incidents share approximately the same coordinates (${key}). This is a spatial correlation only.`,
+        observation: `${list.length} incidents share approximately the same coordinates (${key}).`,
         detail: `Coordinates rounded to ~110m precision.`,
         relatedIncidentIds: list.map((i) => i.id),
         createdAt: Date.now(),
         data: {
           coordinates: key,
+          cell: key,
           count: list.length,
         },
       })
@@ -216,8 +213,8 @@ function frequencySpikes(incidents: Incident[]): PatternAlert[] {
         type: "frequency-spike",
         severity: "high",
         title: "Frequency spike",
-        observation: `On ${day}, you logged ${list.length} incidents — above your typical daily activity. This is a frequency observation only.`,
-        detail: t("patterns.alertText.detailDailyAverage", { mean: mean.toFixed(1), std: std.toFixed(1) }),
+        observation: `A daily spike was detected on ${day}.`,
+        detail: `Daily average is ${mean.toFixed(1)} (±${std.toFixed(1)}).`,
         relatedIncidentIds: list.map((i) => i.id),
         createdAt: Date.now(),
         data: {
@@ -250,18 +247,18 @@ function categoryClustering(incidents: Incident[]): PatternAlert[] {
         type: "category-cluster",
         severity: share >= 0.6 ? "high" : "notable",
         title: `Clustering in ${CATEGORY_MAP[category]?.name ?? "Unknown"}`,
-        observation: `${Math.round(
-          share * 100,
-        )}% of your incidents are categorized as ${CATEGORY_MAP[category]?.name ?? "Unknown"}. This is a categorical correlation only.`,
+        observation: `${Math.round(share * 100)}% of incidents fall in one category.`,
         detail: `${list.length} of ${incidents.length} total incidents.`,
         relatedIncidentIds: list.map((i) => i.id),
         createdAt: Date.now(),
         data: {
           category,
+          categoryLabel: CATEGORY_MAP[category]?.name ?? "Unknown",
           categoryName: CATEGORY_MAP[category]?.name ?? "Unknown",
           count: list.length,
           total: incidents.length,
           percentage: Math.round(share * 100),
+          share: Math.round(share * 100),
         },
       })
     }
@@ -311,8 +308,7 @@ function activityTrend(incidents: Incident[]): PatternAlert[] {
         type: "activity-trend",
         severity: "info",
         title: "Stable activity trend",
-        observation:
-          "Your logging frequency has remained roughly steady over the recorded period. This is a trend observation only.",
+        observation: "Logging frequency appears stable over the recorded period.",
         detail: `Change of ${perWeek.toFixed(2)} incidents/week.`,
         relatedIncidentIds: [],
         createdAt: Date.now(),
@@ -332,7 +328,7 @@ function activityTrend(incidents: Incident[]): PatternAlert[] {
       type: "activity-trend",
       severity: slope > 0 ? "notable" : "info",
       title: `Activity trend ${direction}`,
-      observation: `Your logging frequency appears to be ${direction} over time. This is a trend observation only.`,
+      observation: `Logging frequency appears ${direction} over time.`,
       detail: `Estimated change of ${Math.abs(perWeek).toFixed(
         1,
       )} incidents/week across ${Math.round(spanDays)} days.`,

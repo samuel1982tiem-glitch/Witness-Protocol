@@ -76,10 +76,13 @@ export interface PatternAlertData {
   block?: "earlyMorning" | "morning" | "afternoon" | "evening" | "night"
   category?: CategoryId
   categoryName?: string
+  categoryLabel?: string
   count?: number
   total?: number
   percentage?: number
+  share?: number
   coordinates?: string
+  cell?: string
   day?: string
   average?: number
   std?: number

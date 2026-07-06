@@ -147,7 +147,6 @@ function AlertItem({ alert }: { alert: PatternAlert }) {
     const block = String(data.block ?? "")
     switch (block) {
       case "earlyMorning":
-        return t("patterns.timeBlocks.dawn")
       case "dawn":
         return t("patterns.timeBlocks.dawn")
       case "morning":
@@ -164,31 +163,25 @@ function AlertItem({ alert }: { alert: PatternAlert }) {
   }, [data.block, t])
 
   const translatedWeekday = React.useMemo(() => {
-    const weekday = data.weekday ?? data.day
+    const weekday = data.weekday
     if (weekday === undefined || weekday === null) return ""
     return t(`patterns.weekdays.${String(weekday)}`)
-  }, [data.weekday, data.day, t])
+  }, [data.weekday, t])
 
   const translatedTitle = React.useMemo(() => {
     switch (alert.type) {
       case "repeated-time":
         return t("patterns.alertTitles.repeatedTime")
-
       case "weekday-cluster":
-        return t("patterns.alertTitles.repeatedTime")
-
+        return t("patterns.alertTitles.weekdayCluster")
       case "weekday-time-cluster":
-        return t("patterns.alertTitles.repeatedTime")
-
+        return t("patterns.alertTitles.weekdayTimeCluster")
       case "repeated-location":
         return t("patterns.alertTitles.repeatedLocation")
-
       case "frequency-spike":
         return t("patterns.alertTitles.frequencySpike")
-
       case "category-cluster":
         return t("patterns.alertTitles.categoryCluster")
-
       case "activity-trend": {
         const direction = String(data.direction ?? "")
         if (direction === "increasing") {
@@ -199,7 +192,6 @@ function AlertItem({ alert }: { alert: PatternAlert }) {
         }
         return t("patterns.alertTitles.activityTrendStable")
       }
-
       default:
         return alert.title
     }
@@ -214,29 +206,34 @@ function AlertItem({ alert }: { alert: PatternAlert }) {
         })
 
       case "weekday-cluster":
-        return `${Number(data.count ?? 0)} incident(s) were logged on ${translatedWeekday}.`
+        return t("patterns.alertText.weekdayCluster", {
+          count: Number(data.count ?? 0),
+          day: translatedWeekday,
+        })
 
       case "weekday-time-cluster":
-        return `${Number(data.count ?? 0)} incident(s) were logged on ${translatedWeekday} during ${translatedBlock}.`
+        return t("patterns.alertText.weekdayTimeCluster", {
+          count: Number(data.count ?? 0),
+          day: translatedWeekday,
+          block: translatedBlock,
+        })
 
       case "repeated-location":
         return t("patterns.alertText.repeatedLocation", {
           count: Number(data.count ?? 0),
-          cell:
-            String(data.cell ?? data.coordinates ?? ""),
+          cell: String(data.cell ?? data.coordinates ?? ""),
         })
 
       case "frequency-spike":
         return t("patterns.alertText.frequencySpike", {
-          day: translatedWeekday || String(data.day ?? ""),
+          day: String(data.day ?? ""),
           count: Number(data.count ?? 0),
         })
 
       case "category-cluster":
         return t("patterns.alertText.categoryCluster", {
           share: Number(data.share ?? data.percentage ?? 0),
-          category:
-            String(data.categoryLabel ?? data.category ?? ""),
+          category: String(data.categoryLabel ?? data.categoryName ?? data.category ?? ""),
         })
 
       case "activity-trend": {
@@ -254,6 +251,62 @@ function AlertItem({ alert }: { alert: PatternAlert }) {
         return alert.observation
     }
   }, [alert.type, alert.observation, data, translatedBlock, translatedWeekday, t])
+
+  const translatedDetail = React.useMemo(() => {
+    switch (alert.type) {
+      case "repeated-time":
+        return t("patterns.alertDetail.repeatedTime", {
+          share: Number(data.percentage ?? 0),
+        })
+
+      case "weekday-cluster":
+        return t("patterns.alertDetail.weekdayCluster", {
+          share: Number(data.percentage ?? 0),
+        })
+
+      case "weekday-time-cluster":
+        return t("patterns.alertDetail.weekdayTimeCluster", {
+          count: Number(data.count ?? 0),
+          share: Number(data.percentage ?? 0),
+        })
+
+      case "repeated-location":
+        return t("patterns.alertDetail.repeatedLocation")
+
+      case "frequency-spike":
+        return t("patterns.alertDetail.frequencySpike", {
+          average: String(data.average ?? "0"),
+          std: String(data.std ?? "0"),
+        })
+
+      case "category-cluster":
+        return t("patterns.alertDetail.categoryCluster", {
+          count: Number(data.count ?? 0),
+          total: Number(data.total ?? 0),
+        })
+
+      case "activity-trend": {
+        const direction = String(data.direction ?? "")
+        const payload = {
+          perWeek: String(data.perWeek ?? "0"),
+          spanDays: String(data.spanDays ?? "0"),
+        }
+
+        if (direction === "increasing") {
+          return t("patterns.alertDetail.activityTrendIncreasing", payload)
+        }
+        if (direction === "decreasing") {
+          return t("patterns.alertDetail.activityTrendDecreasing", payload)
+        }
+        return t("patterns.alertDetail.activityTrendStable", {
+          perWeek: String(data.perWeek ?? "0"),
+        })
+      }
+
+      default:
+        return alert.detail
+    }
+  }, [alert.type, alert.detail, data, t])
 
   const severityLabel =
     alert.severity === "high"
@@ -282,7 +335,9 @@ function AlertItem({ alert }: { alert: PatternAlert }) {
             {translatedObservation}
           </p>
 
-          <p className="text-xs font-medium text-foreground/70">{alert.detail}</p>
+          <p className="text-xs font-medium text-foreground/70">
+            {translatedDetail}
+          </p>
         </CardBody>
       </Card>
     </li>

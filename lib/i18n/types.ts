@@ -269,20 +269,24 @@ export interface PatternsDict {
     categoryCluster: string
     weekdayCluster: string
     weekdayTimeCluster: string
-    detailHourWindow: string
-    detailSameWeekday: string
-    detailWeekdayTimeBlock: string
-    detailDailyAverage: string
-    detailHourWindow: string
-    detailSameWeekday: string
-    detailWeekdayTimeBlock: string
-    detailDailyAverage: string
     activityTrendIncreasing: string
     activityTrendDecreasing: string
     activityTrendStable: string
   }
 
   alertText: {
+    repeatedTime: string
+    repeatedLocation: string
+    frequencySpike: string
+    categoryCluster: string
+    weekdayCluster: string
+    weekdayTimeCluster: string
+    activityTrendIncreasing: string
+    activityTrendDecreasing: string
+    activityTrendStable: string
+  }
+
+  alertDetail: {
     repeatedTime: string
     repeatedLocation: string
     frequencySpike: string
