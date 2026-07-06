@@ -180,25 +180,13 @@ function SetupForm() {
 }
 
 function UnlockForm() {
-  const { unlock, busy, error, lastLockReason } = useVault()
+  const { unlock, busy, error } = useVault()
   const { t } = useI18n()
 
   const length = 6
   const [passcode, setPasscode] = React.useState("")
   const [localError, setLocalError] = React.useState<string | null>(null)
   const [shake, setShake] = React.useState(false)
-
-  const [debugInfo, setDebugInfo] = React.useState<string | null>(null)
-  React.useEffect(() => {
-    try {
-      const bootCount = sessionStorage.getItem("wp_boot_count")
-      const lastBootAt = sessionStorage.getItem("wp_last_boot_at")
-      const lastDeleteAt = sessionStorage.getItem("wp_last_delete_at")
-      setDebugInfo(
-        `bootCount=${bootCount}\nlastBootAt=${lastBootAt ? new Date(Number(lastBootAt)).toISOString() : "null"}\nlastDeleteAt=${lastDeleteAt ? new Date(Number(lastDeleteAt)).toISOString() : "null"}`,
-      )
-    } catch {}
-  }, [])
 
   React.useEffect(() => {
     if (passcode.length === length) {
@@ -226,20 +214,6 @@ function UnlockForm() {
 
       {(localError || error) && (
         <p className="text-sm text-destructive">{localError ?? error}</p>
-      )}
-
-      {lastLockReason && (
-        <details className="mt-2 max-h-40 overflow-auto rounded-lg border border-border bg-muted/40 p-2 text-[10px] leading-tight text-muted-foreground">
-          <summary className="cursor-pointer text-xs font-medium">Debug: last lock reason</summary>
-          <pre className="whitespace-pre-wrap break-all">{lastLockReason}</pre>
-        </details>
-      )}
-
-      {debugInfo && (
-        <details open className="mt-2 max-h-40 overflow-auto rounded-lg border border-border bg-muted/40 p-2 text-[10px] leading-tight text-muted-foreground">
-          <summary className="cursor-pointer text-xs font-medium">Debug: session markers</summary>
-          <pre className="whitespace-pre-wrap break-all">{debugInfo}</pre>
-        </details>
       )}
 
       <DialPad

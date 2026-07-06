@@ -236,11 +236,8 @@ const incidentId = searchParams.get("id")
     setError(null)
     setWorking(true)
     try {
-      try {
-        sessionStorage.setItem("wp_last_delete_at", String(Date.now()))
-      } catch {}
       await removeIncident(incident!.id)
-      router.push("/incidents")
+      router.push("/incidents/")
     } catch (err) {
       setError((err as Error).message)
       setWorking(false)

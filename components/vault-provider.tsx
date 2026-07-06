@@ -64,7 +64,6 @@ interface VaultContextValue {
   autoLockMs: number
   error: string | null
   busy: boolean
-  lastLockReason: string | null
   setupVault: (passcode: string, autoLockMinutes?: number) => Promise<void>
   unlock: (passcode: string) => Promise<boolean>
   lock: () => void
@@ -119,7 +118,6 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
   const [autoLockMs, setAutoLockMs] = React.useState(DEFAULT_AUTOLOCK_MS)
   const [error, setError] = React.useState<string | null>(null)
   const [busy, setBusy] = React.useState(false)
-  const [lastLockReason, setLastLockReason] = React.useState<string | null>(null)
   const [profile, setProfile] = React.useState<any>(null)
 
   const keyRef = React.useRef<CryptoKey | null>(null)
@@ -128,12 +126,6 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
   // Determine whether a vault has been initialized on this device.
 React.useEffect(() => {
   let active = true
-
-  try {
-    const bootCount = Number(sessionStorage.getItem("wp_boot_count") ?? "0") + 1
-    sessionStorage.setItem("wp_boot_count", String(bootCount))
-    sessionStorage.setItem("wp_last_boot_at", String(Date.now()))
-  } catch {}
 
   ;(async () => {
     console.log("[VAULT] init start")
@@ -179,9 +171,6 @@ React.useEffect(() => {
   }, [])
 
   const lock = React.useCallback(() => {
-    const stack = new Error().stack ?? "(no stack available)"
-    console.log("[LOCK DIAG] lock() called. Stack:", stack)
-    setLastLockReason(stack)
     if (lockTimer.current) clearTimeout(lockTimer.current)
     clearMemory()
     setStatus((s) => (s === "uninitialized" ? s : "locked"))
@@ -566,7 +555,6 @@ const importBackup = React.useCallback(
     autoLockMs,
     error,
     busy,
-    lastLockReason,
     setupVault,
     unlock,
     lock,
