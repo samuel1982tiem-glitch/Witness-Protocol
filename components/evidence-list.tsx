@@ -87,6 +87,13 @@ export function EvidenceList({ incidentId }: { incidentId: string }) {
             <div className="flex items-center justify-center bg-muted p-6">
               <FileText className="size-10 text-muted-foreground" aria-hidden="true" />
             </div>
+          ) : record.kind === "video" ? (
+            <video
+              controls
+              src={url}
+              className="max-h-72 w-full bg-black"
+              preload="metadata"
+            />
           ) : (
             <img src={url || "/placeholder.svg"} alt={name || record.kind} className="max-h-72 w-full object-contain bg-muted" />
           )}
