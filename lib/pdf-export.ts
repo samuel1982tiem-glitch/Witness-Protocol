@@ -51,6 +51,73 @@ function bytesToDataUrl(data: Uint8Array, mimeType: string): string {
   return `data:${mimeType};base64,${base64}`
 }
 
+/**
+ * Downscales + recompresses a photo's raw bytes to a bounded size before
+ * it is ever embedded in a PDF, regardless of the original resolution.
+ * Evidence captured before the capture-time 1600px cap was added (see
+ * lib/media.ts stripImageMetadata) can still be full camera resolution
+ * (10-20MB+ decoded) -- embedding those directly during a large bulk
+ * export was crashing the app. Mirrors the resize-at-decode pattern used
+ * in components/incident-form.tsx: createImageBitmap with resizeWidth/
+ * resizeHeight decodes directly at target size, avoiding ever holding
+ * the full-resolution bitmap in memory.
+ */
+async function downscaleForPdf(
+  data: Uint8Array,
+  mimeType: string,
+): Promise<{ dataUrl: string; width: number; height: number } | null> {
+  const maxDim = 1200
+  try {
+    const blob = new Blob([data], { type: mimeType })
+    if (typeof createImageBitmap !== "function") {
+      // No downscaling available in this environment -- caller's catch
+      // block will show the "[Image could not be embedded]" placeholder
+      // rather than risk embedding an unbounded full-resolution image.
+      return null
+    }
+
+    const probe = await createImageBitmap(blob)
+    const scale = Math.min(1, maxDim / Math.max(probe.width, probe.height))
+    const width = Math.round(probe.width * scale)
+    const height = Math.round(probe.height * scale)
+    probe.close?.()
+
+    const bitmap = await createImageBitmap(blob, {
+      resizeWidth: width,
+      resizeHeight: height,
+      resizeQuality: "medium",
+    })
+
+    const canvas = document.createElement("canvas")
+    canvas.width = width
+    canvas.height = height
+    const ctx = canvas.getContext("2d")
+    if (!ctx) {
+      bitmap.close?.()
+      return null
+    }
+    ctx.drawImage(bitmap, 0, 0)
+    bitmap.close?.()
+
+    const outBlob: Blob | null = await new Promise((resolve) =>
+      canvas.toBlob((b) => resolve(b), "image/jpeg", 0.7),
+    )
+    if (!outBlob) return null
+
+    const dataUrl: string = await new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = () => reject(new Error("Could not read downscaled blob"))
+      reader.readAsDataURL(outBlob)
+    })
+
+    return { dataUrl, width, height }
+  } catch (err) {
+    console.error("Failed to downscale image for PDF:", err)
+    return null
+  }
+}
+
 function calculateImageDimensions(
   origWidth: number,
   origHeight: number,
@@ -274,14 +341,15 @@ async function renderIncidentBody(
 
       if (data) {
         try {
-          const dataUrl = bytesToDataUrl(data, mimeType)
-          const imgDims = await getImageDimensions(dataUrl)
+          const downscaled = await downscaleForPdf(data, mimeType)
+          if (!downscaled) throw new Error("downscale failed")
+          const { dataUrl, width, height } = downscaled
 
           const maxImgWidth = pageWidth - margin * 2
           const maxImgHeight = 150
           const { width: scaledWidth, height: scaledHeight } = calculateImageDimensions(
-            imgDims.width,
-            imgDims.height,
+            width,
+            height,
             maxImgWidth,
             maxImgHeight,
           )
