@@ -52,7 +52,7 @@ function repeatedTimes(incidents: Incident[]): PatternAlert[] {
         observation: `${list.length} of your logged incidents occurred near the ${timeBucketLabel(
           hour,
         )} hour. This is a timing correlation only.`,
-        detail: `${share}% of all incidents fall in this hour window.`,
+        detail: t("patterns.alertText.detailHourWindow", { share }),
         relatedIncidentIds: list.map((i) => i.id),
         createdAt: Date.now(),
         data: {
@@ -89,7 +89,7 @@ function repeatedWeekdays(incidents: Incident[]): PatternAlert[] {
         title: "Weekday concentration",
         observation:
           "A larger share of incidents appears on the same day of the week. This is a scheduling correlation only.",
-        detail: `${share}% of all incidents fall on the same weekday.`,
+        detail: t("patterns.alertText.detailSameWeekday", { share }),
         relatedIncidentIds: list.map((i) => i.id),
         createdAt: Date.now(),
         data: {
@@ -132,7 +132,7 @@ function weekdayTimeClusters(incidents: Incident[]): PatternAlert[] {
         title: "Repeated weekday + time pattern",
         observation:
           "Several incidents are clustering on the same weekday and part of the day. This is a timing correlation only.",
-        detail: `${list.length} incidents (${share}% of the log) share this weekday/time block.`,
+        detail: t("patterns.alertText.detailWeekdayTimeBlock", { count: list.length, share }),
         relatedIncidentIds: list.map((i) => i.id),
         createdAt: Date.now(),
         data: {
@@ -217,7 +217,7 @@ function frequencySpikes(incidents: Incident[]): PatternAlert[] {
         severity: "high",
         title: "Frequency spike",
         observation: `On ${day}, you logged ${list.length} incidents — above your typical daily activity. This is a frequency observation only.`,
-        detail: `Daily average is ${mean.toFixed(1)} (±${std.toFixed(1)}).`,
+        detail: t("patterns.alertText.detailDailyAverage", { mean: mean.toFixed(1), std: std.toFixed(1) }),
         relatedIncidentIds: list.map((i) => i.id),
         createdAt: Date.now(),
         data: {
