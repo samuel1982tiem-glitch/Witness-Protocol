@@ -150,11 +150,20 @@ export function IncidentForm() {
     }
   }, [category, title, description, occurredAt, location])
 
+  const attachmentsRef = React.useRef<PendingAttachment[]>(attachments)
+  React.useEffect(() => {
+    attachmentsRef.current = attachments
+  }, [attachments])
+
+  // Revoke remaining object URLs only on actual unmount. This used to run
+  // on every [attachments] change, which revoked every prior attachment's
+  // URL each time a new one was added (only the most recent capture's
+  // preview stayed valid).
   React.useEffect(() => {
     return () => {
-      attachments.forEach((a) => URL.revokeObjectURL(a.url))
+      attachmentsRef.current.forEach((a) => URL.revokeObjectURL(a.url))
     }
-  }, [attachments])
+  }, [])
 
   // Autofill GPS if permission already granted
   React.useEffect(() => {
