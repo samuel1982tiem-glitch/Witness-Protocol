@@ -247,52 +247,7 @@ export function IncidentForm() {
     }
   }
 
-                                      async function captureVideo() {
-    try {
-      // Use MediaCapture plugin for reliable video recording
-      const video = await MediaCapture.captureVideo({
-        duration: 30, // 30 seconds max
-        quality: 1    // High quality
-      });
-
-      if (!video || !video.files || video.files.length === 0) {
-        throw new Error("No video captured");
-      }
-
-      // Get the first video file
-      const videoFile = video.files[0];
-      
-      // Fetch the video file
-      const response = await fetch(videoFile.fullPath);
-      const blob = await response.blob();
-
-      const ext = 'mp4';
-      const mimeType = blob.type || 'video/mp4';
-      const finalBlob = blob.type ? blob : new Blob([blob], { type: mimeType });
-
-      setAttachments((prev) => [
-        ...prev,
-        buildAttachment("video", finalBlob, `video-${Date.now()}.${ext}`),
-      ]);
-
-      setError(null);
-
-    } catch (err) {
-      const message = (err as Error)?.message || "";
-      if (
-        /cancel/i.test(message) ||
-        /user/i.test(message) ||
-        /No video selected/i.test(message)
-      ) {
-        return;
-      }
-      // If video capture fails, offer the file picker as fallback
-      setError("Video capture failed. Please select a video from your device.");
-      videoFileInput.current?.click();
-    }
-  }
-
-  function addVoice(blob: Blob) {
+function addVoice(blob: Blob) {
     setAttachments((prev) => [
       ...prev,
       buildAttachment(

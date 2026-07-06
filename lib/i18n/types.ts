@@ -267,6 +267,8 @@ export interface PatternsDict {
     repeatedLocation: string
     frequencySpike: string
     categoryCluster: string
+    weekdayCluster: string
+    weekdayTimeCluster: string
     activityTrendIncreasing: string
     activityTrendDecreasing: string
     activityTrendStable: string
@@ -277,6 +279,8 @@ export interface PatternsDict {
     repeatedLocation: string
     frequencySpike: string
     categoryCluster: string
+    weekdayCluster: string
+    weekdayTimeCluster: string
     activityTrendIncreasing: string
     activityTrendDecreasing: string
     activityTrendStable: string

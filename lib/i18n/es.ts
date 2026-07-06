@@ -291,6 +291,10 @@ export const es: Dictionary = {
         "Los registros recientes sugieren una tendencia de descenso en la frecuencia de anotaciones.",
       activityTrendStable:
         "Los registros recientes sugieren una tendencia estable en la frecuencia de anotaciones.",
+      weekdayCluster:
+        "{count} registros fueron anotados el {day}.",
+      weekdayTimeCluster:
+        "{count} registros fueron anotados el {day} durante el bloque horario de {block}.",
     },
   },
 }
