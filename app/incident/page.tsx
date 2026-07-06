@@ -47,6 +47,7 @@ const incidentId = searchParams.get("id")
   const [error, setError] = React.useState<string | null>(null)
   const [editing, setEditing] = React.useState(false)
   const [geoStatus, setGeoStatus] = React.useState<string | null>(null)
+  const [exportingPdf, setExportingPdf] = React.useState(false)
 
   const incident = incidents.find((i) => i.id === incidentId)
 
@@ -143,8 +144,6 @@ const incidentId = searchParams.get("id")
       </div>
     )
   }
-
-  const [exportingPdf, setExportingPdf] = React.useState(false)
 
   async function handlePdfExport() {
     if (!incident) return
