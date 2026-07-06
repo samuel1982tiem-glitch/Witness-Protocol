@@ -180,7 +180,7 @@ function SetupForm() {
 }
 
 function UnlockForm() {
-  const { unlock, busy, error } = useVault()
+  const { unlock, busy, error, lastLockReason } = useVault()
   const { t } = useI18n()
 
   const length = 6
@@ -214,6 +214,13 @@ function UnlockForm() {
 
       {(localError || error) && (
         <p className="text-sm text-destructive">{localError ?? error}</p>
+      )}
+
+      {lastLockReason && (
+        <details className="mt-2 max-h-40 overflow-auto rounded-lg border border-border bg-muted/40 p-2 text-[10px] leading-tight text-muted-foreground">
+          <summary className="cursor-pointer text-xs font-medium">Debug: last lock reason</summary>
+          <pre className="whitespace-pre-wrap break-all">{lastLockReason}</pre>
+        </details>
       )}
 
       <DialPad

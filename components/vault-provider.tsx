@@ -64,6 +64,7 @@ interface VaultContextValue {
   autoLockMs: number
   error: string | null
   busy: boolean
+  lastLockReason: string | null
   setupVault: (passcode: string, autoLockMinutes?: number) => Promise<void>
   unlock: (passcode: string) => Promise<boolean>
   lock: () => void
@@ -118,6 +119,7 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
   const [autoLockMs, setAutoLockMs] = React.useState(DEFAULT_AUTOLOCK_MS)
   const [error, setError] = React.useState<string | null>(null)
   const [busy, setBusy] = React.useState(false)
+  const [lastLockReason, setLastLockReason] = React.useState<string | null>(null)
   const [profile, setProfile] = React.useState<any>(null)
 
   const keyRef = React.useRef<CryptoKey | null>(null)
@@ -171,7 +173,9 @@ React.useEffect(() => {
   }, [])
 
   const lock = React.useCallback(() => {
-    console.log("[LOCK DIAG] lock() called. Stack:", new Error().stack)
+    const stack = new Error().stack ?? "(no stack available)"
+    console.log("[LOCK DIAG] lock() called. Stack:", stack)
+    setLastLockReason(stack)
     if (lockTimer.current) clearTimeout(lockTimer.current)
     clearMemory()
     setStatus((s) => (s === "uninitialized" ? s : "locked"))
@@ -556,6 +560,7 @@ const importBackup = React.useCallback(
     autoLockMs,
     error,
     busy,
+    lastLockReason,
     setupVault,
     unlock,
     lock,
