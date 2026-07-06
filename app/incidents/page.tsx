@@ -124,12 +124,17 @@ export default function IncidentsPage() {
     return results
   }
 
-  async function writeAndShareBlob(blob: Blob, safeName: string) {
-    return new Promise<void>((resolve, reject) => {
+  // Writes a batch PDF to disk and returns its file:// URI, WITHOUT
+  // sharing it yet. Explicitly drops the base64 string reference before
+  // returning so it can't linger in memory across batches -- sharing
+  // once per batch (backgrounding the app repeatedly) was suspected of
+  // contributing to a crash while preparing a later batch.
+  async function writeBlobToDisk(blob: Blob, safeName: string): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
       const reader = new FileReader()
       reader.onload = async () => {
         try {
-          const base64 = (reader.result as string).split(",")[1]
+          let base64: string | null = (reader.result as string).split(",")[1]
           const { Filesystem, Directory } = await import("@capacitor/filesystem")
           await Filesystem.writeFile({
             path: safeName,
@@ -137,10 +142,9 @@ export default function IncidentsPage() {
             directory: Directory.Cache,
             recursive: true,
           })
-          const { Share } = await import("@capacitor/share")
+          base64 = null // drop the largest reference immediately after writing
           const uriResult = await Filesystem.getUri({ path: safeName, directory: Directory.Cache })
-          await Share.share({ url: uriResult.uri, title: safeName })
-          resolve()
+          resolve(uriResult.uri)
         } catch (err) {
           reject(err)
         }
@@ -163,11 +167,13 @@ export default function IncidentsPage() {
     const totalBatches = batches.length
     const exportRunId = Date.now()
 
+    const fileUris: string[] = []
+
     try {
       for (let i = 0; i < batches.length; i++) {
         setExportBatchProgress({ current: i + 1, total: totalBatches })
         const batch = batches[i]
-        const blob = await generateBulkIncidentsPdf(
+        let blob: Blob | null = await generateBulkIncidentsPdf(
           batch,
           profile,
           getEvidenceForIncident,
@@ -176,8 +182,22 @@ export default function IncidentsPage() {
           totalBatches > 1
             ? `witness-protocol-export-${exportRunId}-part${i + 1}-of-${totalBatches}.pdf`
             : `witness-protocol-export-${incidents.length}-incidents-${exportRunId}.pdf`
-        await writeAndShareBlob(blob, safeName)
+        const uri = await writeBlobToDisk(blob, safeName)
+        blob = null // release this batch's PDF bytes before starting the next batch
+        fileUris.push(uri)
       }
+
+      // Single share action for all batches, so the app only backgrounds
+      // once instead of once per batch.
+      const { Share } = await import("@capacitor/share")
+      await Share.share({
+        files: fileUris,
+        title:
+          totalBatches > 1
+            ? `${incidents.length} incidents (${totalBatches} files)`
+            : `${incidents.length} incidents`,
+      })
+
       await logAudit(
         "bulk_pdf_exported",
         `${incidents.length} incidents (${totalBatches} file${totalBatches === 1 ? "" : "s"})`,
