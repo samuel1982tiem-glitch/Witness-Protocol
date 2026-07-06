@@ -212,9 +212,9 @@ function UnlockForm() {
         <Dots length={length} filled={passcode.length} />
       </div>
 
-      {(localError || error) && (
-        <p className="text-sm text-destructive">{localError ?? error}</p>
-      )}
+      {/* Error text intentionally suppressed on unlock — the dot-row
+          shake animation (see animate-shake above) is the only feedback
+          for a wrong PIN, so we don't reveal anything via text. */}
 
       <DialPad
         onPress={(d) => {
