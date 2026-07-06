@@ -148,6 +148,11 @@ export interface IncidentRecordDict {
   saveChanges: string
   pdf: string
   exporting: string
+  decryptingAttachments: string
+  readyToSaveShare: string
+  downloadFailed: string
+  evidenceSeal: string
+  sealedAt: string
 }
 
 export interface IncidentFormExtraDict {

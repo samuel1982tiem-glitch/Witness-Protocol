@@ -22,6 +22,10 @@ export const incidentRecordEs = {
   decryptedInMemory: "Descifrado solo en memoria.",
   noAttachments: "No hay archivos adjuntos en este registro.",
   sealEvidence: "Sellar evidencia",
+  decryptingAttachments: "Descifrando archivos adjuntos…",
+  readyToSaveShare: "Listo para guardar/compartir:\n{name}",
+  downloadFailed: "Error al descargar: {error}\n\nSi esto persiste, permite el acceso al almacenamiento para esta aplicación en la Configuración de Android.",
+  evidenceSeal: "Sello de evidencia", sealedAt: "Sellado {time}",
   sealedCannotDelete:
     "Los registros sellados son permanentes y no se pueden eliminar.",
   confirmDelete: "Confirmar eliminación",

@@ -18,6 +18,10 @@ export const incidentRecordEn = {
   sealedCannotDelete: "Sealed records are permanent and cannot be deleted.",
   confirmDelete: "Confirm delete", cancel: "Cancel", deleteRecord: "Delete record",
   edit: "Edit", saveChanges: "Save changes", pdf: "PDF", exporting: "Exporting…",
+  decryptingAttachments: "Decrypting attachments…",
+  readyToSaveShare: "Ready to save/share:\n{name}",
+  downloadFailed: "Download failed: {error}\n\nIf this persists, allow storage permission for this app in Android Settings.",
+  evidenceSeal: "Evidence seal", sealedAt: "Sealed {time}",
 }
 
 export const incidentFormExtraEn = {

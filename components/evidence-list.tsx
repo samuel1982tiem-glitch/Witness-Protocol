@@ -5,6 +5,7 @@ import * as React from "react"
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/primitives"
+import { useI18n } from "@/components/i18n-provider"
 import { useVault } from "@/components/vault-provider"
 import type { EvidenceRecord } from "@/lib/db"
 import { shortHash } from "@/lib/format"
@@ -18,6 +19,7 @@ interface LoadedEvidence {
 
 export function EvidenceList({ incidentId }: { incidentId: string }) {
   const { getEvidenceRecords, loadEvidenceUrl, downloadEvidence } = useVault()
+  const { t } = useI18n()
   const [items, setItems] = React.useState<LoadedEvidence[]>([])
   const [loading, setLoading] = React.useState(true)
   const [downloadingId, setDownloadingId] = React.useState<string | null>(null)
@@ -53,19 +55,19 @@ export function EvidenceList({ incidentId }: { incidentId: string }) {
     setDownloadingId(record.id)
     try {
       const savedName = await downloadEvidence(record)
-      alert(`Ready to save/share:\n${savedName}`)
+      alert(t("incidentRecord.readyToSaveShare", { name: savedName }))
     } catch (err) {
-      alert(`Download failed: ${(err as Error).message}\n\nIf this persists, allow storage permission for this app in Android Settings.`)
+      alert(t("incidentRecord.downloadFailed", { error: (err as Error).message }))
     } finally {
       setDownloadingId(null)
     }
   }
 
   if (loading) {
-    return <Card className="p-4 text-sm text-muted-foreground">Decrypting attachments…</Card>
+    return <Card className="p-4 text-sm text-muted-foreground">{t("incidentRecord.decryptingAttachments")}</Card>
   }
   if (items.length === 0) {
-    return <Card className="p-4 text-sm text-muted-foreground">No attachments on this record.</Card>
+    return <Card className="p-4 text-sm text-muted-foreground">{t("incidentRecord.noAttachments")}</Card>
   }
 
   const documentCount = items.filter((i) => i.record.kind === "document").length
@@ -112,7 +114,7 @@ export function EvidenceList({ incidentId }: { incidentId: string }) {
             </div>
             <Button variant="outline" size="sm" onClick={() => handleDownload(record)} disabled={downloadingId === record.id}>
               <Download className="size-3.5" aria-hidden="true" />
-              {downloadingId === record.id ? "Saving…" : "Download"}
+              {downloadingId === record.id ? t("common.saving") : t("common.download")}
             </Button>
           </div>
         </Card>
