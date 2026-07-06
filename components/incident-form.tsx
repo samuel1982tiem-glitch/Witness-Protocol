@@ -214,7 +214,48 @@ export function IncidentForm() {
       if (!photo.webPath) return
 
       const response = await fetch(photo.webPath)
-      const originalBlob = await response.blob()
+      const rawBlob = await response.blob()
+
+      // Downscale + compress before it becomes a full-size in-memory blob.
+      // Rapid confirm-tapping after capture was outrunning the encode of
+      // the full-resolution image; this keeps the working set small and
+      // finishes fast enough that there's no window to interrupt.
+      const originalBlob = await new Promise<Blob>((resolve, reject) => {
+        const img = new Image()
+        const objectUrl = URL.createObjectURL(rawBlob)
+        img.onload = () => {
+          const maxDim = 1600
+          let { width, height } = img
+          if (width > maxDim || height > maxDim) {
+            const scale = maxDim / Math.max(width, height)
+            width = Math.round(width * scale)
+            height = Math.round(height * scale)
+          }
+          const canvas = document.createElement("canvas")
+          canvas.width = width
+          canvas.height = height
+          const ctx = canvas.getContext("2d")
+          if (!ctx) {
+            URL.revokeObjectURL(objectUrl)
+            resolve(rawBlob)
+            return
+          }
+          ctx.drawImage(img, 0, 0, width, height)
+          canvas.toBlob(
+            (b) => {
+              URL.revokeObjectURL(objectUrl)
+              resolve(b || rawBlob)
+            },
+            "image/jpeg",
+            0.75,
+          )
+        }
+        img.onerror = () => {
+          URL.revokeObjectURL(objectUrl)
+          resolve(rawBlob)
+        }
+        img.src = objectUrl
+      })
 
       const ext =
         photo.format === "jpeg" || photo.format === "jpg"
