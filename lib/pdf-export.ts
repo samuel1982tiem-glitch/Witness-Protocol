@@ -155,8 +155,10 @@ function createPdfLayout(doc: jsPDF): PdfLayout {
     doc.setFont("helvetica", "bold")
     doc.setFontSize(9)
     doc.text(label, margin, y)
+    const labelWidth = doc.getTextWidth(label)
+    const valueX = margin + Math.max(110, labelWidth + 10)
     doc.setFont("helvetica", "normal")
-    doc.text(value, margin + 110, y)
+    doc.text(value, valueX, y)
     line(15)
   }
   function resetY() { y = margin }
