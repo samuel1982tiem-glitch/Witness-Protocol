@@ -14,6 +14,7 @@ import {
 import Link from "next/link"
 import { Linkify } from "@/lib/linkify"
 import { generateIncidentPdf } from "@/lib/pdf-export"
+import { isShareCancelled } from "@/lib/share-utils"
 import { useSearchParams, useRouter } from "next/navigation"
 import * as React from "react"
 import { useI18n } from "@/components/i18n-provider"
@@ -200,7 +201,11 @@ const incidentId = searchParams.get("id")
 
           const { Share } = await import("@capacitor/share")
           const uriResult = await Filesystem.getUri({ path: safeName, directory: Directory.Cache })
-          await Share.share({ url: uriResult.uri, title: safeName })
+          try {
+            await Share.share({ url: uriResult.uri, title: safeName })
+          } catch (shareErr) {
+            if (!isShareCancelled(shareErr)) throw shareErr
+          }
           await logAudit("pdf_exported", incident.title)
         } catch (err) {
           alert(`PDF export failed: ${(err as Error).message}`)

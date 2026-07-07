@@ -18,6 +18,7 @@ import { useI18n } from "@/components/i18n-provider"
 import { CATEGORIES, categoryDescription, categoryName } from "@/lib/categories"
 import { generateBulkIncidentsPdf } from "@/lib/pdf-export"
 import { generateIncidentsPackage } from "@/lib/package-export"
+import { isShareCancelled } from "@/lib/share-utils"
 import type { IncidentFilters } from "@/lib/types"
 
 const EMPTY_FILTERS: IncidentFilters = {
@@ -182,13 +183,17 @@ export default function IncidentsPage() {
       // Single share action for all batches, so the app only backgrounds
       // once instead of once per batch.
       const { Share } = await import("@capacitor/share")
-      await Share.share({
-        files: fileUris,
-        title:
-          totalBatches > 1
-            ? `${incidents.length} incidents (${totalBatches} files)`
-            : `${incidents.length} incidents`,
-      })
+      try {
+        await Share.share({
+          files: fileUris,
+          title:
+            totalBatches > 1
+              ? `${incidents.length} incidents (${totalBatches} files)`
+              : `${incidents.length} incidents`,
+        })
+      } catch (shareErr) {
+        if (!isShareCancelled(shareErr)) throw shareErr
+      }
 
       await logAudit(
         "bulk_pdf_exported",
@@ -214,10 +219,14 @@ export default function IncidentsPage() {
         (p) => setPackageProgress({ current: p.processed, total: p.total }),
       )
       const { Share } = await import("@capacitor/share")
-      await Share.share({
-        url: uri,
-        title: `WP-INCIDENTS (${incidents.length} incidents)`,
-      })
+      try {
+        await Share.share({
+          url: uri,
+          title: `WP-INCIDENTS (${incidents.length} incidents)`,
+        })
+      } catch (shareErr) {
+        if (!isShareCancelled(shareErr)) throw shareErr
+      }
       await logAudit("package_exported", `${incidents.length} incidents`)
     } catch (err) {
       alert(t("recordsPage.packageAllFailed", { error: (err as Error).message }))
