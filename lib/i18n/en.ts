@@ -28,6 +28,7 @@ export const incidentFormExtraEn = {
   photo: "Photo", screenshot: "Screenshot", uploadAudio: "Upload audio file",
   uploadDocument: "Upload document", capture: "Capture",
   removeLocation: "Remove location", removeAttachment: "Remove attachment",
+  descriptionPlaceholder: "What happened? Include details while they are fresh.",
   noLocationAttached: "No location attached.", locating: "Locating…",
   geoNotAvailable: "Geolocation is not available on this device.",
   geoPermissionDenied: "Location permission denied or unavailable.",

@@ -164,6 +164,7 @@ export interface IncidentFormExtraDict {
   removeLocation: string
   removeAttachment: string
   noLocationAttached: string
+  descriptionPlaceholder: string
   locating: string
   geoNotAvailable: string
   geoPermissionDenied: string

@@ -25,6 +25,7 @@ export const incidentFormExtraPtBR = {
   photo: "Foto", screenshot: "Captura de tela", uploadAudio: "Enviar arquivo de áudio",
   uploadDocument: "Enviar documento", capture: "Capturar",
   removeLocation: "Remover localização", removeAttachment: "Remover anexo",
+  descriptionPlaceholder: "O que aconteceu? Inclua os detalhes enquanto estão frescos.",
   noLocationAttached: "Nenhuma localização anexada.", locating: "Localizando…",
   geoNotAvailable: "Geolocalização não está disponível neste dispositivo.",
   geoPermissionDenied: "Permissão de localização negada ou indisponível.",

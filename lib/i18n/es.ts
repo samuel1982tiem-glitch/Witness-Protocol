@@ -45,6 +45,7 @@ export const incidentFormExtraEs = {
   capture: "Capturar",
   removeLocation: "Eliminar ubicación",
   removeAttachment: "Eliminar archivo adjunto",
+  descriptionPlaceholder: "¿Qué sucedió? Incluye los detalles mientras están frescos.",
   noLocationAttached: "Sin ubicación adjunta.",
   locating: "Localizando…",
   geoNotAvailable: "La geolocalización no está disponible en este dispositivo.",

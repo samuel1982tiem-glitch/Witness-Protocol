@@ -517,7 +517,7 @@ function addVoice(blob: Blob) {
             id="description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="What happened? Include details while they are fresh."
+            placeholder={t("incidentFormExtra.descriptionPlaceholder")}
           />
         </div>
 
