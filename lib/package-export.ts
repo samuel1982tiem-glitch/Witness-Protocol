@@ -10,6 +10,7 @@
 
 import { Zip, ZipPassThrough } from "fflate"
 import { generateIncidentPdf } from "./pdf-export"
+import type { LanguageCode } from "./i18n"
 import type { Incident, EvidenceMeta } from "./types"
 import type { EvidenceRecord } from "./db"
 
@@ -91,6 +92,7 @@ export async function generateIncidentsPackage(
   getEvidenceRecords: (incidentId: string) => Promise<EvidenceRecord[]>,
   decryptEvidenceRaw: (record: EvidenceRecord) => Promise<{ name: string; raw: Uint8Array }>,
   onProgress?: (p: PackageProgress) => void,
+  language: LanguageCode = "en",
 ): Promise<string> {
   const { Filesystem, Directory } = await import("@capacitor/filesystem")
 
@@ -170,7 +172,7 @@ export async function generateIncidentsPackage(
       }
     }
 
-    const pdfBlob = await generateIncidentPdf(incident, profile, evidenceWithData)
+    const pdfBlob = await generateIncidentPdf(incident, profile, evidenceWithData, language)
     const pdfBytes = new Uint8Array(await pdfBlob.arrayBuffer())
     evidenceWithData.length = 0 // release photo bytes now that the PDF is built
 

@@ -42,7 +42,7 @@ const incidentId = searchParams.get("id")
   const router = useRouter()
   const { incidents, sealIncident, removeIncident, updateIncident, profile, logAudit, busy, decryptEvidenceRaw, getEvidenceRecords } =
     useVault()
-  const { t } = useI18n()
+  const { t, language } = useI18n()
   const [working, setWorking] = React.useState(false)
   const [confirmDelete, setConfirmDelete] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
@@ -181,7 +181,7 @@ const incidentId = searchParams.get("id")
       ).then((items) => items.filter((i) => i !== null))
 
       // Generate PDF with embedded images (now async)
-      const blob = await generateIncidentPdf(incident, profile, evidenceWithData as any)
+      const blob = await generateIncidentPdf(incident, profile, evidenceWithData as any, language)
       
       // Convert blob to base64
       const reader = new FileReader()
@@ -544,7 +544,7 @@ const incidentId = searchParams.get("id")
 }
 
 function BackLink() {
-  const { t } = useI18n()
+  const { t, language } = useI18n()
   return (
     <Link
       href="/incidents"

@@ -325,4 +325,22 @@ export const es: Dictionary = {
       activityTrendStable: "Cambio de {perWeek} incidentes/semana.",
     },
   },
+
+  pdfExport: {
+    investigatorIdentity: "Identidad del Investigador",
+    name: "Nombre:", governmentId: "Identificación oficial:", organization: "Organización:",
+    phone: "Teléfono:", email: "Correo electrónico:",
+    untitledIncident: "Incidente sin título",
+    category: "Categoría:", occurred: "Ocurrió:", logged: "Registrado:", status: "Estado:",
+    sealed: "Sellado", unsealed: "No sellado", gps: "GPS:",
+    description: "Descripción", noDescriptionProvided: "No se proporcionó descripción.",
+    evidenceCount: "Evidencia ({count})", noAttachments: "No hay archivos adjuntos en este registro.",
+    imageEmbedFailed: "[No se pudo incluir la imagen]",
+    documentPlaceholder: "[Documento - ver exportación de archivo separada]",
+    voicePlaceholder: "[Grabación de voz - ver exportación de archivo separada]",
+    evidenceSeal: "Sello de Evidencia", sealedAt: "Sellado el: {time}",
+    footer: "Generado por Witness Protocol · {date} · Página {page} de {total}",
+    bulkReportTitle: "Informe de Incidentes — {count} registro(s)",
+    generatedAt: "Generado {date}",
+  },
 }

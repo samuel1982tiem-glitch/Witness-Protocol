@@ -284,4 +284,22 @@ export const ptBR: Dictionary = {
       activityTrendStable: "Mudança de {perWeek} incidentes/semana.",
     },
   },
+
+  pdfExport: {
+    investigatorIdentity: "Identidade do Investigador",
+    name: "Nome:", governmentId: "Documento de identificação:", organization: "Organização:",
+    phone: "Telefone:", email: "E-mail:",
+    untitledIncident: "Incidente sem título",
+    category: "Categoria:", occurred: "Ocorreu em:", logged: "Registrado em:", status: "Status:",
+    sealed: "Selado", unsealed: "Não selado", gps: "GPS:",
+    description: "Descrição", noDescriptionProvided: "Nenhuma descrição fornecida.",
+    evidenceCount: "Evidência ({count})", noAttachments: "Nenhum anexo neste registro.",
+    imageEmbedFailed: "[Não foi possível inserir a imagem]",
+    documentPlaceholder: "[Documento - veja a exportação de arquivo separada]",
+    voicePlaceholder: "[Gravação de voz - veja a exportação de arquivo separada]",
+    evidenceSeal: "Selo de Evidência", sealedAt: "Selado em: {time}",
+    footer: "Gerado pelo Witness Protocol · {date} · Página {page} de {total}",
+    bulkReportTitle: "Relatório de Incidentes — {count} registro(s)",
+    generatedAt: "Gerado em {date}",
+  },
 }

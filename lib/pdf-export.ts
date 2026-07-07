@@ -1,6 +1,7 @@
 import { jsPDF } from "jspdf"
-import { CATEGORY_MAP } from "./categories"
-import { formatCoords, formatDateTime, shortHash } from "./format"
+import { categoryName } from "./categories"
+import { formatDateTime, formatCoords, shortHash } from "./format"
+import { translate, type LanguageCode } from "./i18n"
 import type { Incident, EvidenceMeta } from "./types"
 import type { EvidenceRecord } from "./db"
 
@@ -19,12 +20,6 @@ interface EvidenceWithData {
   mimeType: string
 }
 
-/**
- * Fetches + decrypts a single evidence file's bytes on demand. Used by
- * the bulk exporter so it never holds more than one photo's decrypted
- * bytes in memory at a time, regardless of how many photos a single
- * incident has.
- */
 type DecryptEvidenceFn = (
   evidenceId: string,
 ) => Promise<{ data: Uint8Array; mimeType: string } | null>
@@ -51,17 +46,18 @@ function bytesToDataUrl(data: Uint8Array, mimeType: string): string {
   return `data:${mimeType};base64,${base64}`
 }
 
-/**
- * Downscales + recompresses a photo's raw bytes to a bounded size before
- * it is ever embedded in a PDF, regardless of the original resolution.
- * Evidence captured before the capture-time 1600px cap was added (see
- * lib/media.ts stripImageMetadata) can still be full camera resolution
- * (10-20MB+ decoded) -- embedding those directly during a large bulk
- * export was crashing the app. Mirrors the resize-at-decode pattern used
- * in components/incident-form.tsx: createImageBitmap with resizeWidth/
- * resizeHeight decodes directly at target size, avoiding ever holding
- * the full-resolution bitmap in memory.
- */
+function calculateImageDimensions(
+  origWidth: number,
+  origHeight: number,
+  maxWidth: number,
+  maxHeight: number,
+): { width: number; height: number } {
+  const widthRatio = maxWidth / origWidth
+  const heightRatio = maxHeight / origHeight
+  const ratio = Math.min(widthRatio, heightRatio, 1)
+  return { width: origWidth * ratio, height: origHeight * ratio }
+}
+
 async function downscaleForPdf(
   data: Uint8Array,
   mimeType: string,
@@ -70,12 +66,8 @@ async function downscaleForPdf(
   try {
     const blob = new Blob([data], { type: mimeType })
     if (typeof createImageBitmap !== "function") {
-      // No downscaling available in this environment -- caller's catch
-      // block will show the "[Image could not be embedded]" placeholder
-      // rather than risk embedding an unbounded full-resolution image.
       return null
     }
-
     const probe = await createImageBitmap(blob)
     const scale = Math.min(1, maxDim / Math.max(probe.width, probe.height))
     const width = Math.round(probe.width * scale)
@@ -118,37 +110,6 @@ async function downscaleForPdf(
   }
 }
 
-function calculateImageDimensions(
-  origWidth: number,
-  origHeight: number,
-  maxWidth: number,
-  maxHeight: number,
-): { width: number; height: number } {
-  const widthRatio = maxWidth / origWidth
-  const heightRatio = maxHeight / origHeight
-  const ratio = Math.min(widthRatio, heightRatio, 1)
-
-  return {
-    width: origWidth * ratio,
-    height: origHeight * ratio,
-  }
-}
-
-async function getImageDimensions(
-  dataUrl: string,
-): Promise<{ width: number; height: number }> {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    img.onload = () => {
-      resolve({ width: img.naturalWidth, height: img.naturalHeight })
-    }
-    img.onerror = () => {
-      reject(new Error("Failed to load image"))
-    }
-    img.src = dataUrl
-  })
-}
-
 interface PdfLayout {
   doc: jsPDF
   pageWidth: number
@@ -172,17 +133,10 @@ function createPdfLayout(doc: jsPDF): PdfLayout {
   const usableHeight = pageHeight - footerHeight
   let y = margin
 
-  function line(height = 16) {
-    y += height
-  }
-
+  function line(height = 16) { y += height }
   function checkPageBreak(needed = 40) {
-    if (y > usableHeight - needed) {
-      doc.addPage()
-      y = margin
-    }
+    if (y > usableHeight - needed) { doc.addPage(); y = margin }
   }
-
   function heading(text: string, size = 13) {
     checkPageBreak()
     doc.setFont("helvetica", "bold")
@@ -191,17 +145,11 @@ function createPdfLayout(doc: jsPDF): PdfLayout {
     line(size + 6)
     doc.setFont("helvetica", "normal")
   }
-
   function body(text: string, size = 10) {
     doc.setFontSize(size)
     const wrapped = doc.splitTextToSize(text, pageWidth - margin * 2)
-    for (const wline of wrapped) {
-      checkPageBreak()
-      doc.text(wline, margin, y)
-      line(size + 4)
-    }
+    for (const wline of wrapped) { checkPageBreak(); doc.text(wline, margin, y); line(size + 4) }
   }
-
   function labelValue(label: string, value: string) {
     checkPageBreak()
     doc.setFont("helvetica", "bold")
@@ -211,65 +159,41 @@ function createPdfLayout(doc: jsPDF): PdfLayout {
     doc.text(value, margin + 110, y)
     line(15)
   }
-
-  function resetY() {
-    y = margin
-  }
+  function resetY() { y = margin }
 
   return {
-    doc,
-    pageWidth,
-    pageHeight,
-    margin,
-    usableHeight,
-    get y() {
-      return y
-    },
-    set y(value: number) {
-      y = value
-    },
-    line,
-    checkPageBreak,
-    heading,
-    body,
-    labelValue,
-    resetY,
+    doc, pageWidth, pageHeight, margin, usableHeight,
+    get y() { return y }, set y(v: number) { y = v },
+    line, checkPageBreak, heading, body, labelValue, resetY,
   }
 }
 
 function renderInvestigatorHeader(
   layout: PdfLayout,
   profile: InvestigatorProfile | null,
+  t: (key: string, vars?: Record<string, string | number>) => string,
 ) {
   if (!hasProfileContent(profile)) return
   const { doc, margin, pageWidth } = layout
 
-  layout.heading("Investigator Identity", 11)
-  if (profile?.name?.trim()) layout.labelValue("Name:", profile.name.trim())
+  layout.heading(t("pdfExport.investigatorIdentity"), 11)
+  if (profile?.name?.trim()) layout.labelValue(t("pdfExport.name"), profile.name.trim())
   if (profile?.governmentId?.trim())
-    layout.labelValue("Government ID:", profile.governmentId.trim())
+    layout.labelValue(t("pdfExport.governmentId"), profile.governmentId.trim())
   if (profile?.organization?.trim())
-    layout.labelValue("Organization:", profile.organization.trim())
-  if (profile?.phone?.trim()) layout.labelValue("Phone:", profile.phone.trim())
-  if (profile?.email?.trim()) layout.labelValue("Email:", profile.email.trim())
+    layout.labelValue(t("pdfExport.organization"), profile.organization.trim())
+  if (profile?.phone?.trim()) layout.labelValue(t("pdfExport.phone"), profile.phone.trim())
+  if (profile?.email?.trim()) layout.labelValue(t("pdfExport.email"), profile.email.trim())
   layout.line(10)
   doc.setDrawColor(200)
   doc.line(margin, layout.y, pageWidth - margin, layout.y)
   layout.line(20)
 }
 
-/**
- * Renders one incident's content onto the current page of an already-created
- * layout. Photo/screenshot evidence is resolved either from a pre-supplied
- * `evidenceWithData` array (single-incident export path, where the caller
- * already decrypted everything) OR, one at a time on demand, via a
- * `decryptEvidence` callback (bulk export path). The callback path never
- * holds more than one photo's decrypted bytes in memory at once -- an
- * incident with many photos will not accumulate them.
- */
 async function renderIncidentBody(
   layout: PdfLayout,
   incident: Incident,
+  t: (key: string, vars?: Record<string, string | number>) => string,
   options?: {
     evidenceWithData?: EvidenceWithData[]
     decryptEvidence?: DecryptEvidenceFn
@@ -277,27 +201,30 @@ async function renderIncidentBody(
 ) {
   const { doc, margin, pageWidth, usableHeight } = layout
 
-  layout.heading(incident.title || "Untitled incident", 16)
+  layout.heading(incident.title || t("pdfExport.untitledIncident"), 16)
 
-  layout.labelValue("Category:", CATEGORY_MAP[incident.category]?.name ?? "Unknown")
-  layout.labelValue("Occurred:", formatDateTime(incident.occurredAt))
-  layout.labelValue("Logged:", formatDateTime(incident.createdAt))
-  layout.labelValue("Status:", incident.sealed ? "Sealed" : "Unsealed")
+  layout.labelValue(t("pdfExport.category"), categoryName(incident.category, t))
+  layout.labelValue(t("pdfExport.occurred"), formatDateTime(incident.occurredAt))
+  layout.labelValue(t("pdfExport.logged"), formatDateTime(incident.createdAt))
+  layout.labelValue(
+    t("pdfExport.status"),
+    incident.sealed ? t("pdfExport.sealed") : t("pdfExport.unsealed"),
+  )
   if (incident.location) {
     layout.labelValue(
-      "GPS:",
+      t("pdfExport.gps"),
       formatCoords(incident.location.latitude, incident.location.longitude),
     )
   }
   layout.line(10)
 
-  layout.heading("Description", 12)
-  layout.body(incident.description?.trim() || "No description provided.")
+  layout.heading(t("pdfExport.description"), 12)
+  layout.body(incident.description?.trim() || t("pdfExport.noDescriptionProvided"))
   layout.line(10)
 
-  layout.heading(`Evidence (${incident.evidence.length})`, 12)
+  layout.heading(t("pdfExport.evidenceCount", { count: incident.evidence.length }), 12)
   if (incident.evidence.length === 0) {
-    layout.body("No attachments on this record.")
+    layout.body(t("pdfExport.noAttachments"))
   } else {
     for (const ev of incident.evidence) {
       layout.checkPageBreak(40)
@@ -320,19 +247,14 @@ async function renderIncidentBody(
       let mimeType = ev.mimeType
 
       if (ev.kind === "photo" || ev.kind === "screenshot") {
-        const preloaded = options?.evidenceWithData?.find(
-          (e) => e.meta.id === ev.id,
-        )
+        const preloaded = options?.evidenceWithData?.find((e) => e.meta.id === ev.id)
         if (preloaded?.data) {
           data = preloaded.data
           mimeType = preloaded.mimeType
         } else if (options?.decryptEvidence) {
           try {
             const decrypted = await options.decryptEvidence(ev.id)
-            if (decrypted) {
-              data = decrypted.data
-              mimeType = decrypted.mimeType
-            }
+            if (decrypted) { data = decrypted.data; mimeType = decrypted.mimeType }
           } catch (err) {
             console.error(`Failed to decrypt evidence ${ev.id}:`, err)
           }
@@ -348,76 +270,64 @@ async function renderIncidentBody(
           const maxImgWidth = pageWidth - margin * 2
           const maxImgHeight = 150
           const { width: scaledWidth, height: scaledHeight } = calculateImageDimensions(
-            width,
-            height,
-            maxImgWidth,
-            maxImgHeight,
+            width, height, maxImgWidth, maxImgHeight,
           )
 
           if (layout.y + scaledHeight > usableHeight - 20) {
-            doc.addPage()
-            layout.resetY()
+            doc.addPage(); layout.resetY()
           }
 
           const imgX = margin + (pageWidth - margin * 2 - scaledWidth) / 2
-
-          doc.addImage(
-            dataUrl,
-            "JPEG",
-            imgX,
-            layout.y,
-            scaledWidth,
-            scaledHeight,
-            undefined,
-            "NONE",
-          )
+          doc.addImage(dataUrl, "JPEG", imgX, layout.y, scaledWidth, scaledHeight, undefined, "NONE")
           layout.line(scaledHeight + 10)
         } catch (err) {
           console.error(`Failed to embed image for evidence ${ev.id}:`, err)
-          doc.setFontSize(8)
-          doc.setTextColor(200)
-          doc.text("[Image could not be embedded]", margin, layout.y)
-          doc.setTextColor(0)
-          layout.line(15)
+          doc.setFontSize(8); doc.setTextColor(200)
+          doc.text(t("pdfExport.imageEmbedFailed"), margin, layout.y)
+          doc.setTextColor(0); layout.line(15)
         } finally {
-          // Release this photo's decrypted bytes before moving to the
-          // next evidence item -- critical for incidents with many photos.
           data = undefined
         }
       } else if (ev.kind === "document") {
-        doc.setFontSize(8)
-        doc.setTextColor(150)
-        doc.text("[Document - see separate file export]", margin, layout.y)
-        doc.setTextColor(0)
-        layout.line(15)
+        doc.setFontSize(8); doc.setTextColor(150)
+        doc.text(t("pdfExport.documentPlaceholder"), margin, layout.y)
+        doc.setTextColor(0); layout.line(15)
       } else if (ev.kind === "voice") {
-        doc.setFontSize(8)
-        doc.setTextColor(150)
-        doc.text("[Voice recording - see separate file export]", margin, layout.y)
-        doc.setTextColor(0)
-        layout.line(15)
+        doc.setFontSize(8); doc.setTextColor(150)
+        doc.text(t("pdfExport.voicePlaceholder"), margin, layout.y)
+        doc.setTextColor(0); layout.line(15)
       }
-
       layout.line(5)
     }
   }
   layout.line(10)
 
   if (incident.sealed && incident.seal) {
-    layout.heading("Evidence Seal", 12)
-    layout.labelValue("Sealed at:", formatDateTime(incident.seal.sealedAt))
-    layout.body(`SHA-256 (canonical hash): ${incident.seal.hash}`, 8.5)
+    layout.heading(t("pdfExport.evidenceSeal"), 12)
+    layout.labelValue(
+      t("pdfExport.sealedAt", { time: formatDateTime(incident.seal.sealedAt) }),
+      "",
+    )
+    layout.body(`SHA-256: ${incident.seal.hash}`, 8.5)
   }
 }
 
-function addFooter(doc: jsPDF, layout: PdfLayout) {
+function addFooter(
+  doc: jsPDF,
+  layout: PdfLayout,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+) {
   const pageCount = doc.internal.pages.length - 1
   for (let p = 1; p <= pageCount; p++) {
     doc.setPage(p)
     doc.setFontSize(7.5)
     doc.setTextColor(150)
     doc.text(
-      `Generated by Witness Protocol \u00b7 ${new Date().toLocaleString()} \u00b7 Page ${p} of ${pageCount}`,
+      t("pdfExport.footer", {
+        date: new Date().toLocaleString(),
+        page: p,
+        total: pageCount,
+      }),
       layout.margin,
       layout.pageHeight - 20,
     )
@@ -425,54 +335,45 @@ function addFooter(doc: jsPDF, layout: PdfLayout) {
   }
 }
 
-/**
- * Generates a single-incident PDF report. Caller pre-decrypts evidence
- * (this is fine for single-incident use -- it's not the bulk-export path
- * that runs into memory pressure across many incidents/photos).
- */
 export async function generateIncidentPdf(
   incident: Incident,
   profile: InvestigatorProfile | null,
   evidenceWithData?: EvidenceWithData[],
+  language: LanguageCode = "en",
 ): Promise<Blob> {
+  const t = (key: string, vars?: Record<string, string | number>) =>
+    translate(language, key, vars)
   const doc = new jsPDF({ unit: "pt", format: "a4", compress: true })
   const layout = createPdfLayout(doc)
 
-  renderInvestigatorHeader(layout, profile)
-  await renderIncidentBody(layout, incident, { evidenceWithData })
-  addFooter(doc, layout)
+  renderInvestigatorHeader(layout, profile, t)
+  await renderIncidentBody(layout, incident, t, { evidenceWithData })
+  addFooter(doc, layout, t)
 
   return doc.output("blob")
 }
 
-/**
- * Generates a single PDF containing every incident passed in, one per page.
- * Evidence photos are decrypted ONE AT A TIME via `decryptEvidence`, right
- * before each is embedded, and released immediately after -- so an
- * incident with many photos never holds more than one decrypted photo in
- * memory at once. This replaced an earlier version that pre-decrypted all
- * of an incident's evidence into an array up front, which crashed on
- * incidents with a large number of photos.
- */
 export async function generateBulkIncidentsPdf(
   incidents: Incident[],
   profile: InvestigatorProfile | null,
   decryptEvidence: DecryptEvidenceFn,
+  language: LanguageCode = "en",
 ): Promise<Blob> {
+  const t = (key: string, vars?: Record<string, string | number>) =>
+    translate(language, key, vars)
   const doc = new jsPDF({ unit: "pt", format: "a4", compress: true })
   const layout = createPdfLayout(doc)
 
-  renderInvestigatorHeader(layout, profile)
-  layout.heading(`Incident Report \u2014 ${incidents.length} record(s)`, 14)
-  layout.body(`Generated ${new Date().toLocaleString()}`)
+  renderInvestigatorHeader(layout, profile, t)
+  layout.heading(t("pdfExport.bulkReportTitle", { count: incidents.length }), 14)
+  layout.body(t("pdfExport.generatedAt", { date: new Date().toLocaleString() }))
 
   for (const incident of incidents) {
     doc.addPage()
     layout.resetY()
-    await renderIncidentBody(layout, incident, { decryptEvidence })
+    await renderIncidentBody(layout, incident, t, { decryptEvidence })
   }
 
-  addFooter(doc, layout)
-
+  addFooter(doc, layout, t)
   return doc.output("blob")
 }

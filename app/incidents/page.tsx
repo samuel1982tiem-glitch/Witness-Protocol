@@ -39,7 +39,7 @@ export default function IncidentsPage() {
     profile,
     logAudit,
   } = useVault()
-  const { t } = useI18n()
+  const { t, language } = useI18n()
   const [filters, setFilters] = React.useState<IncidentFilters>(EMPTY_FILTERS)
   const [showFilters, setShowFilters] = React.useState(false)
   const [exportingAll, setExportingAll] = React.useState(false)
@@ -170,6 +170,7 @@ export default function IncidentsPage() {
           batch,
           profile,
           decryptSinglePhoto,
+          language,
         )
         const safeName =
           totalBatches > 1
@@ -217,6 +218,7 @@ export default function IncidentsPage() {
         getEvidenceRecords,
         decryptEvidenceRaw,
         (p) => setPackageProgress({ current: p.processed, total: p.total }),
+        language,
       )
       const { Share } = await import("@capacitor/share")
       try {
