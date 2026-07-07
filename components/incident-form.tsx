@@ -113,24 +113,51 @@ export function IncidentForm() {
   const audioFileInput = React.useRef<HTMLInputElement>(null)
   const docInput = React.useRef<HTMLInputElement>(null)
 
-  // Restore draft text/location
+  // Restore draft text/location, then silently auto-fill GPS if the
+  // draft didn't already have a location. Runs quietly: if GPS is off or
+  // permission is denied, the field just stays empty for manual capture
+  // instead of showing an error on every new incident.
   React.useEffect(() => {
     if (typeof window === "undefined") return
+    let draftHasLocation = false
     try {
       const raw = window.localStorage.getItem(INCIDENT_DRAFT_KEY)
-      if (!raw) return
-      const draft = JSON.parse(raw) as IncidentDraft
+      if (raw) {
+        const draft = JSON.parse(raw) as IncidentDraft
 
-      if (draft.category) setCategory(draft.category)
-      if (typeof draft.title === "string") setTitle(draft.title)
-      if (typeof draft.description === "string") setDescription(draft.description)
-      if (typeof draft.occurredAt === "string" && draft.occurredAt) {
-        setOccurredAt(draft.occurredAt)
+        if (draft.category) setCategory(draft.category)
+        if (typeof draft.title === "string") setTitle(draft.title)
+        if (typeof draft.description === "string") setDescription(draft.description)
+        if (typeof draft.occurredAt === "string" && draft.occurredAt) {
+          setOccurredAt(draft.occurredAt)
+        }
+        if (draft.location) {
+          setLocation(draft.location)
+          draftHasLocation = true
+        }
       }
-      if (draft.location) setLocation(draft.location)
     } catch {
       // ignore corrupt draft
     }
+
+    if (draftHasLocation) return
+    if (typeof navigator === "undefined" || !navigator.geolocation) return
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocation({
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          accuracy: pos.coords.accuracy ?? null,
+        })
+      },
+      () => {
+        // Silent: GPS off or permission denied. Manual button still
+        // shows a status message when tapped.
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Persist draft text/location only
@@ -163,28 +190,6 @@ export function IncidentForm() {
     return () => {
       attachmentsRef.current.forEach((a) => URL.revokeObjectURL(a.url))
     }
-  }, [])
-
-  // Autofill GPS if permission already granted
-  React.useEffect(() => {
-    if (typeof navigator === "undefined" || !navigator.geolocation) return
-    if (!navigator.permissions?.query) return
-
-    let cancelled = false
-    navigator.permissions
-      .query({ name: "geolocation" as PermissionName })
-      .then((status) => {
-        if (cancelled) return
-        if (status.state === "granted") {
-          captureLocation()
-        }
-      })
-      .catch(() => {})
-
-    return () => {
-      cancelled = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function buildAttachment(kind: EvidenceKind, blob: Blob, name?: string): PendingAttachment {
