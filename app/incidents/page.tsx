@@ -1,6 +1,6 @@
 "use client"
 
-import { FileDown, Search, SlidersHorizontal, X } from "lucide-react"
+import { FileDown, Package as PackageIcon, Search, SlidersHorizontal, X } from "lucide-react"
 import * as React from "react"
 import { useRouter } from "next/navigation"
 
@@ -17,6 +17,7 @@ import { useVault } from "@/components/vault-provider"
 import { useI18n } from "@/components/i18n-provider"
 import { CATEGORIES, categoryDescription, categoryName } from "@/lib/categories"
 import { generateBulkIncidentsPdf } from "@/lib/pdf-export"
+import { generateIncidentsPackage } from "@/lib/package-export"
 import type { IncidentFilters } from "@/lib/types"
 
 const EMPTY_FILTERS: IncidentFilters = {
@@ -42,6 +43,11 @@ export default function IncidentsPage() {
   const [showFilters, setShowFilters] = React.useState(false)
   const [exportingAll, setExportingAll] = React.useState(false)
   const [exportBatchProgress, setExportBatchProgress] = React.useState<{
+    current: number
+    total: number
+  } | null>(null)
+  const [packaging, setPackaging] = React.useState(false)
+  const [packageProgress, setPackageProgress] = React.useState<{
     current: number
     total: number
   } | null>(null)
@@ -196,6 +202,31 @@ export default function IncidentsPage() {
     }
   }
 
+  async function handlePackageAll() {
+    setPackaging(true)
+    setPackageProgress({ current: 0, total: incidents.length })
+    try {
+      const uri = await generateIncidentsPackage(
+        incidents,
+        profile,
+        getEvidenceRecords,
+        decryptEvidenceRaw,
+        (p) => setPackageProgress({ current: p.processed, total: p.total }),
+      )
+      const { Share } = await import("@capacitor/share")
+      await Share.share({
+        url: uri,
+        title: `WP-INCIDENTS (${incidents.length} incidents)`,
+      })
+      await logAudit("package_exported", `${incidents.length} incidents`)
+    } catch (err) {
+      alert(t("recordsPage.packageAllFailed", { error: (err as Error).message }))
+    } finally {
+      setPackaging(false)
+      setPackageProgress(null)
+    }
+  }
+
   return (
     <div className="space-y-5">
       <SectionTitle
@@ -206,24 +237,44 @@ export default function IncidentsPage() {
       />
 
       {incidents.length > 0 ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="w-full"
-          disabled={exportingAll}
-          onClick={handleExportAllPdf}
-        >
-          <FileDown className="size-4" aria-hidden="true" />
-          {exportingAll
-            ? exportBatchProgress
-              ? t("recordsPage.exportingAllPdfProgress", {
-                  current: exportBatchProgress.current,
-                  total: exportBatchProgress.total,
-                })
-              : t("recordsPage.exportingAllPdf")
-            : t("recordsPage.exportAllPdf")}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            disabled={exportingAll || packaging}
+            onClick={handleExportAllPdf}
+          >
+            <FileDown className="size-4" aria-hidden="true" />
+            {exportingAll
+              ? exportBatchProgress
+                ? t("recordsPage.exportingAllPdfProgress", {
+                    current: exportBatchProgress.current,
+                    total: exportBatchProgress.total,
+                  })
+                : t("recordsPage.exportingAllPdf")
+              : t("recordsPage.exportAllPdf")}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            disabled={exportingAll || packaging}
+            onClick={handlePackageAll}
+          >
+            <PackageIcon className="size-4" aria-hidden="true" />
+            {packaging
+              ? packageProgress
+                ? t("recordsPage.packagingAllProgress", {
+                    current: packageProgress.current,
+                    total: packageProgress.total,
+                  })
+                : t("recordsPage.packagingAll")
+              : t("recordsPage.packageAll")}
+          </Button>
+        </div>
       ) : null}
 
       <div className="flex items-center gap-2">

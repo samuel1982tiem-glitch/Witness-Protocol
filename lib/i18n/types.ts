@@ -195,6 +195,10 @@ export interface RecordsPageDict {
   exportingAllPdf: string
   exportingAllPdfProgress: string
   exportAllPdfFailed: string
+  packageAll: string
+  packagingAll: string
+  packagingAllProgress: string
+  packageAllFailed: string
 }
 
 export interface MiscUiDict {

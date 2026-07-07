@@ -49,6 +49,10 @@ export const recordsPageEn = {
   exportingAllPdf: "Exporting incidents…",
   exportingAllPdfProgress: "Exporting batch {current} of {total}…",
   exportAllPdfFailed: "PDF export failed: {error}",
+  packageAll: "Package",
+  packagingAll: "Packaging incidents…",
+  packagingAllProgress: "Packaging {current} of {total}…",
+  packageAllFailed: "Package export failed: {error}",
 }
 
 export const miscUiEn = {

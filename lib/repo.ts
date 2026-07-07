@@ -327,6 +327,7 @@ export type AuditAction =
   | "evidence_downloaded"
   | "pdf_exported"
   | "bulk_pdf_exported"
+  | "package_exported"
   | "backup_exported"
   | "backup_restored"
   | "backup_merged"

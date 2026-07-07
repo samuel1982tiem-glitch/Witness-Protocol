@@ -46,6 +46,10 @@ export const recordsPagePtBR = {
   exportingAllPdf: "Exportando incidentes…",
   exportingAllPdfProgress: "Exportando lote {current} de {total}…",
   exportAllPdfFailed: "Falha ao exportar o PDF: {error}",
+  packageAll: "Pacote",
+  packagingAll: "Empacotando incidentes…",
+  packagingAllProgress: "Empacotando {current} de {total}…",
+  packageAllFailed: "Falha ao gerar o pacote: {error}",
 }
 
 export const miscUiPtBR = {
