@@ -30,6 +30,7 @@ import {
   type VaultRecord,
   type IncidentRecord,
   type EvidenceRecord,
+  type SealRecord,
 } from "./db"
 
 // ---------------------------------------------------------------------------
@@ -41,6 +42,14 @@ function toUint8(val: any): Uint8Array {
   if (Array.isArray(val)) return new Uint8Array(val)
   if (val && typeof val === "object") return new Uint8Array(Object.values(val))
   return new Uint8Array(0)
+}
+
+function reviveUserProfileBuffers(profiles: any[]): any[] {
+  for (const profile of profiles ?? []) {
+    if (profile.iv != null) profile.iv = toUint8(profile.iv)
+    if (profile.data != null) profile.data = toUint8(profile.data)
+  }
+  return profiles
 }
 
 function reviveBuffers(backup: VaultBackup): VaultBackup {
@@ -61,7 +70,7 @@ function reviveBuffers(backup: VaultBackup): VaultBackup {
     if ("verifierIv" in user) (user as any).verifierIv = toUint8((user as any).verifierIv)
     if ("verifierData" in user) (user as any).verifierData = toUint8((user as any).verifierData) as any
   }
-  reviveUserProfileBuffers(backup.userProfile)
+  reviveUserProfileBuffers(backup.userProfile ?? [])
   return backup
 }
 
@@ -190,7 +199,7 @@ interface ManifestV4 {
   exportedAt: number
   salt: number[]
   evidenceCount: number
-  userProfile?: any[];
+  userProfile?: any[]
 }
 
 interface EvidenceSidecar {
@@ -214,11 +223,39 @@ function uint8ToBase64(bytes: Uint8Array): string {
   return btoa(binary)
 }
 
-export async function exportVaultBackupV4(key: CryptoKey): Promise<string> {
+async function buildExportMetadata(
+  key: CryptoKey,
+  includeIdDocument: boolean,
+): Promise<VaultBackup> {
+  const metadata = await exportMetadataOnly()
+
+  if (includeIdDocument) {
+    return metadata
+  }
+
+  const profile = await loadUserProfile<any>(key)
+  if (!profile) {
+    return metadata
+  }
+
+  const { idDocument, ...rest } = profile
+  await saveUserProfile(key, rest)
+
+  try {
+    return await exportMetadataOnly()
+  } finally {
+    await saveUserProfile(key, profile)
+  }
+}
+
+export async function exportVaultBackupV4(
+  key: CryptoKey,
+  includeIdDocument: boolean = true,
+): Promise<string> {
   const vault = await getRecord<VaultRecord>(STORES.users, "vault")
   if (!vault) throw new Error("Vault is not set up.")
 
-  const backup = await exportMetadataOnly()
+  const backup = await buildExportMetadata(key, includeIdDocument)
   const metaPlain = new TextEncoder().encode(JSON.stringify(backup))
   const metaCompressed = await compress(metaPlain)
   const metaEncrypted = await encryptRaw(key, metaCompressed)
@@ -381,11 +418,28 @@ async function importVaultBackupV4(
 // Public export/import API
 // ---------------------------------------------------------------------------
 
+export type ExportStage =
+  | "preparing"
+  | "metadata"
+  | "evidence"
+  | "finishing"
+  | "saving"
+
+export interface ExportProgress {
+  stage: ExportStage
+  processed: number
+  total: number
+  currentName: string
+  percent: number
+  etaSeconds: number | null
+}
+
 export async function exportVaultBackup(
   key: CryptoKey,
   onProgress?: (progress: ExportProgress) => void,
+  includeIdDocument: boolean = true,
 ): Promise<string> {
-  return exportVaultBackupV4Streaming(key, onProgress)
+  return exportVaultBackupV4Streaming(key, onProgress, includeIdDocument)
 }
 
 export async function importVaultBackupFresh(
@@ -439,14 +493,6 @@ interface ParsedBackup {
   evidence: EvidenceRecord[]
   seals: SealRecord[]
   userProfile: { id: string; iv: Uint8Array; data: ArrayBuffer }[]
-}
-
-function reviveUserProfileBuffers(profiles: any[]): any[] {
-  for (const profile of profiles ?? []) {
-    if (profile.iv != null) profile.iv = toUint8(profile.iv)
-    if (profile.data != null) profile.data = toUint8(profile.data)
-  }
-  return profiles
 }
 
 async function parseVaultBackupV3(
@@ -571,7 +617,7 @@ async function parseVaultBackupV4(
     sourceKey,
     incidents: (meta.incidents ?? []) as unknown as IncidentRecord[],
     evidence: evidenceRecords,
-      seals: (meta.seals ?? []) as unknown as SealRecord[],
+    seals: (meta.seals ?? []) as unknown as SealRecord[],
     userProfile: reviveUserProfileBuffers((meta.userProfile ?? []) as any[]),
   }
 }
@@ -625,54 +671,40 @@ export async function mergeVaultBackup(
     parsed.evidence,
     parsed.seals,
     onProgress,
-  );
+  )
 
   // Import investigator identity from the backup
-  let identityImported = false;
+  let identityImported = false
   if (parsed.userProfile && parsed.userProfile.length > 0) {
     try {
-      const profileRecord = parsed.userProfile.find((p: any) => p.id === "profile") ||
-        parsed.userProfile[parsed.userProfile.length - 1];
+      const profileRecord =
+        parsed.userProfile.find((p: any) => p.id === "profile") ||
+        parsed.userProfile[parsed.userProfile.length - 1]
 
-      const plaintext = await decryptJSON<any>(
-        parsed.sourceKey,
-        { iv: profileRecord.iv, data: profileRecord.data }
-      );
+      const plaintext = await decryptJSON<any>(parsed.sourceKey, {
+        iv: profileRecord.iv,
+        data: profileRecord.data,
+      })
 
       if (plaintext) {
-        await saveUserProfile(currentKey, plaintext);
-        identityImported = true;
-        console.log('✅ Investigator identity imported during merge');
+        await saveUserProfile(currentKey, plaintext)
+        identityImported = true
+        console.log("✅ Investigator identity imported during merge")
       }
     } catch (err) {
-      console.error("Failed to import investigator identity during merge:", err);
+      console.error("Failed to import investigator identity during merge:", err)
     }
   }
 
   return { ...result, identityImported }
 }
+
 // ---------------------------------------------------------------------------
 // Streaming export — processes evidence one file at a time and writes
 // ZIP chunks to disk incrementally, instead of building the entire
 // backup in memory before writing. This fixes out-of-memory crashes on
 // exports with many/large media attachments.
 // ---------------------------------------------------------------------------
-
-export type ExportStage =
-  | "preparing"
-  | "metadata"
-  | "evidence"
-  | "finishing"
-  | "saving"
-
-export interface ExportProgress {
-  stage: ExportStage
-  processed: number
-  total: number
-  currentName: string
-  percent: number
-  etaSeconds: number | null
-}
 
 function uint8ToBase64Chunk(bytes: Uint8Array): string {
   let binary = ""
@@ -697,6 +729,7 @@ function uint8ToBase64Chunk(bytes: Uint8Array): string {
 export async function exportVaultBackupV4Streaming(
   key: CryptoKey,
   onProgress?: (progress: ExportProgress) => void,
+  includeIdDocument: boolean = true,
 ): Promise<string> {
   const vault = await getRecord<VaultRecord>(STORES.users, "vault")
   if (!vault) throw new Error("Vault is not set up.")
@@ -728,6 +761,7 @@ export async function exportVaultBackupV4Streaming(
       zipError = err
       return
     }
+
     pendingWrites = pendingWrites.then(async () => {
       const b64 = uint8ToBase64Chunk(chunk)
       if (!wroteFirstChunk) {
@@ -758,7 +792,7 @@ export async function exportVaultBackupV4Streaming(
     etaSeconds: null,
   })
 
-  const metadata = await exportMetadataOnly()
+  const metadata = await buildExportMetadata(key, includeIdDocument)
   const metaPlain = new TextEncoder().encode(JSON.stringify(metadata))
   const metaCompressed = await compress(metaPlain)
   const metaEncrypted = await encryptRaw(key, metaCompressed)
