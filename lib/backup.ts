@@ -314,7 +314,7 @@ async function importVaultBackupV4(
   const meta = JSON.parse(new TextDecoder().decode(metaPlain)) as Omit<
     VaultBackup,
     "evidence"
-  >
+  > & { userProfile?: any[] }
 
   const evidenceRecords: EvidenceRecord[] = []
   const evidencePaths = Object.keys(files).filter(
