@@ -20,6 +20,7 @@ import {
   type VaultBackup,
   type MergeProgress,
   type MergeResult,
+  saveUserProfile,
 } from "./repo"
 import {
   getRecord,
