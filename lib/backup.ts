@@ -21,6 +21,7 @@ import {
   type MergeProgress,
   type MergeResult,
   saveUserProfile,
+  loadUserProfile,
 } from "./repo"
 import {
   getRecord,
@@ -192,6 +193,7 @@ interface ManifestV4 {
   exportedAt: number
   salt: number[]
   evidenceCount: number
+  userProfile: any[];
 }
 
 interface EvidenceSidecar {
