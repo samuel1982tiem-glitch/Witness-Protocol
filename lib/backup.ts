@@ -447,6 +447,7 @@ interface ParsedBackup {
   evidence: EvidenceRecord[]
   seals: SealRecord[]
   userProfile: { id: string; iv: Uint8Array; data: ArrayBuffer }[]
+}[]
 }
 
 async function parseVaultBackupV3(
