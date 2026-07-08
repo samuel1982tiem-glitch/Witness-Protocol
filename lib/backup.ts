@@ -611,39 +611,42 @@ export async function mergeVaultBackup(
     )
   }
 
-  const result = await mergeIncidentRecords(
+  return mergeIncidentRecords(
     parsed.sourceKey,
     currentKey,
     parsed.incidents,
     parsed.evidence,
     parsed.seals,
     onProgress,
-  );
+  )
+}
+// ---------------------------------------------------------------------------
+// Streaming export — processes evidence one file at a time and writes
+// ZIP chunks to disk incrementally, instead of building the entire
+// backup in memory before writing. This fixes out-of-memory crashes on
+// exports with many/large media attachments.
+// ---------------------------------------------------------------------------
 
-  // Import investigator identity from the backup
-  let identityImported = false;
-  if (parsed.userProfile && parsed.userProfile.length > 0) {
-    try {
-      const profileRecord = parsed.userProfile.find((p: any) => p.id === "profile") ||
-        parsed.userProfile[parsed.userProfile.length - 1];
-      
-      const plaintext = await decryptJSON<any>(
-        parsed.sourceKey,
-        { iv: profileRecord.iv, data: profileRecord.data }
-      );
-      
-      if (plaintext) {
-        await saveUserProfile(currentKey, plaintext);
-        identityImported = true;
-        console.log('✅ Investigator identity imported during merge');
-      }
-    } catch (err) {
-      console.error("Failed to import investigator identity during merge:", err);
-    }
-  }
+export type ExportStage =
+  | "preparing"
+  | "metadata"
+  | "evidence"
+  | "finishing"
+  | "saving"
 
-  return { ...result, identityImported };
- i < bytes.length; i += chunkSize) {
+export interface ExportProgress {
+  stage: ExportStage
+  processed: number
+  total: number
+  currentName: string
+  percent: number
+  etaSeconds: number | null
+}
+
+function uint8ToBase64Chunk(bytes: Uint8Array): string {
+  let binary = ""
+  const chunkSize = 0x8000
+  for (let i = 0; i < bytes.length; i += chunkSize) {
     const chunk = bytes.subarray(i, i + chunkSize)
     binary += String.fromCharCode(...chunk)
   }
