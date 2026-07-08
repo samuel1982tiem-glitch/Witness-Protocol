@@ -61,10 +61,7 @@ function reviveBuffers(backup: VaultBackup): VaultBackup {
     if ("verifierIv" in user) (user as any).verifierIv = toUint8((user as any).verifierIv)
     if ("verifierData" in user) (user as any).verifierData = toUint8((user as any).verifierData) as any
   }
-  for (const profile of backup.userProfile ?? []) {
-    if (profile.iv != null) profile.iv = toUint8(profile.iv)
-    if (profile.data != null) profile.data = toUint8(profile.data)
-  }
+  reviveUserProfileBuffers(backup.userProfile)
   return backup
 }
 
@@ -193,7 +190,7 @@ interface ManifestV4 {
   exportedAt: number
   salt: number[]
   evidenceCount: number
-  userProfile: any[];
+  userProfile?: any[];
 }
 
 interface EvidenceSidecar {
@@ -444,6 +441,14 @@ interface ParsedBackup {
   userProfile: { id: string; iv: Uint8Array; data: ArrayBuffer }[]
 }
 
+function reviveUserProfileBuffers(profiles: any[]): any[] {
+  for (const profile of profiles ?? []) {
+    if (profile.iv != null) profile.iv = toUint8(profile.iv)
+    if (profile.data != null) profile.data = toUint8(profile.data)
+  }
+  return profiles
+}
+
 async function parseVaultBackupV3(
   raw: any,
   passcode: string,
@@ -567,7 +572,7 @@ async function parseVaultBackupV4(
     incidents: (meta.incidents ?? []) as unknown as IncidentRecord[],
     evidence: evidenceRecords,
       seals: (meta.seals ?? []) as unknown as SealRecord[],
-    userProfile: (meta.userProfile ?? []) as any[],
+    userProfile: reviveUserProfileBuffers((meta.userProfile ?? []) as any[]),
   }
 }
 
@@ -767,7 +772,6 @@ export async function exportVaultBackupV4Streaming(
         exportedAt: Date.now(),
         salt: Array.from(vault.salt),
         evidenceCount: total,
-        userProfile: await loadUserProfile<any>(key),
       } satisfies ManifestV4),
     ),
     true,
