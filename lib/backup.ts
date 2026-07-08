@@ -642,7 +642,8 @@ export async function mergeVaultBackup(
     }
   }
 
-  return { ...result, identityImported }; i < bytes.length; i += chunkSize) {
+  return { ...result, identityImported };
+ i < bytes.length; i += chunkSize) {
     const chunk = bytes.subarray(i, i + chunkSize)
     binary += String.fromCharCode(...chunk)
   }
