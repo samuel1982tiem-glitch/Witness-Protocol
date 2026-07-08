@@ -10,6 +10,10 @@ import {
   Building2,
   Phone,
   Mail,
+  Paperclip,
+  FileText,
+  Download,
+  Trash2,
 } from "lucide-react"
 import * as React from "react"
 
@@ -20,6 +24,8 @@ import { useVault } from "@/components/vault-provider"
 import { useI18n } from "@/components/i18n-provider"
 import { SUPPORTED_LANGUAGES, type LanguagePreference } from "@/lib/i18n"
 import { Globe } from "lucide-react"
+import { formatBytes } from "@/lib/media"
+import { isShareCancelled } from "@/lib/share-utils"
 
 export default function VaultPage() {
   const {
@@ -44,18 +50,28 @@ export default function VaultPage() {
   const autoLockMin = Math.round(autoLockMs / 60000)
 
   // Local editable draft state (UI only)
-  const [draft, setDraft] = React.useState({
+  const [draft, setDraft] = React.useState<{
+    name: string
+    governmentId: string
+    organization: string
+    phone: string
+    email: string
+    idDocument: { name: string; mimeType: string; size: number; dataBase64: string } | null
+  }>({
     name: "",
     governmentId: "",
     organization: "",
     phone: "",
     email: "",
+    idDocument: null,
   })
+  const [idDocDirty, setIdDocDirty] = React.useState(false)
 
   // Sync from vault → UI
   React.useEffect(() => {
     if (vaultProfile) {
-      setDraft(vaultProfile)
+      setDraft({ idDocument: null, ...vaultProfile })
+      setIdDocDirty(false)
     }
   }, [vaultProfile])
 
@@ -68,13 +84,15 @@ export default function VaultPage() {
     organization: "",
     phone: "",
     email: "",
+    idDocument: null,
   }
   const isDirty =
     draft.name !== savedBaseline.name ||
     draft.governmentId !== savedBaseline.governmentId ||
     draft.organization !== savedBaseline.organization ||
     draft.phone !== savedBaseline.phone ||
-    draft.email !== savedBaseline.email
+    draft.email !== savedBaseline.email ||
+    idDocDirty
 
   function exportStageLabel(stage: string): string {
     switch (stage) {
@@ -101,9 +119,81 @@ export default function VaultPage() {
     return `~${mins} minute${mins === 1 ? "" : "s"} remaining`
   }
 
+  const MAX_ID_DOCUMENT_BYTES = 10 * 1024 * 1024 // 10 MB
+
+  async function handleIdDocumentSelected(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    event.target.value = ""
+    if (!file) return
+
+    if (file.size > MAX_ID_DOCUMENT_BYTES) {
+      alert(t("vault.idDocumentTooLarge"))
+      return
+    }
+
+    const buffer = await file.arrayBuffer()
+    const bytes = new Uint8Array(buffer)
+    let binary = ""
+    const chunkSize = 0x8000
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      const chunk = bytes.subarray(i, i + chunkSize)
+      binary += String.fromCharCode(...chunk)
+    }
+    const dataBase64 = btoa(binary)
+
+    setDraft((p) => ({
+      ...p,
+      idDocument: {
+        name: file.name || "government-id",
+        mimeType: file.type || "application/octet-stream",
+        size: file.size,
+        dataBase64,
+      },
+    }))
+    setIdDocDirty(true)
+  }
+
+  function removeIdDocument() {
+    setDraft((p) => ({ ...p, idDocument: null }))
+    setIdDocDirty(true)
+  }
+
+  async function downloadIdDocument() {
+    const doc = draft.idDocument
+    if (!doc) return
+    try {
+      const { Filesystem, Directory } = await import("@capacitor/filesystem")
+      const { Share } = await import("@capacitor/share")
+      const extMap: Record<string, string> = {
+        "application/pdf": "pdf",
+        "image/jpeg": "jpg",
+        "image/png": "png",
+        "image/webp": "webp",
+        "image/gif": "gif",
+      }
+      const ext = extMap[doc.mimeType] || "bin"
+      const safeName = doc.name && doc.name.includes(".") ? doc.name : `government-id.${ext}`
+      await Filesystem.writeFile({
+        path: safeName,
+        data: doc.dataBase64,
+        directory: Directory.Cache,
+        recursive: true,
+      })
+      const uriResult = await Filesystem.getUri({ path: safeName, directory: Directory.Cache })
+      await Share.share({ url: uriResult.uri, title: safeName })
+    } catch (err) {
+      if (isShareCancelled(err)) return
+      console.error(err)
+      alert(String(err))
+    }
+  }
+
+  const [includeIdDocOnExport, setIncludeIdDocOnExport] = React.useState(false)
+  const [includeIdDocOnRestore, setIncludeIdDocOnRestore] = React.useState(false)
+
   async function handleExport() {
     try {
-      const fileName = await exportBackup()
+      const fileName = await exportBackup(includeIdDocOnExport)
       alert(t("backup.backupSaved", { fileName }))
     } catch (err) {
       console.error(err)
@@ -191,7 +281,7 @@ async function runImport(passcode: string) {
   const isMerge = status === "unlocked"
 
   try {
-    await importBackup(file, passcode)
+    await importBackup(file, passcode, includeIdDocOnRestore)
     if (!isMerge) {
       alert(t("backup.backupRestored"))
     }
@@ -259,6 +349,68 @@ async function runImport(passcode: string) {
               setDraft((p) => ({ ...p, email: v }))
             }
           />
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-muted-foreground">
+              {t("vault.idDocument")}
+            </p>
+
+            {draft.idDocument ? (
+              <div className="space-y-2 rounded-xl border px-3 py-3">
+                <div className="flex items-center gap-3">
+                  <FileText className="size-5 shrink-0 text-muted-foreground" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">
+                      {draft.idDocument.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatBytes(draft.idDocument.size)}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={downloadIdDocument}
+                  >
+                    <Download className="size-3.5" />
+                    {t("vault.downloadIdDocument")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 text-destructive"
+                    onClick={removeIdDocument}
+                  >
+                    <Trash2 className="size-3.5" />
+                    {t("vault.removeIdDocument")}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => document.getElementById("id-document-input")?.click()}
+              >
+                <Paperclip className="size-4" />
+                {t("vault.attachIdDocument")}
+              </Button>
+            )}
+
+            <input
+              id="id-document-input"
+              type="file"
+              accept="application/pdf,image/*"
+              className="hidden"
+              onChange={handleIdDocumentSelected}
+            />
+          </div>
 
           <Button
             className="w-full"

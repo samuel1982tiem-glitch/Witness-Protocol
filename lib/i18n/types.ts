@@ -24,6 +24,7 @@ export interface Dictionary {
   incidentRecord: IncidentRecordDict
   incidentForm: IncidentFormDict
   patterns: PatternsDict
+  pdfExport: PdfExportDict
 
   common: {
     save: string
@@ -62,6 +63,11 @@ export interface Dictionary {
     investigatorIdentity: string
     fullName: string
     governmentId: string
+    idDocument: string
+    attachIdDocument: string
+    idDocumentTooLarge: string
+    downloadIdDocument: string
+    removeIdDocument: string
     organization: string
     phone: string
     email: string
@@ -77,6 +83,8 @@ export interface Dictionary {
   }
 
   backup: {
+    includeIdDocumentExport: string
+    includeIdDocumentRestore: string
     exportBackup: string
     importBackup: string
     exporting: string
@@ -311,4 +319,33 @@ export interface PatternsDict {
     activityTrendDecreasing: string
     activityTrendStable: string
   }
+}
+
+export interface PdfExportDict {
+  investigatorIdentity: string
+  name: string
+  governmentId: string
+  organization: string
+  phone: string
+  email: string
+  untitledIncident: string
+  category: string
+  occurred: string
+  logged: string
+  status: string
+  sealed: string
+  unsealed: string
+  gps: string
+  description: string
+  noDescriptionProvided: string
+  evidenceCount: string
+  noAttachments: string
+  imageEmbedFailed: string
+  documentPlaceholder: string
+  voicePlaceholder: string
+  evidenceSeal: string
+  sealedAt: string
+  footer: string
+  bulkReportTitle: string
+  generatedAt: string
 }

@@ -139,6 +139,11 @@ export const ptBR: Dictionary = {
     investigatorIdentity: "Identidade do Investigador",
     fullName: "Nome completo",
     governmentId: "Documento de identidade",
+    idDocument: "Documento de Identidade",
+    attachIdDocument: "Anexar Documento de Identidade",
+    idDocumentTooLarge: "O arquivo é muito grande. Escolha um arquivo com menos de 10 MB.",
+    downloadIdDocument: "Baixar",
+    removeIdDocument: "Remover",
     organization: "Organização",
     phone: "Telefone",
     email: "E-mail",
@@ -155,6 +160,8 @@ export const ptBR: Dictionary = {
   },
 
   backup: {
+    includeIdDocumentExport: "Incluir documento de identidade",
+    includeIdDocumentRestore: "Incluir documento de identidade",
     exportBackup: "Exportar Backup",
     importBackup: "Importar Backup",
     exporting: "Exportando…",

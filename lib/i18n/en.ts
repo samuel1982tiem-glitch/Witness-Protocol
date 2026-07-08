@@ -142,6 +142,11 @@ export const en: Dictionary = {
     investigatorIdentity: "Investigator Identity",
     fullName: "Full name",
     governmentId: "Government ID",
+    idDocument: "Government ID Document",
+    attachIdDocument: "Attach ID Document",
+    idDocumentTooLarge: "File is too large. Please choose a file under 10 MB.",
+    downloadIdDocument: "Download",
+    removeIdDocument: "Remove",
     organization: "Organization",
     phone: "Phone",
     email: "Email",
@@ -158,6 +163,8 @@ export const en: Dictionary = {
   },
 
   backup: {
+    includeIdDocumentExport: "Include government ID document",
+    includeIdDocumentRestore: "Include government ID document",
     exportBackup: "Export Backup",
     importBackup: "Import Backup",
     exporting: "Exporting…",

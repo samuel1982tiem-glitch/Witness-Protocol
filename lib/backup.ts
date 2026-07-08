@@ -27,6 +27,7 @@ import {
   getRecord,
   putRecord,
   STORES,
+  toCipherPayload,
   type VaultRecord,
   type IncidentRecord,
   type EvidenceRecord,
@@ -387,8 +388,9 @@ async function importVaultBackupV4(
 export async function exportVaultBackup(
   key: CryptoKey,
   onProgress?: (progress: ExportProgress) => void,
+  includeIdDocument: boolean = true,
 ): Promise<string> {
-  return exportVaultBackupV4Streaming(key, onProgress)
+  return exportVaultBackupV4Streaming(key, onProgress, includeIdDocument)
 }
 
 export async function importVaultBackupFresh(
@@ -665,6 +667,7 @@ function uint8ToBase64Chunk(bytes: Uint8Array): string {
 export async function exportVaultBackupV4Streaming(
   key: CryptoKey,
   onProgress?: (progress: ExportProgress) => void,
+  includeIdDocument: boolean = true,
 ): Promise<string> {
   const vault = await getRecord<VaultRecord>(STORES.users, "vault")
   if (!vault) throw new Error("Vault is not set up.")
@@ -727,6 +730,30 @@ export async function exportVaultBackupV4Streaming(
   })
 
   const metadata = await exportMetadataOnly()
+
+  if (!includeIdDocument && metadata.userProfile && metadata.userProfile.length > 0) {
+    const strippedProfiles: any[] = []
+    for (const profRecord of metadata.userProfile as any[]) {
+      try {
+        const plaintext = await decryptJSON<any>(key, toCipherPayload(profRecord))
+        if (plaintext && "idDocument" in plaintext) {
+          delete plaintext.idDocument
+          const reEncrypted = await encryptJSON(key, plaintext)
+          strippedProfiles.push({
+            ...profRecord,
+            iv: Array.from(reEncrypted.iv),
+            data: Array.from(new Uint8Array(reEncrypted.data)),
+          })
+        } else {
+          strippedProfiles.push(profRecord)
+        }
+      } catch {
+        strippedProfiles.push(profRecord)
+      }
+    }
+    metadata.userProfile = strippedProfiles as any
+  }
+
   const metaPlain = new TextEncoder().encode(JSON.stringify(metadata))
   const metaCompressed = await compress(metaPlain)
   const metaEncrypted = await encryptRaw(key, metaCompressed)

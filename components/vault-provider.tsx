@@ -83,10 +83,10 @@ interface VaultContextValue {
   decryptEvidenceRaw: (record: EvidenceRecord) => Promise<{ name: string; raw: Uint8Array }>
   loadSampleData: () => Promise<void>
   registerActivity: () => void
-  exportBackup: () => Promise<string>
+  exportBackup: (includeIdDocument?: boolean) => Promise<string>
   /** Live progress during export (null when not exporting). */
   exportProgress: ExportProgress | null
-  importBackup: (file: File, passcode: string) => Promise<void>
+  importBackup: (file: File, passcode: string, includeIdDocument?: boolean) => Promise<void>
   /** Live progress during a merge import (null when not merging). */
   mergeProgress: MergeProgress | null
   /** Summary counts from the most recently completed merge import. */
@@ -475,7 +475,7 @@ return true
     null,
   )
 
-  const exportBackup = React.useCallback(async (): Promise<string> => {
+  const exportBackup = React.useCallback(async (includeIdDocument: boolean = true): Promise<string> => {
     const key = keyRef.current
     if (!key) throw new Error("Vault is locked.")
 
@@ -488,8 +488,10 @@ return true
       etaSeconds: null,
     })
     try {
-      const fileName = await exportVaultBackup(key, (progress) =>
-        setExportProgress(progress),
+      const fileName = await exportVaultBackup(
+        key,
+        (progress) => setExportProgress(progress),
+        includeIdDocument,
       )
       await logAudit("backup_exported", fileName)
       return fileName
@@ -508,7 +510,7 @@ const clearMergeResult = React.useCallback(() => {
 }, [])
 
 const importBackup = React.useCallback(
-  async (file: File, passcode: string) => {
+  async (file: File, passcode: string, includeIdDocument: boolean = true) => {
     const existingKey = keyRef.current
 
     if (existingKey) {
@@ -543,6 +545,17 @@ const importBackup = React.useCallback(
     await refreshIncidents()
     await loadStoredAlerts()
     await loadProfile()
+
+    if (!includeIdDocument) {
+      try {
+        const stored = await loadUserProfile<any>(key)
+        if (stored && "idDocument" in stored) {
+          const { idDocument, ...rest } = stored
+          await saveUserProfile(key, rest)
+          setProfile(rest)
+        }
+      } catch {}
+    }
     setStatus("unlocked")
     registerActivity()
   },
