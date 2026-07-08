@@ -569,64 +569,6 @@ async function parseVaultBackupV4(
   }
 }
 
-export async function mergeVaultBackup(
-  file: File,
-  passcode: string,
-  currentKey: CryptoKey,
-  onProgress?: (progress: MergeProgress) => void,
-): Promise<MergeResult> {
-  const buffer = await file.arrayBuffer()
-  const bytes = new Uint8Array(buffer)
-  const format = detectFileFormat(bytes, file.name)
-
-  if (format === "png") {
-    throw new Error(
-      "This file is an image (PNG), not a valid backup file. Please select a .wpb or .wpbz file.",
-    )
-  }
-
-  if (format === "unknown") {
-    throw new Error(
-      "This file format is not recognized. Please select a valid backup file (.wpb or .wpbz).",
-    )
-  }
-
-  let parsed: ParsedBackup
-
-  if (format === "zip") {
-    parsed = await parseVaultBackupV4(bytes, passcode)
-  } else if (format === "json") {
-    try {
-      const text = new TextDecoder().decode(bytes)
-      const raw = JSON.parse(text)
-      parsed = await parseVaultBackupV3(raw, passcode)
-    } catch {
-      throw new Error(
-        "The file is not a valid JSON backup. Please ensure you selected the correct file.",
-      )
-    }
-  } else {
-    throw new Error(
-      "Unable to determine file format. Please select a valid backup file (.wpb or .wpbz).",
-    )
-  }
-
-  return mergeIncidentRecords(
-    parsed.sourceKey,
-    currentKey,
-    parsed.incidents,
-    parsed.evidence,
-    parsed.seals,
-    onProgress,
-  )
-}
-// ---------------------------------------------------------------------------
-// Streaming export — processes evidence one file at a time and writes
-// ZIP chunks to disk incrementally, instead of building the entire
-// backup in memory before writing. This fixes out-of-memory crashes on
-// exports with many/large media attachments.
-// ---------------------------------------------------------------------------
-
 export type ExportStage =
   | "preparing"
   | "metadata"
