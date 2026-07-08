@@ -588,6 +588,18 @@ async function runImport(passcode: string) {
       <Card>
         <CardBody className="space-y-3">
 
+          {vaultProfile?.idDocument ? (
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="size-4 rounded border-border"
+                checked={includeIdDocOnExport}
+                onChange={(e) => setIncludeIdDocOnExport(e.target.checked)}
+              />
+              {t("backup.includeIdDocumentExport")}
+            </label>
+          ) : null}
+
           <Button
             className="w-full"
             onClick={handleExport}
@@ -631,6 +643,18 @@ async function runImport(passcode: string) {
             className="hidden"
             onChange={handleFileSelected}
           />
+
+          {status !== "unlocked" ? (
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="size-4 rounded border-border"
+                checked={includeIdDocOnRestore}
+                onChange={(e) => setIncludeIdDocOnRestore(e.target.checked)}
+              />
+              {t("backup.includeIdDocumentRestore")}
+            </label>
+          ) : null}
 
           <Button
             variant="outline"
