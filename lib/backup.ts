@@ -767,6 +767,7 @@ export async function exportVaultBackupV4Streaming(
         exportedAt: Date.now(),
         salt: Array.from(vault.salt),
         evidenceCount: total,
+        userProfile: await loadUserProfile<any>(key),
       } satisfies ManifestV4),
     ),
     true,
