@@ -221,6 +221,7 @@ export const es: Dictionary = {
       "{count} registro{plural} añadido{plural} como nuevo (mismo ID, contenido diferente)",
     mergeEvidenceAdded:
       "{count} archivo{plural} de evidencia importado{plural}",
+    mergeIdentityImported: "Identidad del investigador importada",
     dismiss: "Descartar",
     stagePreparing: "Preparando…",
     stageMetadata: "Exportando metadatos…",

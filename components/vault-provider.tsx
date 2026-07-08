@@ -529,6 +529,7 @@ const importBackup = React.useCallback(
         )
         setMergeResult(result)
         await refreshIncidents()
+        if (result.identityImported) await loadProfile()
       } finally {
         setMergeProgress(null)
       }
@@ -561,6 +562,7 @@ const importBackup = React.useCallback(
   },
   [refreshIncidents, loadStoredAlerts, loadProfile, registerActivity],
 )
+
   const value: VaultContextValue = {
     status,
     incidents,

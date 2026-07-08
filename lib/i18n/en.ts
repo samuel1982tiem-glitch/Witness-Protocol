@@ -183,6 +183,7 @@ export const en: Dictionary = {
     mergeDiverged:
       "{count} record{plural} added as new (matching ID but different content)",
     mergeEvidenceAdded: "{count} evidence file{plural} imported",
+    mergeIdentityImported: "Investigator identity imported",
     dismiss: "Dismiss",
     stagePreparing: "Preparing…",
     stageMetadata: "Exporting metadata…",

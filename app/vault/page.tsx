@@ -700,6 +700,9 @@ async function runImport(passcode: string) {
                 <li>{t("backup.mergeDiverged", { count: mergeResult.diverged, plural: mergeResult.diverged === 1 ? "" : "s" })}</li>
                 <li>{t("backup.mergeDuplicates", { count: mergeResult.duplicates, plural: mergeResult.duplicates === 1 ? "" : "s" })}</li>
                 <li>{t("backup.mergeEvidenceAdded", { count: mergeResult.totalEvidenceAdded, plural: mergeResult.totalEvidenceAdded === 1 ? "" : "s" })}</li>
+                {mergeResult.identityImported ? (
+                  <li>{t("backup.mergeIdentityImported")}</li>
+                ) : null}
               </ul>
               <Button
                 variant="outline"

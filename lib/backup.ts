@@ -17,6 +17,7 @@ import {
   listEvidenceRecords,
   decryptEvidenceRaw,
   mergeIncidentRecords,
+  saveUserProfile,
   type VaultBackup,
   type MergeProgress,
   type MergeResult,
@@ -443,6 +444,7 @@ interface ParsedBackup {
   incidents: IncidentRecord[]
   evidence: EvidenceRecord[]
   seals: SealRecord[]
+  userProfile: { id: string; iv: Uint8Array; data: ArrayBuffer }[]
 }
 
 async function parseVaultBackupV3(
@@ -477,6 +479,11 @@ async function parseVaultBackupV3(
     incidents: revived.incidents as unknown as IncidentRecord[],
     evidence: revived.evidence as unknown as EvidenceRecord[],
     seals: (revived.seals ?? []) as unknown as SealRecord[],
+    userProfile: (revived.userProfile ?? []) as unknown as {
+      id: string
+      iv: Uint8Array
+      data: ArrayBuffer
+    }[],
   }
 }
 
@@ -567,6 +574,11 @@ async function parseVaultBackupV4(
     incidents: (meta.incidents ?? []) as unknown as IncidentRecord[],
     evidence: evidenceRecords,
     seals: (meta.seals ?? []) as unknown as SealRecord[],
+    userProfile: (meta.userProfile ?? []) as unknown as {
+      id: string
+      iv: Uint8Array
+      data: ArrayBuffer
+    }[],
   }
 }
 
@@ -612,7 +624,7 @@ export async function mergeVaultBackup(
     )
   }
 
-  return mergeIncidentRecords(
+  const result = await mergeIncidentRecords(
     parsed.sourceKey,
     currentKey,
     parsed.incidents,
@@ -620,6 +632,27 @@ export async function mergeVaultBackup(
     parsed.seals,
     onProgress,
   )
+
+  // Investigator identity: unlike incidents, there's only one per vault,
+  // so "merging" means overwrite-with-imported rather than combine.
+  // Decrypt with the SOURCE backup's key, then re-encrypt/save under the
+  // CURRENT vault's key -- the two keys differ whenever the backup came
+  // from a different device/passcode, which is the normal merge case.
+  if (parsed.userProfile.length > 0) {
+    try {
+      const record = parsed.userProfile[0]
+      const decrypted = await decryptJSON<unknown>(parsed.sourceKey, {
+        iv: record.iv,
+        data: record.data,
+      })
+      await saveUserProfile(currentKey, decrypted)
+      result.identityImported = true
+    } catch (err) {
+      console.error("Failed to import investigator identity during merge:", err)
+    }
+  }
+
+  return result
 }
 // ---------------------------------------------------------------------------
 // Streaming export — processes evidence one file at a time and writes

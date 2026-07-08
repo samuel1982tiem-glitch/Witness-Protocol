@@ -180,6 +180,7 @@ export const ptBR: Dictionary = {
     mergeDiverged:
       "{count} registro{plural} adicionado{plural} como novo (mesmo ID, conteúdo diferente)",
     mergeEvidenceAdded: "{count} arquivo{plural} de evidência importado{plural}",
+    mergeIdentityImported: "Identidade do investigador importada",
     dismiss: "Dispensar",
     stagePreparing: "Preparando…",
     stageMetadata: "Exportando metadados…",

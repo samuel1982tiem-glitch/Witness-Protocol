@@ -101,6 +101,7 @@ export interface Dictionary {
     mergeDuplicates: string
     mergeDiverged: string
     mergeEvidenceAdded: string
+    mergeIdentityImported: string
     dismiss: string
     stagePreparing: string
     stageMetadata: string

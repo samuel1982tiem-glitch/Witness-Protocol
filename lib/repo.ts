@@ -579,6 +579,7 @@ export interface MergeResult {
   duplicates: number
   diverged: number
   totalEvidenceAdded: number
+  identityImported: boolean
 }
 
 async function decryptIncidentForCompare(
@@ -644,6 +645,7 @@ export async function mergeIncidentRecords(
     duplicates: 0,
     diverged: 0,
     totalEvidenceAdded: 0,
+    identityImported: false,
   }
 
   const currentRecords = await getAll<IncidentRecord>(STORES.incidents)
