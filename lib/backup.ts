@@ -8,7 +8,7 @@ import {
   decompress,
   deriveKey,
 } from "./crypto"
-import { Filesystem, Directory, Encoding } from "@capacitor/filesystem"
+import { Filesystem, Directory } from "@capacitor/filesystem"
 import {
   exportAllRecords,
   exportMetadataOnly,
@@ -17,23 +17,17 @@ import {
   listEvidenceRecords,
   decryptEvidenceRaw,
   mergeIncidentRecords,
-  saveUserProfile,
-  loadUserProfile,
   type VaultBackup,
   type MergeProgress,
   type MergeResult,
 } from "./repo"
-
-export type { MergeProgress, MergeResult }
 import {
   getRecord,
   putRecord,
   STORES,
-  toCipherPayload,
   type VaultRecord,
   type IncidentRecord,
   type EvidenceRecord,
-  type SealRecord,
 } from "./db"
 
 // ---------------------------------------------------------------------------
@@ -143,7 +137,7 @@ async function exportVaultBackupV3(key: CryptoKey): Promise<string> {
     path: fileName,
     data: JSON.stringify(payload),
     directory: Directory.Documents,
-    encoding: Encoding.UTF8,
+    encoding: "utf8",
     recursive: true,
   })
 
@@ -168,7 +162,7 @@ async function importVaultBackupV3(
 
   let backup: VaultBackup
   try {
-    backup = await decryptJSON<VaultBackup>(key, { iv, data: dataBytes.buffer })
+    backup = await decryptJSON<VaultBackup>(key, { iv, data: dataBytes })
   } catch (err) {
     throw new Error(
       "Incorrect passcode or corrupted backup file. (" + String(err) + ")",
@@ -184,7 +178,6 @@ async function importVaultBackupV3(
     if (currentVault) await putRecord(STORES.users, currentVault)
     throw err
   }
-
 
   return { key, autoLockMs: 3 * 60 * 1000 }
 }
@@ -391,9 +384,8 @@ async function importVaultBackupV4(
 export async function exportVaultBackup(
   key: CryptoKey,
   onProgress?: (progress: ExportProgress) => void,
-  includeIdDocument: boolean = true,
 ): Promise<string> {
-  return exportVaultBackupV4Streaming(key, onProgress, includeIdDocument)
+  return exportVaultBackupV4Streaming(key, onProgress)
 }
 
 export async function importVaultBackupFresh(
@@ -447,8 +439,6 @@ interface ParsedBackup {
   evidence: EvidenceRecord[]
   seals: SealRecord[]
   userProfile: { id: string; iv: Uint8Array; data: ArrayBuffer }[]
-}[]
-}[]
 }
 
 async function parseVaultBackupV3(
@@ -469,7 +459,7 @@ async function parseVaultBackupV3(
 
   let backup: VaultBackup
   try {
-    backup = await decryptJSON<VaultBackup>(sourceKey, { iv, data: dataBytes.buffer })
+    backup = await decryptJSON<VaultBackup>(sourceKey, { iv, data: dataBytes })
   } catch (err) {
     throw new Error(
       "Incorrect passcode or corrupted backup file. (" + String(err) + ")",
@@ -483,11 +473,7 @@ async function parseVaultBackupV3(
     incidents: revived.incidents as unknown as IncidentRecord[],
     evidence: revived.evidence as unknown as EvidenceRecord[],
     seals: (revived.seals ?? []) as unknown as SealRecord[],
-    userProfile: (revived.userProfile ?? []) as unknown as {
-      id: string
-      iv: Uint8Array
-      data: ArrayBuffer
-    }[],
+    userProfile: (revived.userProfile ?? []) as any[],
   }
 }
 
@@ -577,12 +563,8 @@ async function parseVaultBackupV4(
     sourceKey,
     incidents: (meta.incidents ?? []) as unknown as IncidentRecord[],
     evidence: evidenceRecords,
-    seals: (meta.seals ?? []) as unknown as SealRecord[],
-    userProfile: (meta.userProfile ?? []) as unknown as {
-      id: string
-      iv: Uint8Array
-      data: ArrayBuffer
-    }[],
+      seals: (meta.seals ?? []) as unknown as SealRecord[],
+    userProfile: (meta.userProfile ?? []) as any[],
   }
 }
 
@@ -628,7 +610,7 @@ export async function mergeVaultBackup(
     )
   }
 
-  const result = await mergeIncidentRecords(
+  return mergeIncidentRecords(
     parsed.sourceKey,
     currentKey,
     parsed.incidents,
@@ -636,27 +618,6 @@ export async function mergeVaultBackup(
     parsed.seals,
     onProgress,
   )
-
-  // Investigator identity: unlike incidents, there's only one per vault,
-  // so "merging" means overwrite-with-imported rather than combine.
-  // Decrypt with the SOURCE backup's key, then re-encrypt/save under the
-  // CURRENT vault's key -- the two keys differ whenever the backup came
-  // from a different device/passcode, which is the normal merge case.
-  if (parsed.userProfile.length > 0) {
-    try {
-      const record = parsed.userProfile[0]
-      const decrypted = await decryptJSON<unknown>(parsed.sourceKey, {
-        iv: record.iv,
-        data: record.data,
-      })
-      await saveUserProfile(currentKey, decrypted)
-      result.identityImported = true
-    } catch (err) {
-      console.error("Failed to import investigator identity during merge:", err)
-    }
-  }
-
-  return result
 }
 // ---------------------------------------------------------------------------
 // Streaming export — processes evidence one file at a time and writes
@@ -704,7 +665,6 @@ function uint8ToBase64Chunk(bytes: Uint8Array): string {
 export async function exportVaultBackupV4Streaming(
   key: CryptoKey,
   onProgress?: (progress: ExportProgress) => void,
-  includeIdDocument: boolean = true,
 ): Promise<string> {
   const vault = await getRecord<VaultRecord>(STORES.users, "vault")
   if (!vault) throw new Error("Vault is not set up.")
@@ -767,31 +727,6 @@ export async function exportVaultBackupV4Streaming(
   })
 
   const metadata = await exportMetadataOnly()
-
-
-  if (!includeIdDocument && metadata.userProfile && metadata.userProfile.length > 0) {
-    const strippedProfiles: any[] = []
-    for (const profRecord of metadata.userProfile as any[]) {
-      try {
-        const plaintext = await decryptJSON<any>(key, toCipherPayload(profRecord))
-        if (plaintext && "idDocument" in plaintext) {
-          delete plaintext.idDocument
-          const reEncrypted = await encryptJSON(key, plaintext)
-          strippedProfiles.push({
-            ...profRecord,
-            iv: Array.from(reEncrypted.iv),
-            data: Array.from(new Uint8Array(reEncrypted.data)),
-          })
-        } else {
-          strippedProfiles.push(profRecord)
-        }
-      } catch {
-        strippedProfiles.push(profRecord)
-      }
-    }
-    metadata.userProfile = strippedProfiles as any
-  }
-
   const metaPlain = new TextEncoder().encode(JSON.stringify(metadata))
   const metaCompressed = await compress(metaPlain)
   const metaEncrypted = await encryptRaw(key, metaCompressed)
