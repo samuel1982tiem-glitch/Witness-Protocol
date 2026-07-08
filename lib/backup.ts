@@ -185,12 +185,6 @@ async function importVaultBackupV3(
     throw err
   }
 
-  try {
-    const check = await loadUserProfile<any>(key)
-    alert("[WP-DEBUG import-V4] loadUserProfile after import: " + JSON.stringify(check))
-  } catch (err) {
-    alert("[WP-DEBUG import-V4] loadUserProfile threw: " + String(err))
-  }
 
   return { key, autoLockMs: 3 * 60 * 1000 }
 }
@@ -377,7 +371,6 @@ async function importVaultBackupV4(
     seals: meta.seals ?? [],
   }
 
-  alert("[WP-DEBUG import-V4] meta.userProfile raw length: " + (meta.userProfile?.length ?? "undefined"))
   const revived = reviveBuffers(fullBackup)
 
   const currentVault = await getRecord<VaultRecord>(STORES.users, "vault")
@@ -773,10 +766,7 @@ export async function exportVaultBackupV4Streaming(
 
   const metadata = await exportMetadataOnly()
 
-  // TEMP DIAGNOSTIC -- remove once identity-export bug is confirmed fixed
-  alert("[WP-DEBUG export] metadata.userProfile.length: " + (metadata.userProfile?.length ?? "undefined"))
 
-  alert("[WP-DEBUG export] metadata.userProfile.length: " + (metadata.userProfile?.length ?? "undefined"))
   if (!includeIdDocument && metadata.userProfile && metadata.userProfile.length > 0) {
     const strippedProfiles: any[] = []
     for (const profRecord of metadata.userProfile as any[]) {
