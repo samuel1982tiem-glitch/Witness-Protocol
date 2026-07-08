@@ -764,6 +764,9 @@ export async function exportVaultBackupV4Streaming(
 
   const metadata = await exportMetadataOnly()
 
+  // TEMP DIAGNOSTIC -- remove once identity-export bug is confirmed fixed
+  alert("[WP-DEBUG export] metadata.userProfile.length: " + (metadata.userProfile?.length ?? "undefined"))
+
   if (!includeIdDocument && metadata.userProfile && metadata.userProfile.length > 0) {
     const strippedProfiles: any[] = []
     for (const profRecord of metadata.userProfile as any[]) {
