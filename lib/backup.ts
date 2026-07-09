@@ -8,7 +8,7 @@ import {
   decompress,
   deriveKey,
 } from "./crypto"
-import { Filesystem, Directory } from "@capacitor/filesystem"
+import { Filesystem, Directory, Encoding } from "@capacitor/filesystem"
 import {
   exportAllRecords,
   exportMetadataOnly,
@@ -23,6 +23,8 @@ import {
   saveUserProfile,
   loadUserProfile,
 } from "./repo"
+
+export type { MergeProgress, MergeResult }
 import {
   getRecord,
   putRecord,
@@ -145,7 +147,7 @@ async function exportVaultBackupV3(key: CryptoKey): Promise<string> {
     path: fileName,
     data: JSON.stringify(payload),
     directory: Directory.Documents,
-    encoding: "utf8",
+    encoding: Encoding.UTF8,
     recursive: true,
   })
 
@@ -170,7 +172,10 @@ async function importVaultBackupV3(
 
   let backup: VaultBackup
   try {
-    backup = await decryptJSON<VaultBackup>(key, { iv, data: dataBytes })
+    backup = await decryptJSON<VaultBackup>(key, {
+      iv,
+      data: dataBytes.buffer.slice(dataBytes.byteOffset, dataBytes.byteOffset + dataBytes.byteLength),
+    })
   } catch (err) {
     throw new Error(
       "Incorrect passcode or corrupted backup file. (" + String(err) + ")",
@@ -226,7 +231,7 @@ function uint8ToBase64(bytes: Uint8Array): string {
 async function buildExportMetadata(
   key: CryptoKey,
   includeIdDocument: boolean,
-): Promise<VaultBackup> {
+): Promise<Omit<VaultBackup, "evidence">> {
   const metadata = await exportMetadataOnly()
 
   if (includeIdDocument) {
@@ -513,7 +518,10 @@ async function parseVaultBackupV3(
 
   let backup: VaultBackup
   try {
-    backup = await decryptJSON<VaultBackup>(sourceKey, { iv, data: dataBytes })
+    backup = await decryptJSON<VaultBackup>(sourceKey, {
+      iv,
+      data: dataBytes.buffer.slice(dataBytes.byteOffset, dataBytes.byteOffset + dataBytes.byteLength),
+    })
   } catch (err) {
     throw new Error(
       "Incorrect passcode or corrupted backup file. (" + String(err) + ")",

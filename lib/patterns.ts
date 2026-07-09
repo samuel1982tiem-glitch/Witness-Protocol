@@ -363,3 +363,107 @@ export function analyzeIncidents(incidents: Incident[]): PatternAlert[] {
     (a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity],
   )
 }
+
+
+/**
+ * Translates a PatternAlert's title/observation/detail for display,
+ * mirroring the logic in app/patterns/page.tsx's AlertItem component.
+ * Extracted here (additive, no change to the page) so other consumers
+ * (e.g. lib/report.ts) can reuse it without duplicating the switch-cases.
+ */
+export function translatePatternAlert(
+  alert: PatternAlert,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): { title: string; observation: string; detail: string } {
+  const data = alert.data ?? {}
+
+  const translatedBlock = (() => {
+    const block = String(data.block ?? "")
+    switch (block) {
+      case "earlyMorning": return t("patterns.timeBlocks.dawn")
+      case "dawn": return t("patterns.timeBlocks.dawn")
+      case "morning": return t("patterns.timeBlocks.morning")
+      case "afternoon": return t("patterns.timeBlocks.afternoon")
+      case "evening": return t("patterns.timeBlocks.evening")
+      case "night": return t("patterns.timeBlocks.night")
+      default: return block
+    }
+  })()
+
+  const translatedWeekday = (() => {
+    const weekday = data.weekday
+    if (weekday === undefined || weekday === null) return ""
+    return t(`patterns.weekdays.${String(weekday)}`)
+  })()
+
+  const title = (() => {
+    switch (alert.type) {
+      case "repeated-time": return t("patterns.alertTitles.repeatedTime")
+      case "weekday-cluster": return t("patterns.alertTitles.repeatedTime")
+      case "weekday-time-cluster": return t("patterns.alertTitles.repeatedTime")
+      case "repeated-location": return t("patterns.alertTitles.repeatedLocation")
+      case "frequency-spike": return t("patterns.alertTitles.frequencySpike")
+      case "category-cluster": return t("patterns.alertTitles.categoryCluster")
+      case "activity-trend": {
+        const direction = String(data.direction ?? "")
+        if (direction === "increasing") return t("patterns.alertTitles.activityTrendIncreasing")
+        if (direction === "decreasing") return t("patterns.alertTitles.activityTrendDecreasing")
+        return t("patterns.alertTitles.activityTrendStable")
+      }
+      default: return alert.title
+    }
+  })()
+
+  const observation = (() => {
+    switch (alert.type) {
+      case "repeated-time":
+        return t("patterns.alertText.repeatedTime", { count: Number(data.count ?? 0), block: translatedBlock })
+      case "weekday-cluster":
+        return `${Number(data.count ?? 0)} ${translatedWeekday}`
+      case "weekday-time-cluster":
+        return `${Number(data.count ?? 0)} ${translatedWeekday} ${translatedBlock}`
+      case "repeated-location":
+        return t("patterns.alertText.repeatedLocation", {
+          count: Number(data.count ?? 0),
+          cell: String(data.cell ?? data.coordinates ?? ""),
+        })
+      case "frequency-spike": {
+        const rawDay = String(data.day ?? "")
+        const formattedDay = rawDay ? new Date(`${rawDay}T00:00:00`).toLocaleDateString() : rawDay
+        return t("patterns.alertText.frequencySpike", { day: formattedDay, count: Number(data.count ?? 0) })
+      }
+      case "category-cluster":
+        return t("patterns.alertText.categoryCluster", {
+          share: Number(data.share ?? data.percentage ?? 0),
+          category: String(data.categoryName ?? data.category ?? ""),
+        })
+      case "activity-trend": {
+        const direction = String(data.direction ?? "")
+        if (direction === "increasing") return t("patterns.alertText.activityTrendIncreasing")
+        if (direction === "decreasing") return t("patterns.alertText.activityTrendDecreasing")
+        return t("patterns.alertText.activityTrendStable")
+      }
+      default: return alert.observation
+    }
+  })()
+
+  const detail = (() => {
+    switch (alert.type) {
+      case "repeated-time": return t("patterns.alertDetail.repeatedTime", { share: Number(data.percentage ?? 0) })
+      case "repeated-location": return t("patterns.alertDetail.repeatedLocation")
+      case "frequency-spike": return t("patterns.alertDetail.frequencySpike", { average: Number(data.average ?? 0), std: Number(data.std ?? 0) })
+      case "category-cluster": return t("patterns.alertDetail.categoryCluster", { count: Number(data.count ?? 0), total: Number(data.total ?? 0) })
+      case "weekday-cluster": return t("patterns.alertDetail.weekdayCluster", { share: Number(data.percentage ?? 0) })
+      case "weekday-time-cluster": return t("patterns.alertDetail.weekdayTimeCluster", { count: Number(data.count ?? 0), share: Number(data.percentage ?? 0) })
+      case "activity-trend": {
+        const direction = String(data.direction ?? "")
+        if (direction === "increasing") return t("patterns.alertDetail.activityTrendIncreasing", { perWeek: Number(data.perWeek ?? 0), spanDays: Number(data.spanDays ?? 0) })
+        if (direction === "decreasing") return t("patterns.alertDetail.activityTrendDecreasing", { perWeek: Number(data.perWeek ?? 0), spanDays: Number(data.spanDays ?? 0) })
+        return t("patterns.alertDetail.activityTrendStable", { perWeek: Number(data.perWeek ?? 0) })
+      }
+      default: return alert.detail
+    }
+  })()
+
+  return { title, observation, detail }
+}
