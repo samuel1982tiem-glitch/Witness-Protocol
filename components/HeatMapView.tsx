@@ -111,8 +111,16 @@ function MapPanel({ incidents, t }: MapPanelProps) {
       leafletRef.current = L
 
       const map = L.map(mapContainerRef.current).setView([0, 0], 2)
+      // Leaflet adds a "Leaflet" attribution link (leafletjs.com) by
+      // default. Tapping it navigates the ENTIRE app's WebView to an
+      // external URL -- this project has no external-link interception
+      // set up, so a failed top-level navigation (e.g. while offline)
+      // replaces the whole app with the WebView's native error page,
+      // and going "Back" from there forces a hard reload that relocks
+      // the vault. Disable the link entirely rather than risk it.
+      map.attributionControl.setPrefix(false)
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "&copy; OpenStreetMap contributors",
+        attribution: "\u00a9 OpenStreetMap contributors",
         maxZoom: 19,
       }).addTo(map)
 
