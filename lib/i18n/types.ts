@@ -26,6 +26,7 @@ export interface Dictionary {
   patterns: PatternsDict
   pdfExport: PdfExportDict
   report: ReportDict
+  heatMap: HeatMapDict
 
   common: {
     save: string
@@ -350,6 +351,16 @@ export interface PdfExportDict {
   footer: string
   bulkReportTitle: string
   generatedAt: string
+}
+
+export interface HeatMapDict {
+  title: string
+  consentTitle: string
+  consentBody: string
+  consentProceed: string
+  showHeatOverlay: string
+  noGpsIncidents: string
+  viewIncident: string
 }
 
 export interface ReportDict {

@@ -1,6 +1,6 @@
 "use client"
 
-import { FileDown, FileText, Package as PackageIcon, Search, SlidersHorizontal, X } from "lucide-react"
+import { FileDown, FileText, MapPin as MapPinIcon, Package as PackageIcon, Search, SlidersHorizontal, X } from "lucide-react"
 import * as React from "react"
 import { useRouter } from "next/navigation"
 
@@ -290,12 +290,20 @@ export default function IncidentsPage() {
       ) : null}
 
       {incidents.length > 0 ? (
-        <Link href="/report/" className="block">
-          <Button type="button" variant="outline" size="sm" className="w-full">
-            <FileText className="size-4" aria-hidden="true" />
-            {t("report.generate")}
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/report/" className="block flex-1">
+            <Button type="button" variant="outline" size="sm" className="w-full">
+              <FileText className="size-4" aria-hidden="true" />
+              {t("report.generate")}
+            </Button>
+          </Link>
+          <Link href="/heatmap/" className="block flex-1">
+            <Button type="button" variant="outline" size="sm" className="w-full">
+              <MapPinIcon className="size-4" aria-hidden="true" />
+              {t("heatMap.title")}
+            </Button>
+          </Link>
+        </div>
       ) : null}
 
       <div className="flex items-center gap-2">

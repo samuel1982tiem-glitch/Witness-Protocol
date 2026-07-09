@@ -375,4 +375,14 @@ export const es: Dictionary = {
     generateFailed: "Error al generar el informe: {error}",
     noIncidentsToReport: "Ningún incidente coincide con los filtros seleccionados.",
   },
+
+  heatMap: {
+    title: "Mapa de Calor",
+    consentTitle: "Esta función requiere acceso a internet",
+    consentBody: "El mapa de calor carga imágenes de mapa de un proveedor en línea. Tus datos de incidentes nunca se envían a ningún lugar -- solo solicitudes genéricas de teselas de mapa para el área que estás viendo. Todo lo demás en esta aplicación permanece completamente sin conexión y en el dispositivo.",
+    consentProceed: "Sí, continuar",
+    showHeatOverlay: "Mostrar superposición de calor",
+    noGpsIncidents: "No hay incidentes con ubicación GPS para mostrar.",
+    viewIncident: "Ver incidente",
+  },
 }

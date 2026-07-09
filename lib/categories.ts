@@ -82,6 +82,20 @@ export function categoryName(
  * Translated description for a category. Always call this instead of
  * reading Category.description directly.
  */
+const CATEGORY_COLORS: Record<CategoryId, string> = {
+  "surveillance": "#3b82f6",
+  "personal-tracking": "#8b5cf6",
+  "gaslighting": "#f59e0b",
+  "device-anomaly": "#06b6d4",
+  "poisoning": "#ef4444",
+  "legal": "#64748b",
+}
+
+/** Marker/legend color for a category, used on the Heat Map. */
+export function categoryColor(id: CategoryId): string {
+  return CATEGORY_COLORS[id] ?? "#64748b"
+}
+
 export function categoryDescription(
   id: CategoryId,
   t: (key: string, vars?: Record<string, string | number>) => string,

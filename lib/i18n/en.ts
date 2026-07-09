@@ -336,4 +336,14 @@ export const en: Dictionary = {
     generateFailed: "Report generation failed: {error}",
     noIncidentsToReport: "No incidents match the selected filters.",
   },
+
+  heatMap: {
+    title: "Heat Map",
+    consentTitle: "This feature requires internet access",
+    consentBody: "The heat map loads map imagery from an online map provider. Your incident data is never sent anywhere -- only generic map tile requests for the area you're viewing. Everything else in this app stays fully offline and on-device.",
+    consentProceed: "Yes, continue",
+    showHeatOverlay: "Show heat overlay",
+    noGpsIncidents: "No incidents with GPS location to display.",
+    viewIncident: "View incident",
+  },
 }
