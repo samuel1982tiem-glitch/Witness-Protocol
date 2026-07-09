@@ -14,6 +14,7 @@ import {
   FileText,
   Download,
   Trash2,
+  ChevronDown,
 } from "lucide-react"
 import * as React from "react"
 
@@ -32,6 +33,7 @@ export default function VaultPage() {
     status,
     incidents,
     autoLockMs,
+    setAutoLockMs,
     lock,
     exportBackup,
     exportProgress,
@@ -295,6 +297,78 @@ async function runImport(passcode: string) {
   return (
     <div className="space-y-5">
 
+
+      <Card>
+        <CardBody className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Globe className="size-4 text-primary" />
+            <p className="font-medium">{t("vault.language")}</p>
+          </div>
+
+          <div className="relative">
+            <select
+              value={preference}
+              onChange={(e) => setLanguage(e.target.value as LanguagePreference)}
+              className="w-full appearance-none rounded-xl border border-border bg-background px-3 py-3 pr-10 text-sm outline-none"
+            >
+              <option value="system">System</option>
+              {SUPPORTED_LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code}>
+                  {l.nativeName}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          </div>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardBody className="space-y-4">
+
+          <div className="flex items-start gap-3">
+            <Timer className="mt-1 size-4 text-primary" />
+            <div className="flex-1">
+              <p className="font-medium">
+                {t("vault.autoLockTitle")}
+              </p>
+
+              <p className="text-sm text-muted-foreground">
+                {t("vault.autoLockDescription", {
+                  minutes: autoLockMin,
+                  plural: autoLockMin === 1 ? "" : "s",
+                })}
+              </p>
+            </div>
+          </div>
+
+          <div className="relative">
+            <select
+              value={String(autoLockMin)}
+              onChange={(e) => setAutoLockMs(Number(e.target.value) * 60000)}
+              className="w-full appearance-none rounded-xl border border-border bg-background px-3 py-3 pr-10 text-sm outline-none"
+            >
+              <option value="1">1 minute</option>
+              <option value="3">3 minutes</option>
+              <option value="5">5 minutes</option>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          </div>
+
+          <Button
+            variant="outline"
+            className="w-full"
+            disabled={status !== "unlocked"}
+            onClick={lock}
+          >
+            <Lock className="size-4" />
+            {t("vault.lockNow")}
+          </Button>
+
+        </CardBody>
+      </Card>
+
+
       <Card>
         <CardBody className="space-y-5">
 
@@ -425,74 +499,6 @@ async function runImport(passcode: string) {
 
       <Card>
         <CardBody className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Globe className="size-4 text-primary" />
-            <p className="font-medium">{t("vault.language")}</p>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setLanguage("system")}
-              className={`rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors ${
-                preference === "system"
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border bg-background text-foreground hover:bg-muted"
-              }`}
-            >
-              System
-            </button>
-            {SUPPORTED_LANGUAGES.map((l) => (
-              <button
-                key={l.code}
-                type="button"
-                onClick={() => setLanguage(l.code as LanguagePreference)}
-                className={`rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors ${
-                  preference === l.code
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border bg-background text-foreground hover:bg-muted"
-                }`}
-              >
-                {l.nativeName}
-              </button>
-            ))}
-          </div>
-        </CardBody>
-      </Card>
-
-      <Card>
-        <CardBody className="space-y-4">
-
-          <div className="flex items-start gap-3">
-            <Timer className="mt-1 size-4 text-primary" />
-            <div>
-              <p className="font-medium">
-                {t("vault.autoLockTitle")}
-              </p>
-
-              <p className="text-sm text-muted-foreground">
-                {t("vault.autoLockDescription", {
-                  minutes: autoLockMin,
-                  plural: autoLockMin === 1 ? "" : "s",
-                })}
-              </p>
-            </div>
-          </div>
-
-          <Button
-            variant="outline"
-            className="w-full"
-            disabled={status !== "unlocked"}
-            onClick={lock}
-          >
-            <Lock className="size-4" />
-            {t("vault.lockNow")}
-          </Button>
-
-        </CardBody>
-      </Card>
-
-      <Card>
-        <CardBody className="space-y-3">
 
           <div className="flex items-start gap-3">
             <ShieldCheck className="mt-1 size-4 text-primary" />
@@ -540,48 +546,6 @@ async function runImport(passcode: string) {
             </div>
           ) : null}
 
-        </CardBody>
-      </Card>
-
-      <Card>
-        <CardBody className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <ScrollText className="size-4 text-primary" />
-              <p className="font-medium">{t("auditLog.title")}</p>
-            </div>
-            {auditEntries.length > 5 ? (
-              <button
-                type="button"
-                className="text-xs text-muted-foreground underline"
-                onClick={() => setAuditExpanded((v) => !v)}
-              >
-                {auditExpanded
-                  ? t("auditLog.showLess")
-                  : t("auditLog.showAll", { count: auditEntries.length })}
-              </button>
-            ) : null}
-          </div>
-
-          {auditEntries.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {t("auditLog.noActivity")}
-            </p>
-          ) : (
-            <ul className="space-y-2">
-              {(auditExpanded ? auditEntries : auditEntries.slice(0, 5)).map((entry, i) => (
-                <li key={i} className="rounded-lg border px-3 py-2 text-xs">
-                  <p className="font-medium">{auditActionLabel(entry.action)}</p>
-                  {entry.detail ? (
-                    <p className="truncate text-muted-foreground">{entry.detail}</p>
-                  ) : null}
-                  <p className="text-muted-foreground">
-                    {new Date(entry.timestamp).toLocaleString()}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
         </CardBody>
       </Card>
 
@@ -717,6 +681,49 @@ async function runImport(passcode: string) {
 
         </CardBody>
       </Card>
+
+      <Card>
+        <CardBody className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ScrollText className="size-4 text-primary" />
+              <p className="font-medium">{t("auditLog.title")}</p>
+            </div>
+            {auditEntries.length > 5 ? (
+              <button
+                type="button"
+                className="text-xs text-muted-foreground underline"
+                onClick={() => setAuditExpanded((v) => !v)}
+              >
+                {auditExpanded
+                  ? t("auditLog.showLess")
+                  : t("auditLog.showAll", { count: auditEntries.length })}
+              </button>
+            ) : null}
+          </div>
+
+          {auditEntries.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {t("auditLog.noActivity")}
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {(auditExpanded ? auditEntries : auditEntries.slice(0, 5)).map((entry, i) => (
+                <li key={i} className="rounded-lg border px-3 py-2 text-xs">
+                  <p className="font-medium">{auditActionLabel(entry.action)}</p>
+                  {entry.detail ? (
+                    <p className="truncate text-muted-foreground">{entry.detail}</p>
+                  ) : null}
+                  <p className="text-muted-foreground">
+                    {new Date(entry.timestamp).toLocaleString()}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardBody>
+      </Card>
+
 
       <PasscodeModal
         open={pendingImportFile !== null}
