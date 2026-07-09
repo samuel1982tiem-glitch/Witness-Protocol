@@ -111,6 +111,12 @@ function MapPanel({ incidents, t }: MapPanelProps) {
       try {
         const L = await import("leaflet")
         try { sessionStorage.setItem("wp_heatmap_last_step", "leaflet_imported") } catch {}
+        // leaflet.heat is an old UMD plugin that patches heatLayer onto a
+        // global L. Under this bundler setup the L reference returned by
+        // dynamic import() is not guaranteed to be the same object
+        // leaflet.heat resolves internally -- exposing it on window
+        // guarantees heatLayer attaches to the object this component uses.
+        ;(window as any).L = L
         await import("leaflet.heat")
         try { sessionStorage.setItem("wp_heatmap_last_step", "heat_imported") } catch {}
         if (cancelled || !mapContainerRef.current || mapRef.current) return
@@ -148,6 +154,9 @@ function MapPanel({ incidents, t }: MapPanelProps) {
 
   // Redraw markers + heat layer whenever the filtered set changes.
   React.useEffect(() => {
+    try {
+      sessionStorage.setItem("wp_heatmap_last_step", "markers_effect_start")
+
     if (!ready || !mapRef.current || !leafletRef.current) return
     const L = leafletRef.current
     const map = mapRef.current
@@ -183,6 +192,14 @@ function MapPanel({ incidents, t }: MapPanelProps) {
     if (points.length > 0) {
       const bounds = L.latLngBounds(points as any)
       map.fitBounds(bounds, { padding: [30, 30], maxZoom: 15 })
+    }
+        sessionStorage.setItem("wp_heatmap_last_step", "markers_effect_done")
+    } catch (err) {
+      try {
+        sessionStorage.setItem("wp_heatmap_last_step", "markers_effect_error")
+        sessionStorage.setItem("wp_heatmap_error", "MARKERS: " + ((err as Error)?.message ?? String(err)))
+      } catch {}
+      console.error("[HeatMap] markers effect failed:", err)
     }
   }, [ready, filtered, showHeat])
 
