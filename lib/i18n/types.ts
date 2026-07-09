@@ -25,6 +25,7 @@ export interface Dictionary {
   incidentForm: IncidentFormDict
   patterns: PatternsDict
   pdfExport: PdfExportDict
+  report: ReportDict
 
   common: {
     save: string
@@ -349,4 +350,28 @@ export interface PdfExportDict {
   footer: string
   bulkReportTitle: string
   generatedAt: string
+}
+
+export interface ReportDict {
+  title: string
+  generatedOn: string
+  timelineHeading: string
+  patternsHeading: string
+  noIncidents: string
+  noPatterns: string
+  footer: string
+  signatureLine: string
+  optionsTitle: string
+  dateFrom: string
+  dateTo: string
+  categoriesLabel: string
+  allCategories: string
+  includeEvidence: string
+  formatLabel: string
+  formatPlainText: string
+  formatRichText: string
+  generate: string
+  generating: string
+  generateFailed: string
+  noIncidentsToReport: string
 }

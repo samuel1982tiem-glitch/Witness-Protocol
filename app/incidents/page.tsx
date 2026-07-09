@@ -1,6 +1,6 @@
 "use client"
 
-import { FileDown, Package as PackageIcon, Search, SlidersHorizontal, X } from "lucide-react"
+import { FileDown, FileText, Package as PackageIcon, Search, SlidersHorizontal, X } from "lucide-react"
 import * as React from "react"
 import { useRouter } from "next/navigation"
 
@@ -18,6 +18,7 @@ import { useI18n } from "@/components/i18n-provider"
 import { CATEGORIES, categoryDescription, categoryName } from "@/lib/categories"
 import { generateBulkIncidentsPdf } from "@/lib/pdf-export"
 import { generateIncidentsPackage } from "@/lib/package-export"
+import Link from "next/link"
 import { isShareCancelled } from "@/lib/share-utils"
 import type { IncidentFilters } from "@/lib/types"
 
@@ -286,6 +287,15 @@ export default function IncidentsPage() {
               : t("recordsPage.packageAll")}
           </Button>
         </div>
+      ) : null}
+
+      {incidents.length > 0 ? (
+        <Link href="/report/" className="block">
+          <Button type="button" variant="outline" size="sm" className="w-full">
+            <FileText className="size-4" aria-hidden="true" />
+            {t("report.generate")}
+          </Button>
+        </Link>
       ) : null}
 
       <div className="flex items-center gap-2">
