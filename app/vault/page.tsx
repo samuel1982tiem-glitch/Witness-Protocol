@@ -297,77 +297,75 @@ async function runImport(passcode: string) {
   return (
     <div className="space-y-5">
 
-
-      <Card>
-        <CardBody className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Globe className="size-4 text-primary" />
-            <p className="font-medium">{t("vault.language")}</p>
-          </div>
-
-          <div className="relative">
-            <select
-              value={preference}
-              onChange={(e) => setLanguage(e.target.value as LanguagePreference)}
-              className="w-full appearance-none rounded-xl border border-border bg-background px-3 py-3 pr-10 text-sm outline-none"
-            >
-              <option value="system">System</option>
-              {SUPPORTED_LANGUAGES.map((l) => (
-                <option key={l.code} value={l.code}>
-                  {l.nativeName}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          </div>
-        </CardBody>
-      </Card>
-
-      <Card>
-        <CardBody className="space-y-4">
-
-          <div className="flex items-start gap-3">
-            <Timer className="mt-1 size-4 text-primary" />
-            <div className="flex-1">
-              <p className="font-medium">
-                {t("vault.autoLockTitle")}
-              </p>
-
-              <p className="text-sm text-muted-foreground">
-                {t("vault.autoLockDescription", {
-                  minutes: autoLockMin,
-                  plural: autoLockMin === 1 ? "" : "s",
-                })}
-              </p>
+      <div className="grid gap-5 md:grid-cols-2 md:items-start">
+        <Card className="h-full">
+          <CardBody className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Globe className="size-4 text-primary" />
+              <p className="font-medium">{t("vault.language")}</p>
             </div>
-          </div>
 
-          <div className="relative">
-            <select
-              value={String(autoLockMin)}
-              onChange={(e) => setAutoLockMs(Number(e.target.value) * 60000)}
-              className="w-full appearance-none rounded-xl border border-border bg-background px-3 py-3 pr-10 text-sm outline-none"
+            <div className="relative">
+              <select
+                value={preference}
+                onChange={(e) => setLanguage(e.target.value as LanguagePreference)}
+                className="w-full appearance-none rounded-xl border border-border bg-background px-3 py-3 pr-10 text-sm outline-none"
+              >
+                <option value="system">System</option>
+                {SUPPORTED_LANGUAGES.map((l) => (
+                  <option key={l.code} value={l.code}>
+                    {l.nativeName}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            </div>
+          </CardBody>
+        </Card>
+
+        <Card className="h-full">
+          <CardBody className="space-y-4">
+            <div className="flex items-start gap-3">
+              <Timer className="mt-1 size-4 text-primary" />
+              <div className="flex-1">
+                <p className="font-medium">
+                  {t("vault.autoLockTitle")}
+                </p>
+
+                <p className="text-sm text-muted-foreground">
+                  {t("vault.autoLockDescription", {
+                    minutes: autoLockMin,
+                    plural: autoLockMin === 1 ? "" : "s",
+                  })}
+                </p>
+              </div>
+            </div>
+
+            <div className="relative">
+              <select
+                value={String(autoLockMin)}
+                onChange={(e) => setAutoLockMs(Number(e.target.value) * 60000)}
+                className="w-full appearance-none rounded-xl border border-border bg-background px-3 py-3 pr-10 text-sm outline-none"
+              >
+                <option value="1">1 minute</option>
+                <option value="3">3 minutes</option>
+                <option value="5">5 minutes</option>
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            </div>
+
+            <Button
+              variant="outline"
+              className="w-full"
+              disabled={status !== "unlocked"}
+              onClick={lock}
             >
-              <option value="1">1 minute</option>
-              <option value="3">3 minutes</option>
-              <option value="5">5 minutes</option>
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          </div>
-
-          <Button
-            variant="outline"
-            className="w-full"
-            disabled={status !== "unlocked"}
-            onClick={lock}
-          >
-            <Lock className="size-4" />
-            {t("vault.lockNow")}
-          </Button>
-
-        </CardBody>
-      </Card>
-
+              <Lock className="size-4" />
+              {t("vault.lockNow")}
+            </Button>
+          </CardBody>
+        </Card>
+      </div>
 
       <Card>
         <CardBody className="space-y-5">
