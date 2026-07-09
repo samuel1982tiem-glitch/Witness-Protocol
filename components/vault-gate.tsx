@@ -188,6 +188,17 @@ function UnlockForm() {
   const [localError, setLocalError] = React.useState<string | null>(null)
   const [shake, setShake] = React.useState(false)
 
+  const [heatMapDebug, setHeatMapDebug] = React.useState<string | null>(null)
+  React.useEffect(() => {
+    try {
+      const lastStep = sessionStorage.getItem("wp_heatmap_last_step")
+      const errorMsg = sessionStorage.getItem("wp_heatmap_error")
+      if (lastStep || errorMsg) {
+        setHeatMapDebug(`lastStep=${lastStep ?? "null"}\nerror=${errorMsg ?? "null"}`)
+      }
+    } catch {}
+  }, [])
+
   React.useEffect(() => {
     if (passcode.length === length) {
       ;(async () => {
@@ -211,6 +222,13 @@ function UnlockForm() {
       <div className={shake ? "animate-shake" : ""}>
         <Dots length={length} filled={passcode.length} />
       </div>
+
+      {heatMapDebug && (
+        <details open className="mt-2 max-h-40 overflow-auto rounded-lg border border-border bg-muted/40 p-2 text-[10px] leading-tight text-muted-foreground">
+          <summary className="cursor-pointer text-xs font-medium">Debug: heat map</summary>
+          <pre className="whitespace-pre-wrap break-all">{heatMapDebug}</pre>
+        </details>
+      )}
 
       {/* Error text intentionally suppressed on unlock — the dot-row
           shake animation (see animate-shake above) is the only feedback

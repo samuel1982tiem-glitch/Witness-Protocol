@@ -103,30 +103,39 @@ function MapPanel({ incidents, t }: MapPanelProps) {
   // Initialize the map once.
   React.useEffect(() => {
     let cancelled = false
+    try {
+      sessionStorage.setItem("wp_heatmap_last_step", "effect_start")
+      sessionStorage.removeItem("wp_heatmap_error")
+    } catch {}
     ;(async () => {
-      const L = await import("leaflet")
-      await import("leaflet.heat")
-      if (cancelled || !mapContainerRef.current || mapRef.current) return
+      try {
+        const L = await import("leaflet")
+        try { sessionStorage.setItem("wp_heatmap_last_step", "leaflet_imported") } catch {}
+        await import("leaflet.heat")
+        try { sessionStorage.setItem("wp_heatmap_last_step", "heat_imported") } catch {}
+        if (cancelled || !mapContainerRef.current || mapRef.current) return
 
-      leafletRef.current = L
+        leafletRef.current = L
 
-      const map = L.map(mapContainerRef.current).setView([0, 0], 2)
-      // Leaflet adds a "Leaflet" attribution link (leafletjs.com) by
-      // default. Tapping it navigates the ENTIRE app's WebView to an
-      // external URL -- this project has no external-link interception
-      // set up, so a failed top-level navigation (e.g. while offline)
-      // replaces the whole app with the WebView's native error page,
-      // and going "Back" from there forces a hard reload that relocks
-      // the vault. Disable the link entirely rather than risk it.
-      map.attributionControl.setPrefix(false)
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "\u00a9 OpenStreetMap contributors",
-        maxZoom: 19,
-      }).addTo(map)
+        const map = L.map(mapContainerRef.current).setView([0, 0], 2)
+        try { sessionStorage.setItem("wp_heatmap_last_step", "map_created") } catch {}
+        map.attributionControl.setPrefix(false)
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: "\u00a9 OpenStreetMap contributors",
+          maxZoom: 19,
+        }).addTo(map)
+        try { sessionStorage.setItem("wp_heatmap_last_step", "tilelayer_added") } catch {}
 
-      mapRef.current = map
-      markersLayerRef.current = L.layerGroup().addTo(map)
-      setReady(true)
+        mapRef.current = map
+        markersLayerRef.current = L.layerGroup().addTo(map)
+        try { sessionStorage.setItem("wp_heatmap_last_step", "ready") } catch {}
+        setReady(true)
+      } catch (err) {
+        try {
+          sessionStorage.setItem("wp_heatmap_error", (err as Error)?.message ?? String(err))
+        } catch {}
+        console.error("[HeatMap] init failed:", err)
+      }
     })()
     return () => {
       cancelled = true
