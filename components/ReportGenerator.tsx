@@ -65,11 +65,21 @@ export function ReportGenerator({ onClose }: { onClose?: () => void }) {
 
       const content =
         format === "text" ? generateReportText(data, t) : generateReportHtml(data, t)
-      const mimeType = format === "text" ? "text/plain" : "text/html"
+
+      const mimeType =
+        format === "text"
+          ? "text/plain;charset=utf-8"
+          : "text/html;charset=utf-8"
+
       const ext = format === "text" ? "txt" : "html"
       const fileName = `WP-Report-${new Date().toISOString().replace(/[:.]/g, "-")}.${ext}`
 
-      const blob = new Blob([content], { type: mimeType })
+      // Add UTF-8 BOM for plain-text exports so Android viewers/editors
+      // reliably detect accented characters (Relatório, Organização, etc).
+      const textPayload =
+        format === "text" ? "\uFEFF" + content : content
+
+      const blob = new Blob([textPayload], { type: mimeType })
       const reader = new FileReader()
       reader.onload = async () => {
         try {
