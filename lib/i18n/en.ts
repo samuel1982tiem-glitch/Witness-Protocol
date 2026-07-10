@@ -55,6 +55,25 @@ export const recordsPageEn = {
   packageAllFailed: "Package export failed: {error}",
 }
 
+export const diaryPageEn = {
+  title: "Diary",
+  noEntriesYet: "No diary entries yet. Tap the red button to record one.",
+  hasAudio: "Audio",
+  noAudio: "No audio",
+}
+
+export const diaryEntryEn = {
+  allEntries: "Diary",
+  notFound: "This entry could not be found. It may have been deleted, or the vault needs to be unlocked.",
+  textLabel: "Notes",
+  textPlaceholder: "Add a note about this recording…",
+  saveText: "Save",
+  audioLabel: "Recording",
+  recordedAt: "Recorded {time}",
+  deleteEntry: "Delete entry",
+  confirmDelete: "Confirm delete",
+}
+
 export const miscUiEn = {
   noDescriptionShort: "No description.",
   gpsTagged: "GPS tagged",
@@ -102,6 +121,8 @@ export const en: Dictionary = {
   relativeTime: relativeTimeEn,
   miscUi: miscUiEn,
   recordsPage: recordsPageEn,
+  diaryPage: diaryPageEn,
+  diaryEntry: diaryEntryEn,
   incidentForm: incidentFormEn,
   incidentRecord: incidentRecordEn,
   incidentFormExtra: incidentFormExtraEn,

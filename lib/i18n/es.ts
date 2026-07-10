@@ -84,6 +84,25 @@ export const recordsPageEs = {
   packageAllFailed: "Error al generar el paquete: {error}",
 }
 
+export const diaryPageEs = {
+  title: "Diario",
+  noEntriesYet: "Aún no hay entradas de diario. Toca el botón rojo para grabar una.",
+  hasAudio: "Audio",
+  noAudio: "Sin audio",
+}
+
+export const diaryEntryEs = {
+  allEntries: "Diario",
+  notFound: "No se encontró este registro. Puede que se haya eliminado, o que la bóveda deba desbloquearse.",
+  textLabel: "Notas",
+  textPlaceholder: "Agrega una nota sobre esta grabación…",
+  saveText: "Guardar",
+  audioLabel: "Grabación",
+  recordedAt: "Grabado {time}",
+  deleteEntry: "Eliminar entrada",
+  confirmDelete: "Confirmar eliminación",
+}
+
 export const miscUiEs = {
   noDescriptionShort: "Sin descripción.",
   gpsTagged: "GPS marcado",
@@ -136,6 +155,8 @@ export const es: Dictionary = {
   relativeTime: relativeTimeEs,
   miscUi: miscUiEs,
   recordsPage: recordsPageEs,
+  diaryPage: diaryPageEs,
+  diaryEntry: diaryEntryEs,
   incidentForm: incidentFormEs,
   incidentRecord: incidentRecordEs,
   incidentFormExtra: incidentFormExtraEs,

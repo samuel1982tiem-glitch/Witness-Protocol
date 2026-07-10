@@ -52,6 +52,25 @@ export const recordsPagePtBR = {
   packageAllFailed: "Falha ao gerar o pacote: {error}",
 }
 
+export const diaryPagePtBR = {
+  title: "Diário",
+  noEntriesYet: "Nenhuma entrada de diário ainda. Toque no botão vermelho para gravar uma.",
+  hasAudio: "Áudio",
+  noAudio: "Sem áudio",
+}
+
+export const diaryEntryPtBR = {
+  allEntries: "Diário",
+  notFound: "Este registro não foi encontrado. Ele pode ter sido excluído, ou o cofre precisa ser desbloqueado.",
+  textLabel: "Notas",
+  textPlaceholder: "Adicione uma nota sobre esta gravação…",
+  saveText: "Salvar",
+  audioLabel: "Gravação",
+  recordedAt: "Gravado {time}",
+  deleteEntry: "Excluir entrada",
+  confirmDelete: "Confirmar exclusão",
+}
+
 export const miscUiPtBR = {
   noDescriptionShort: "Sem descrição.",
   gpsTagged: "GPS marcado",
@@ -99,6 +118,8 @@ export const ptBR: Dictionary = {
   relativeTime: relativeTimePtBR,
   miscUi: miscUiPtBR,
   recordsPage: recordsPagePtBR,
+  diaryPage: diaryPagePtBR,
+  diaryEntry: diaryEntryPtBR,
   incidentForm: incidentFormPtBR,
   incidentRecord: incidentRecordPtBR,
   incidentFormExtra: incidentFormExtraPtBR,

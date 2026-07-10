@@ -20,6 +20,8 @@ export interface Dictionary {
   relativeTime: RelativeTimeDict
   miscUi: MiscUiDict
   recordsPage: RecordsPageDict
+  diaryPage: DiaryPageDict
+  diaryEntry: DiaryEntryDict
   incidentFormExtra: IncidentFormExtraDict
   incidentRecord: IncidentRecordDict
   incidentForm: IncidentFormDict
@@ -214,6 +216,25 @@ export interface RecordsPageDict {
   packagingAll: string
   packagingAllProgress: string
   packageAllFailed: string
+}
+
+export interface DiaryPageDict {
+  title: string
+  noEntriesYet: string
+  hasAudio: string
+  noAudio: string
+}
+
+export interface DiaryEntryDict {
+  allEntries: string
+  notFound: string
+  textLabel: string
+  textPlaceholder: string
+  saveText: string
+  audioLabel: string
+  recordedAt: string
+  deleteEntry: string
+  confirmDelete: string
 }
 
 export interface MiscUiDict {
