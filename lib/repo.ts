@@ -20,6 +20,8 @@ import {
   type EvidenceRecord,
   type IncidentRecord,
   type SealRecord,
+  type DiaryRecord,
+  type DiaryRecord,
 } from "./db"
 import type {
   CategoryId,
@@ -114,6 +116,110 @@ export async function saveEvidence(
   }
   await putRecord(STORES.evidenceFiles, record)
   return id
+}
+
+// ---------------------------------------------------------------------------
+// Diary (Quick Capture)
+// ---------------------------------------------------------------------------
+
+export interface DiaryEntry {
+  id: string
+  createdAt: number
+  text: string | null
+  hasAudio: boolean
+}
+
+interface DiaryPlaintext {
+  audioBytes: number[]
+  audioMimeType: string
+  text: string | null
+}
+
+/**
+ * Create a new diary entry from a recorded audio blob.
+ * Audio + optional text are encrypted together as a single JSON payload,
+ * matching the IncidentRecord/EvidenceRecord convention.
+ */
+export async function createDiaryEntry(
+  key: CryptoKey,
+  audioBlob: Blob,
+  text: string | null = null,
+): Promise<string> {
+  const id = genId("diary")
+  const bytes = new Uint8Array(await audioBlob.arrayBuffer())
+  const plaintext: DiaryPlaintext = {
+    audioBytes: Array.from(bytes),
+    audioMimeType: audioBlob.type || "audio/m4a",
+    text,
+  }
+  const payload = await encryptJSON(key, plaintext)
+  const record: DiaryRecord = {
+    id,
+    createdAt: Date.now(),
+    iv: payload.iv,
+    data: payload.data,
+  }
+  await putRecord(STORES.diary, record)
+  return id
+}
+
+/** Load all diary entries, decrypted, newest first. Audio stays encrypted on disk. */
+export async function getDiaryEntries(key: CryptoKey): Promise<DiaryEntry[]> {
+  const records = await getAll<DiaryRecord>(STORES.diary)
+  const entries: DiaryEntry[] = []
+  for (const record of records) {
+    try {
+      const plaintext = await decryptJSON<DiaryPlaintext>(key, toCipherPayload(record))
+      entries.push({
+        id: record.id,
+        createdAt: record.createdAt,
+        text: plaintext.text ?? null,
+        hasAudio: Array.isArray(plaintext.audioBytes) && plaintext.audioBytes.length > 0,
+      })
+    } catch (err) {
+      console.log("[diary] decrypt error:", (err as Error).message)
+    }
+  }
+  entries.sort((a, b) => b.createdAt - a.createdAt)
+  return entries
+}
+
+/**
+ * Update the text on an existing diary entry.
+ * Decrypts the entry, replaces text, and re-encrypts (audio bytes preserved as-is).
+ */
+export async function updateDiaryEntry(
+  key: CryptoKey,
+  id: string,
+  text: string | null,
+): Promise<void> {
+  const record = await getRecord<DiaryRecord>(STORES.diary, id)
+  if (!record) throw new Error("Diary entry not found.")
+  const plaintext = await decryptJSON<DiaryPlaintext>(key, toCipherPayload(record))
+  plaintext.text = text
+  const payload = await encryptJSON(key, plaintext)
+  const updated: DiaryRecord = {
+    id: record.id,
+    createdAt: record.createdAt,
+    iv: payload.iv,
+    data: payload.data,
+  }
+  await putRecord(STORES.diary, updated)
+}
+
+/** Decrypt a diary entry's audio into a playable object URL. Caller should revoke it when done. */
+export async function loadDiaryAudioUrl(key: CryptoKey, id: string): Promise<string> {
+  const record = await getRecord<DiaryRecord>(STORES.diary, id)
+  if (!record) throw new Error("Diary entry not found.")
+  const plaintext = await decryptJSON<DiaryPlaintext>(key, toCipherPayload(record))
+  const bytes = new Uint8Array(plaintext.audioBytes)
+  const blob = new Blob([bytes], { type: plaintext.audioMimeType || "audio/m4a" })
+  return URL.createObjectURL(blob)
+}
+
+/** Permanently delete a diary entry. */
+export async function deleteDiaryEntry(id: string): Promise<void> {
+  await deleteRecord(STORES.diary, id)
 }
 
 /** Decrypt a single evidence file back into an object URL for viewing/playback. */
