@@ -17,6 +17,7 @@ import {
   listEvidenceRecords,
   decryptEvidenceRaw,
   mergeIncidentRecords,
+  mergeDiaryRecords,
   type VaultBackup,
   type MergeProgress,
   type MergeResult,
@@ -33,6 +34,7 @@ import {
   type IncidentRecord,
   type EvidenceRecord,
   type SealRecord,
+  type DiaryRecord,
 } from "./db"
 
 // ---------------------------------------------------------------------------
@@ -73,6 +75,10 @@ function reviveBuffers(backup: VaultBackup): VaultBackup {
     if ("verifierData" in user) (user as any).verifierData = toUint8((user as any).verifierData) as any
   }
   reviveUserProfileBuffers(backup.userProfile ?? [])
+  for (const entry of (backup as any).diary ?? []) {
+    if (entry.iv != null) entry.iv = toUint8(entry.iv)
+    if (entry.data != null) entry.data = toUint8(entry.data)
+  }
   return backup
 }
 
@@ -404,6 +410,7 @@ async function importVaultBackupV4(
     users: meta.users ?? [],
     userProfile: meta.userProfile ?? [],
     seals: meta.seals ?? [],
+    diary: (meta as any).diary ?? [],
   }
 
   const revived = reviveBuffers(fullBackup)
@@ -498,6 +505,15 @@ interface ParsedBackup {
   evidence: EvidenceRecord[]
   seals: SealRecord[]
   userProfile: { id: string; iv: Uint8Array; data: ArrayBuffer }[]
+  diary: DiaryRecord[]
+}
+
+function reviveDiaryBuffers(entries: any[]): any[] {
+  for (const entry of entries ?? []) {
+    if (entry.iv != null) entry.iv = toUint8(entry.iv)
+    if (entry.data != null) entry.data = toUint8(entry.data)
+  }
+  return entries
 }
 
 async function parseVaultBackupV3(
@@ -536,6 +552,7 @@ async function parseVaultBackupV3(
     evidence: revived.evidence as unknown as EvidenceRecord[],
     seals: (revived.seals ?? []) as unknown as SealRecord[],
     userProfile: (revived.userProfile ?? []) as any[],
+    diary: reviveDiaryBuffers((revived as any).diary ?? []) as any[],
   }
 }
 
@@ -627,6 +644,7 @@ async function parseVaultBackupV4(
     evidence: evidenceRecords,
     seals: (meta.seals ?? []) as unknown as SealRecord[],
     userProfile: reviveUserProfileBuffers((meta.userProfile ?? []) as any[]),
+    diary: reviveDiaryBuffers((meta as any).diary ?? []) as any[],
   }
 }
 
@@ -704,7 +722,16 @@ export async function mergeVaultBackup(
     }
   }
 
-  return { ...result, identityImported }
+  let diaryAdded = 0
+  if (parsed.diary && parsed.diary.length > 0) {
+    try {
+      diaryAdded = await mergeDiaryRecords(parsed.sourceKey, currentKey, parsed.diary as any)
+    } catch (err) {
+      console.error("Failed to merge diary entries:", err)
+    }
+  }
+
+  return { ...result, identityImported, diaryAdded }
 }
 
 // ---------------------------------------------------------------------------

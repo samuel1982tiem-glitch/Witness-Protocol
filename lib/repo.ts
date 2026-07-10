@@ -485,6 +485,7 @@ export interface VaultBackup {
   users: any[]
   userProfile: any[]
   seals: SealRecord[]
+  diary: any[]
 }
 
 /**
@@ -521,7 +522,7 @@ function serializeRecord(record: any): any {
  * Export all records as a serialization-safe VaultBackup.
  */
 export async function exportAllRecords(): Promise<VaultBackup> {
-  const [incidents, evidence, alerts, users, userProfile, seals] =
+  const [incidents, evidence, alerts, users, userProfile, seals, diary] =
     await Promise.all([
       getAll<IncidentRecord>(STORES.incidents),
       getAll<EvidenceRecord>(STORES.evidenceFiles),
@@ -529,6 +530,7 @@ export async function exportAllRecords(): Promise<VaultBackup> {
       getAll(STORES.users),
       getAll(STORES.userProfile),
       getAll<SealRecord>(STORES.evidenceSeals),
+      getAll<DiaryRecord>(STORES.diary),
     ])
 
   return {
@@ -540,6 +542,7 @@ export async function exportAllRecords(): Promise<VaultBackup> {
     users: users.map(serializeRecord),
     seals,
     userProfile: userProfile.map(serializeRecord),
+    diary: diary.map(serializeRecord),
   }
 }
 
@@ -555,14 +558,16 @@ export async function exportMetadataOnly(): Promise<{
   users: any[]
   userProfile: any[]
   seals: any[]
+  diary: any[]
 }> {
-  const [incidents, alerts, users, userProfile, seals] =
+  const [incidents, alerts, users, userProfile, seals, diary] =
     await Promise.all([
       getAll<IncidentRecord>(STORES.incidents),
       getAll(STORES.patternAlerts),
       getAll(STORES.users),
       getAll(STORES.userProfile),
       getAll<SealRecord>(STORES.evidenceSeals),
+      getAll<DiaryRecord>(STORES.diary),
     ])
 
   return {
@@ -573,6 +578,7 @@ export async function exportMetadataOnly(): Promise<{
     users: users.map(serializeRecord),
     userProfile: userProfile.map(serializeRecord),
     seals,
+    diary: diary.map(serializeRecord),
   }
 }
 
@@ -631,6 +637,7 @@ export async function importAllRecords(data: {
   users: any[]
   userProfile?: any[]
   seals: any[]
+  diary?: any[]
 }) {
   for (const item of data.incidents ?? []) {
     await putRecord(STORES.incidents, item)
@@ -649,6 +656,9 @@ export async function importAllRecords(data: {
   }
   for (const item of data.seals ?? []) {
     await putRecord(STORES.evidenceSeals, item)
+  }
+  for (const item of data.diary ?? []) {
+    await putRecord(STORES.diary, item)
   }
 }
 
@@ -686,6 +696,42 @@ export interface MergeResult {
   diverged: number
   totalEvidenceAdded: number
   identityImported: boolean
+  diaryAdded: number
+}
+
+/**
+ * Merge diary entries from a source backup into the current vault.
+ * Skips any entry whose id already exists locally (idempotent re-merge).
+ * Decrypts under the source key, re-encrypts under the current vault key.
+ */
+export async function mergeDiaryRecords(
+  sourceKey: CryptoKey,
+  currentKey: CryptoKey,
+  sourceDiary: DiaryRecord[],
+): Promise<number> {
+  if (!sourceDiary || sourceDiary.length === 0) return 0
+  const currentDiary = await getAll<DiaryRecord>(STORES.diary)
+  const existingIds = new Set(currentDiary.map((d) => d.id))
+
+  let added = 0
+  for (const record of sourceDiary) {
+    if (existingIds.has(record.id)) continue
+    try {
+      const plaintext = await decryptJSON<any>(sourceKey, toCipherPayload(record))
+      const payload = await encryptJSON(currentKey, plaintext)
+      const reencrypted: DiaryRecord = {
+        id: record.id,
+        createdAt: record.createdAt,
+        iv: payload.iv,
+        data: payload.data,
+      }
+      await putRecord(STORES.diary, reencrypted)
+      added++
+    } catch (err) {
+      console.log("[diary merge] skipped one entry:", (err as Error).message)
+    }
+  }
+  return added
 }
 
 async function decryptIncidentForCompare(
@@ -752,6 +798,7 @@ export async function mergeIncidentRecords(
     diverged: 0,
     totalEvidenceAdded: 0,
     identityImported: false,
+    diaryAdded: 0,
   }
 
   const currentRecords = await getAll<IncidentRecord>(STORES.incidents)
