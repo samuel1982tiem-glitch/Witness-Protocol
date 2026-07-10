@@ -4,7 +4,7 @@
 import type { CipherPayload } from "./crypto"
 
 const DB_NAME = "witness-protocol"
-const DB_VERSION = 3
+const DB_VERSION = 4
 
 export const STORES = {
   users: "users",
@@ -15,6 +15,7 @@ export const STORES = {
   patternAlerts: "patternAlerts",
   evidenceSeals: "evidenceSeals",
   auditLog: "auditLog",
+  diary: "diary",
 } as const
 
 /** Vault configuration record (store: users). Not secret on its own. */
@@ -87,6 +88,17 @@ export interface AuditLogRecord {
   data: ArrayBuffer
 }
 
+/**
+ * Encrypted diary entry (store: diary).
+ * Payload holds audio bytes + optional text, encrypted together as JSON.
+ */
+export interface DiaryRecord {
+  id: string
+  createdAt: number
+  iv: Uint8Array
+  data: ArrayBuffer
+}
+
 let dbPromise: Promise<IDBDatabase> | null = null
 
 export function openDatabase(): Promise<IDBDatabase> {
@@ -129,6 +141,10 @@ export function openDatabase(): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains(STORES.auditLog)) {
         const store = db.createObjectStore(STORES.auditLog, { keyPath: "id" })
+        store.createIndex("createdAt", "createdAt")
+      }
+      if (!db.objectStoreNames.contains(STORES.diary)) {
+        const store = db.createObjectStore(STORES.diary, { keyPath: "id" })
         store.createIndex("createdAt", "createdAt")
       }
     }

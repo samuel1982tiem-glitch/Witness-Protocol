@@ -5,3 +5,4 @@ android/.gradle/
 android/app/build/
 *.log
 .DS_Store
+tsconfig.tsbuildinfo
