@@ -3,9 +3,11 @@
 import {
   Activity,
   Lock,
+  Mic,
   Plus,
   ScrollText,
   ShieldCheck,
+  Square,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -13,6 +15,7 @@ import * as React from "react"
 
 import { InstallPrompt } from "@/components/install-prompt"
 import { useVault } from "@/components/vault-provider"
+import { useDiaryRecording } from "@/components/diary-recording-provider"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/components/i18n-provider"
 
@@ -26,6 +29,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { lock } = useVault()
   const { t } = useI18n()
+  const { isRecording, elapsed, error, toggleRecording, clearError } = useDiaryRecording()
   const NAV = [
     { href: "/incidents", label: t("nav.records"), icon: ScrollText },
     { href: "/patterns", label: t("nav.patterns"), icon: Activity },
@@ -85,7 +89,33 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Plus className="size-5" aria-hidden="true" />
             {t("nav.newIncident")}
           </Link>
+          <button
+            type="button"
+            onClick={() => toggleRecording()}
+            aria-label={isRecording ? t("miscUi.stopRecording") : t("nav.diary")}
+            className="flex flex-1 flex-col items-center gap-1 py-2.5 text-xs font-medium text-red-600 transition-colors hover:text-red-700"
+          >
+            <span
+              className={`flex size-8 items-center justify-center rounded-full border-2 border-red-600 ${
+                isRecording ? "bg-red-600 text-white animate-pulse" : "bg-transparent text-red-600"
+              }`}
+            >
+              {isRecording ? (
+                <Square className="size-3.5" aria-hidden="true" />
+              ) : (
+                <Mic className="size-4" aria-hidden="true" />
+              )}
+            </span>
+            {isRecording
+              ? `${String(Math.floor(elapsed / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`
+              : t("nav.diary")}
+          </button>
         </div>
+        {error ? (
+          <p className="px-4 pb-2 text-center text-xs text-destructive" onClick={clearError}>
+            {error}
+          </p>
+        ) : null}
       </nav>
     </div>
   )

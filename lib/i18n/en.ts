@@ -127,6 +127,7 @@ export const en: Dictionary = {
     patterns: "Patterns",
     vault: "Vault",
     newIncident: "New",
+    diary: "Diary",
   },
 
   vault: {

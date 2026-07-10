@@ -50,6 +50,7 @@ export interface Dictionary {
     patterns: string
     vault: string
     newIncident: string
+    diary: string
   }
 
   vault: {

@@ -124,6 +124,7 @@ export const ptBR: Dictionary = {
     patterns: "Padrões",
     vault: "Cofre",
     newIncident: "Novo",
+    diary: "Diário",
   },
 
   vault: {

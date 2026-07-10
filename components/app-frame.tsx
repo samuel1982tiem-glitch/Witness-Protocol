@@ -7,6 +7,7 @@ import { I18nProvider } from "@/components/i18n-provider"
 import { PwaRegister } from "@/components/pwa-register"
 import { VaultGate } from "@/components/vault-gate"
 import { VaultProvider } from "@/components/vault-provider"
+import { DiaryRecordingProvider } from "@/components/diary-recording-provider"
 
 export function AppFrame({ children }: { children: React.ReactNode }) {
   return (
@@ -14,7 +15,9 @@ export function AppFrame({ children }: { children: React.ReactNode }) {
       <VaultProvider>
         <PwaRegister />
         <VaultGate>
-          <AppShell>{children}</AppShell>
+          <DiaryRecordingProvider>
+            <AppShell>{children}</AppShell>
+          </DiaryRecordingProvider>
         </VaultGate>
       </VaultProvider>
     </I18nProvider>

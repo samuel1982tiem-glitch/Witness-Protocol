@@ -162,6 +162,7 @@ export const es: Dictionary = {
     patterns: "Patrones",
     vault: "Bóveda",
     newIncident: "Nuevo",
+    diary: "Diario",
   },
 
   vault: {
