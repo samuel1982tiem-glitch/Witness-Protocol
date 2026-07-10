@@ -47,6 +47,12 @@ import {
   sealIncident as repoSealIncident,
   type EvidenceInput,
   type IncidentInput,
+  createDiaryEntry,
+  getDiaryEntries,
+  updateDiaryEntry as repoUpdateDiaryEntry,
+  loadDiaryAudioUrl,
+  deleteDiaryEntry as repoDeleteDiaryEntry,
+  type DiaryEntry,
 } from "@/lib/repo"
 import { buildSampleIncidents } from "@/lib/sample-data"
 import type {
@@ -98,6 +104,11 @@ interface VaultContextValue {
   loadProfile: ()=>Promise<void>
   getAuditLog: () => Promise<AuditEntry[]>
   logAudit: (action: AuditAction, detail: string) => Promise<void>
+  diaryEntries: DiaryEntry[]
+  addDiaryEntry: (audioBlob: Blob, text?: string | null) => Promise<string>
+  updateDiaryEntryText: (id: string, text: string | null) => Promise<void>
+  loadDiaryAudio: (id: string) => Promise<string>
+  removeDiaryEntry: (id: string) => Promise<void>
 }
 
 
@@ -119,6 +130,7 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = React.useState<string | null>(null)
   const [busy, setBusy] = React.useState(false)
   const [profile, setProfile] = React.useState<any>(null)
+  const [diaryEntries, setDiaryEntries] = React.useState<DiaryEntry[]>([])
 
   const keyRef = React.useRef<CryptoKey | null>(null)
   const lockTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -168,6 +180,7 @@ React.useEffect(() => {
     keyRef.current = null
     setIncidents([])
     setAlerts([])
+    setDiaryEntries([])
   }, [])
 
   const lock = React.useCallback(() => {
@@ -204,6 +217,14 @@ React.useEffect(() => {
     if (!key) return []
     const list = await loadAllIncidents(key)
     setIncidents(list)
+    return list
+  }, [])
+
+  const refreshDiaryEntries = React.useCallback(async (): Promise<DiaryEntry[]> => {
+    const key = keyRef.current
+    if (!key) return []
+    const list = await getDiaryEntries(key)
+    setDiaryEntries(list)
     return list
   }, [])
 
@@ -307,6 +328,7 @@ setAutoLockMs(vault.autoLockMs ?? DEFAULT_AUTOLOCK_MS)
 await refreshIncidents()
 await loadStoredAlerts()
 await loadProfile()
+await refreshDiaryEntries()
 setStatus("unlocked")
 
 return true
@@ -318,7 +340,7 @@ return true
         setBusy(false)
       }
     },
-    [refreshIncidents, loadStoredAlerts, loadProfile],
+    [refreshIncidents, loadStoredAlerts, loadProfile, refreshDiaryEntries],
   )
 
   const addIncident = React.useCallback(
@@ -399,6 +421,45 @@ return true
       await logAudit("incident_sealed", target.title)
     },
     [incidents, refreshIncidents, logAudit],
+  )
+
+  const addDiaryEntry = React.useCallback(
+    async (audioBlob: Blob, text: string | null = null): Promise<string> => {
+      const key = keyRef.current
+      if (!key) throw new Error("Vault is locked.")
+      const id = await createDiaryEntry(key, audioBlob, text)
+      await refreshDiaryEntries()
+      await logAudit("diary_entry_created", "Diary entry created").catch(() => {})
+      return id
+    },
+    [refreshDiaryEntries],
+  )
+
+  const updateDiaryEntryText = React.useCallback(
+    async (id: string, text: string | null): Promise<void> => {
+      const key = keyRef.current
+      if (!key) throw new Error("Vault is locked.")
+      await repoUpdateDiaryEntry(key, id, text)
+      await refreshDiaryEntries()
+    },
+    [refreshDiaryEntries],
+  )
+
+  const loadDiaryAudio = React.useCallback(
+    async (id: string): Promise<string> => {
+      const key = keyRef.current
+      if (!key) throw new Error("Vault is locked.")
+      return loadDiaryAudioUrl(key, id)
+    },
+    [],
+  )
+
+  const removeDiaryEntry = React.useCallback(
+    async (id: string): Promise<void> => {
+      await repoDeleteDiaryEntry(id)
+      await refreshDiaryEntries()
+    },
+    [refreshDiaryEntries],
   )
 
   const runAnalysis = React.useCallback(async (): Promise<PatternAlert[]> => {
@@ -546,6 +607,7 @@ const importBackup = React.useCallback(
     await refreshIncidents()
     await loadStoredAlerts()
     await loadProfile()
+    await refreshDiaryEntries()
 
     if (!includeIdDocument) {
       try {
@@ -560,7 +622,7 @@ const importBackup = React.useCallback(
     setStatus("unlocked")
     registerActivity()
   },
-  [refreshIncidents, loadStoredAlerts, loadProfile, registerActivity],
+  [refreshIncidents, loadStoredAlerts, loadProfile, refreshDiaryEntries, registerActivity],
 )
 
   const value: VaultContextValue = {
@@ -595,6 +657,11 @@ const importBackup = React.useCallback(
     loadProfile,
     getAuditLog,
     logAudit,
+    diaryEntries,
+    addDiaryEntry,
+    updateDiaryEntryText,
+    loadDiaryAudio,
+    removeDiaryEntry,
   }
 
   return <VaultContext.Provider value={value}>{children}</VaultContext.Provider>

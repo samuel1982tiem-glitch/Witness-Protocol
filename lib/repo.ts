@@ -436,6 +436,7 @@ export type AuditAction =
   | "backup_exported"
   | "backup_restored"
   | "backup_merged"
+  | "diary_entry_created"
 
 export interface AuditEntry {
   action: AuditAction
