@@ -21,7 +21,6 @@ import {
   type IncidentRecord,
   type SealRecord,
   type DiaryRecord,
-  type DiaryRecord,
 } from "./db"
 import type {
   CategoryId,
