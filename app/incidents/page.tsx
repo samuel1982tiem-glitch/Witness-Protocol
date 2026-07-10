@@ -1,6 +1,6 @@
 "use client"
 
-import { FileDown, FileText, MapPin as MapPinIcon, Package as PackageIcon, Search, SlidersHorizontal, X } from "lucide-react"
+import { BookOpen, FileDown, FileText, MapPin as MapPinIcon, Package as PackageIcon, Search, SlidersHorizontal, X } from "lucide-react"
 import * as React from "react"
 import { useRouter } from "next/navigation"
 
@@ -305,6 +305,13 @@ export default function IncidentsPage() {
           </Link>
         </div>
       ) : null}
+
+      <Link href="/diary/" className="block">
+        <Button type="button" variant="outline" size="sm" className="w-full">
+          <BookOpen className="size-4" aria-hidden="true" />
+          {t("diaryPage.title")}
+        </Button>
+      </Link>
 
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
