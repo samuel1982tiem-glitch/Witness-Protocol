@@ -311,7 +311,7 @@ async function runImport(passcode: string) {
                 onChange={(e) => setLanguage(e.target.value as LanguagePreference)}
                 className="w-full appearance-none rounded-xl border border-border bg-background px-3 py-3 pr-10 text-sm outline-none"
               >
-                <option value="system">System</option>
+                <option value="system">{t("vault.systemLanguage")}</option>
                 {SUPPORTED_LANGUAGES.map((l) => (
                   <option key={l.code} value={l.code}>
                     {l.nativeName}
@@ -347,9 +347,9 @@ async function runImport(passcode: string) {
                 onChange={(e) => setAutoLockMs(Number(e.target.value) * 60000)}
                 className="w-full appearance-none rounded-xl border border-border bg-background px-3 py-3 pr-10 text-sm outline-none"
               >
-                <option value="1">1 minute</option>
-                <option value="3">3 minutes</option>
-                <option value="5">5 minutes</option>
+                <option value="1">{`1 ${t("vault.minuteSingular")}`}</option>
+                <option value="3">{`3 ${t("vault.minutesPlural")}`}</option>
+                <option value="5">{`5 ${t("vault.minutesPlural")}`}</option>
               </select>
               <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             </div>

@@ -57,6 +57,9 @@ export interface Dictionary {
     locked: string
     unlocked: string
     lockNow: string
+    systemLanguage: string
+    minuteSingular: string
+    minutesPlural: string
     createPasscode: string
     confirmPasscode: string
     incorrectPasscode: string
