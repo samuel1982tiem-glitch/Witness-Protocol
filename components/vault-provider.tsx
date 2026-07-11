@@ -590,6 +590,7 @@ const importBackup = React.useCallback(
         )
         setMergeResult(result)
         await refreshIncidents()
+        await refreshDiaryEntries()
         if (result.identityImported) await loadProfile()
       } finally {
         setMergeProgress(null)
