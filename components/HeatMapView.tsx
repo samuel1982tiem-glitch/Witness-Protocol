@@ -72,23 +72,6 @@ function MapPanel({ incidents, t }: MapPanelProps) {
   )
   const [showHeat, setShowHeat] = React.useState(true)
   const [selectedIncident, setSelectedIncident] = React.useState<Incident | null>(null)
-  const [debugStep, setDebugStep] = React.useState<string | null>(null)
-  const [debugError, setDebugError] = React.useState<string | null>(null)
-  const [debugHeatAttached, setDebugHeatAttached] = React.useState<string | null>(null)
-  const [debugWindowLKeys, setDebugWindowLKeys] = React.useState<string | null>(null)
-
-  React.useEffect(() => {
-    const interval = setInterval(() => {
-      try {
-        setDebugStep(sessionStorage.getItem("wp_heatmap_last_step"))
-        setDebugError(sessionStorage.getItem("wp_heatmap_error"))
-        setDebugHeatAttached(sessionStorage.getItem("wp_heatmap_heat_attached"))
-        setDebugWindowLKeys(sessionStorage.getItem("wp_heatmap_windowL_keys"))
-      } catch {}
-    }, 500)
-    return () => clearInterval(interval)
-  }, [])
-
   const withLocation = React.useMemo(
     () => incidents.filter((i) => i.location !== null),
     [incidents],
@@ -296,17 +279,6 @@ function MapPanel({ incidents, t }: MapPanelProps) {
           </label>
         </CardBody>
       </Card>
-
-      {(debugStep || debugError) ? (
-        <Card className="border-blue-200 bg-blue-50/60">
-          <CardBody className="space-y-1 text-xs font-mono">
-            <p className="text-blue-900">step: {debugStep ?? "(none)"}</p>
-            <p className="text-blue-900">heat_attached: {debugHeatAttached ?? "(none)"}</p>
-            <p className="text-blue-900 break-all">window.L keys: {debugWindowLKeys ?? "(none)"}</p>
-            {debugError ? <p className="text-red-700">error: {debugError}</p> : null}
-          </CardBody>
-        </Card>
-      ) : null}
 
       {withLocation.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t("heatMap.noGpsIncidents")}</p>
