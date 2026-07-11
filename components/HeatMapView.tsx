@@ -130,7 +130,10 @@ function MapPanel({ incidents, t }: MapPanelProps) {
         // guarantees heatLayer attaches to the object this component uses.
         ;(window as any).L = L
         await import("leaflet.heat")
-        try { sessionStorage.setItem("wp_heatmap_last_step", "heat_imported") } catch {}
+        try {
+          const attached = typeof (window as any).L?.heatLayer === "function"
+          sessionStorage.setItem("wp_heatmap_last_step", "heat_imported:" + attached)
+        } catch {}
         if (cancelled || !mapContainerRef.current || mapRef.current) return
 
         leafletRef.current = L
@@ -198,7 +201,17 @@ function MapPanel({ incidents, t }: MapPanelProps) {
     }
 
     if (showHeat && points.length > 0) {
-      heatLayerRef.current = (L as any).heatLayer(points, { radius: 30, blur: 20 }).addTo(map)
+      const heatLayerFactory = (window as any).L?.heatLayer ?? (L as any).heatLayer
+      if (typeof heatLayerFactory !== "function") {
+        try {
+          sessionStorage.setItem(
+            "wp_heatmap_error",
+            "MARKERS: heatLayer factory unavailable on both window.L and component L",
+          )
+        } catch {}
+      } else {
+        heatLayerRef.current = heatLayerFactory(points, { radius: 30, blur: 20 }).addTo(map)
+      }
     }
 
     if (points.length > 0) {
