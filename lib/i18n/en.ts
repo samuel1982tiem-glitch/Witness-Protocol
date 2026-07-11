@@ -232,6 +232,7 @@ export const en: Dictionary = {
     backupExported: "Backup exported",
     backupRestored: "Backup restored",
     backupMerged: "Backup merged",
+    diaryEntryCreated: "Diary entry created",
   },
 
   patterns: {

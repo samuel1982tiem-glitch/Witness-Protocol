@@ -133,6 +133,7 @@ export interface Dictionary {
     backupExported: string
     backupRestored: string
     backupMerged: string
+    diaryEntryCreated: string
   }
 }
 

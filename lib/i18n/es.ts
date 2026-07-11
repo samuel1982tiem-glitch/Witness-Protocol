@@ -271,6 +271,7 @@ export const es: Dictionary = {
     backupExported: "Copia de seguridad exportada",
     backupRestored: "Copia de seguridad restaurada",
     backupMerged: "Copia de seguridad fusionada",
+    diaryEntryCreated: "Entrada de diario creada",
   },
 
   patterns: {

@@ -230,6 +230,7 @@ export const ptBR: Dictionary = {
     backupExported: "Backup exportado",
     backupRestored: "Backup restaurado",
     backupMerged: "Backup mesclado",
+    diaryEntryCreated: "Entrada de diário criada",
   },
 
   patterns: {

@@ -226,6 +226,7 @@ export default function VaultPage() {
       backup_exported: "auditLog.backupExported",
       backup_restored: "auditLog.backupRestored",
       backup_merged: "auditLog.backupMerged",
+      diary_entry_created: "auditLog.diaryEntryCreated",
     }
     const key = keys[action]
     return key ? t(key) : action
