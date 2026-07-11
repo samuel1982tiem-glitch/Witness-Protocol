@@ -125,13 +125,15 @@ function MapPanel({ incidents, t }: MapPanelProps) {
     } catch {}
     ;(async () => {
       try {
-        const L = await import("leaflet")
+        const leafletNamespace = await import("leaflet")
+        // leaflet.heat does a bare `L.HeatLayer = ...` assignment with no
+        // module wrapper. The object returned by dynamic import() is a
+        // frozen ES module namespace object -- assigning a NEW property to
+        // it is a silent no-op in sloppy mode (no throw, property just
+        // never lands). Spreading it into a plain object makes it
+        // genuinely extensible so leaflet.heat's patch actually sticks.
+        const L: any = { ...leafletNamespace }
         try { sessionStorage.setItem("wp_heatmap_last_step", "leaflet_imported") } catch {}
-        // leaflet.heat is an old UMD plugin that patches heatLayer onto a
-        // global L. Under this bundler setup the L reference returned by
-        // dynamic import() is not guaranteed to be the same object
-        // leaflet.heat resolves internally -- exposing it on window
-        // guarantees heatLayer attaches to the object this component uses.
         ;(window as any).L = L
         await import("leaflet.heat")
         try {
