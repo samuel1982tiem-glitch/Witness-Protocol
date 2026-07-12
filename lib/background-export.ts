@@ -27,13 +27,20 @@ function isNativeAndroid(): boolean {
 
 /** Starts the foreground service + shows an initial progress notification. */
 export async function startExportProgress(title: string, text: string): Promise<void> {
-  if (!isNativeAndroid()) return
+  if (!isNativeAndroid()) {
+    alert("[WP-DEBUG] not native android, skipping notification")
+    return
+  }
   try {
     const plugin = await getPlugin()
-    if (!plugin) return
-    await plugin.start({ title, text, indeterminate: true })
+    if (!plugin) {
+      alert("[WP-DEBUG] BackgroundExport plugin failed to load (null)")
+      return
+    }
+    const result = await plugin.start({ title, text, indeterminate: true })
+    alert("[WP-DEBUG] start() result: " + JSON.stringify(result))
   } catch (err) {
-    console.error("startExportProgress failed (non-fatal):", err)
+    alert("[WP-DEBUG] start() threw: " + String(err))
   }
 }
 
