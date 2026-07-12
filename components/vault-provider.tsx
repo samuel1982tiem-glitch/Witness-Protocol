@@ -49,6 +49,8 @@ import {
   type IncidentInput,
   createDiaryEntry,
   getDiaryEntries,
+  getDiaryRecords,
+  decryptDiaryEntryRaw as repoDecryptDiaryEntryRaw,
   updateDiaryEntry as repoUpdateDiaryEntry,
   loadDiaryAudioUrl,
   deleteDiaryEntry as repoDeleteDiaryEntry,
@@ -109,6 +111,8 @@ interface VaultContextValue {
   updateDiaryEntryText: (id: string, text: string | null) => Promise<void>
   loadDiaryAudio: (id: string) => Promise<string>
   removeDiaryEntry: (id: string) => Promise<void>
+  getDiaryRecordsRaw: () => Promise<import("@/lib/db").DiaryRecord[]>
+  decryptDiaryRaw: (record: import("@/lib/db").DiaryRecord) => Promise<{ text: string | null; audioBytes: Uint8Array; mimeType: string }>
 }
 
 
@@ -462,6 +466,17 @@ return true
     [refreshDiaryEntries],
   )
 
+  const getDiaryRecordsRaw = React.useCallback(() => getDiaryRecords(), [])
+
+  const decryptDiaryRaw = React.useCallback(
+    (record: import("@/lib/db").DiaryRecord) => {
+      const key = keyRef.current
+      if (!key) throw new Error("Vault is locked.")
+      return repoDecryptDiaryEntryRaw(key, record)
+    },
+    [],
+  )
+
   const runAnalysis = React.useCallback(async (): Promise<PatternAlert[]> => {
     const key = keyRef.current
     if (!key) return []
@@ -663,6 +678,8 @@ const importBackup = React.useCallback(
     updateDiaryEntryText,
     loadDiaryAudio,
     removeDiaryEntry,
+    getDiaryRecordsRaw,
+    decryptDiaryRaw,
   }
 
   return <VaultContext.Provider value={value}>{children}</VaultContext.Provider>

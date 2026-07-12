@@ -93,6 +93,8 @@ export async function generateIncidentsPackage(
   decryptEvidenceRaw: (record: EvidenceRecord) => Promise<{ name: string; raw: Uint8Array }>,
   onProgress?: (p: PackageProgress) => void,
   language: LanguageCode = "en",
+  diaryRecords: any[] = [],
+  decryptDiaryRaw?: (record: any) => Promise<{ text: string | null; audioBytes: Uint8Array; mimeType: string }>,
 ): Promise<string> {
   const { Filesystem, Directory } = await import("@capacitor/filesystem")
 
@@ -198,6 +200,36 @@ export async function generateIncidentsPackage(
   }
 
   onProgress?.({ processed: total, total, currentTitle: "", percent: 100 })
+
+  // Stream diary entries into a separate WP-DIARY folder, one subfolder
+  // per entry (audio file + optional notes.txt), same one-at-a-time
+  // decrypt-then-release pattern as evidence above.
+  if (diaryRecords.length > 0 && decryptDiaryRaw) {
+    for (const record of diaryRecords) {
+      if (zipError) throw zipError
+      try {
+        const { text, audioBytes, mimeType } = await decryptDiaryRaw(record)
+        const d = new Date(record.createdAt)
+        const pad = (n: number) => String(n).padStart(2, "0")
+        const dateStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}-${pad(d.getMinutes())}`
+        const entryFolder = `WP-DIARY/${dateStr}`
+
+        const ext = guessExt(mimeType)
+        const audioEntry = new ZipPassThrough(`${entryFolder}/audio.${ext}`)
+        zip.add(audioEntry)
+        audioEntry.push(audioBytes, true)
+
+        if (text && text.trim().length > 0) {
+          const notesBytes = new TextEncoder().encode(text)
+          const notesEntry = new ZipPassThrough(`${entryFolder}/notes.txt`)
+          zip.add(notesEntry)
+          notesEntry.push(notesBytes, true)
+        }
+      } catch (err) {
+        console.error(`Failed to package diary entry ${record.id}:`, err)
+      }
+    }
+  }
 
   zip.end()
   await pendingWrites
