@@ -818,6 +818,10 @@ export async function exportVaultBackupV4Streaming(
   })
 
   // --- Metadata section (excludes evidence — that's streamed separately) ---
+  // Broken into reported sub-steps since building/serializing/compressing/
+  // encrypting the full incidents+diary metadata blob can itself take
+  // meaningful time with large vaults, and was previously invisible as a
+  // single flat "2%" the whole way through.
   onProgress?.({
     stage: "metadata",
     processed: 0,
@@ -828,9 +832,48 @@ export async function exportVaultBackupV4Streaming(
   })
 
   const metadata = await buildExportMetadata(key, includeIdDocument)
+
+  onProgress?.({
+    stage: "metadata",
+    processed: 0,
+    total,
+    currentName: "",
+    percent: 8,
+    etaSeconds: null,
+  })
+
   const metaPlain = new TextEncoder().encode(JSON.stringify(metadata))
+
+  onProgress?.({
+    stage: "metadata",
+    processed: 0,
+    total,
+    currentName: "",
+    percent: 13,
+    etaSeconds: null,
+  })
+
   const metaCompressed = await compress(metaPlain)
+
+  onProgress?.({
+    stage: "metadata",
+    processed: 0,
+    total,
+    currentName: "",
+    percent: 17,
+    etaSeconds: null,
+  })
+
   const metaEncrypted = await encryptRaw(key, metaCompressed)
+
+  onProgress?.({
+    stage: "metadata",
+    processed: 0,
+    total,
+    currentName: "",
+    percent: 20,
+    etaSeconds: null,
+  })
 
   const manifestEntry = new ZipPassThrough("manifest.json")
   zip.add(manifestEntry)
@@ -892,7 +935,7 @@ export async function exportVaultBackupV4Streaming(
       processed,
       total,
       currentName: name,
-      percent: total > 0 ? Math.round(5 + (processed / total) * 85) : 90,
+      percent: total > 0 ? Math.round(20 + (processed / total) * 70) : 90,
       etaSeconds,
     })
   }
