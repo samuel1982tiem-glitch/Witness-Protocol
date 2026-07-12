@@ -10,12 +10,22 @@ import { useVault } from "@/components/vault-provider"
 import { formatDateTime } from "@/lib/format"
 
 export default function DiaryPage() {
-  const { diaryEntries } = useVault()
+  const { diaryEntries, includeDiaryInPackage, setIncludeDiaryInPackage } = useVault()
   const { t } = useI18n()
 
   return (
     <div className="space-y-5">
       <SectionTitle title={t("diaryPage.title")} />
+
+      <label className="flex items-center gap-2.5 text-sm font-medium">
+        <input
+          type="checkbox"
+          checked={includeDiaryInPackage}
+          onChange={(e) => setIncludeDiaryInPackage(e.target.checked)}
+          className="size-4 rounded border-border accent-primary"
+        />
+        {t("diaryPage.includeInPackage")}
+      </label>
 
       {diaryEntries.length > 0 ? (
         <div className="space-y-3">
