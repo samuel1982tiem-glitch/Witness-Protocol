@@ -60,6 +60,7 @@ export const diaryPageEn = {
   noEntriesYet: "No diary entries yet. Tap the red button to record one.",
   hasAudio: "Audio",
   noAudio: "No audio",
+  includeInPackage: "Include diary in Package export",
 }
 
 export const diaryEntryEn = {

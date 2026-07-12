@@ -224,6 +224,7 @@ export interface DiaryPageDict {
   noEntriesYet: string
   hasAudio: string
   noAudio: string
+  includeInPackage: string
 }
 
 export interface DiaryEntryDict {

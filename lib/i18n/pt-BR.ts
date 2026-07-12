@@ -57,6 +57,7 @@ export const diaryPagePtBR = {
   noEntriesYet: "Nenhuma entrada de diário ainda. Toque no botão vermelho para gravar uma.",
   hasAudio: "Áudio",
   noAudio: "Sem áudio",
+  includeInPackage: "Incluir diário na exportação do Pacote",
 }
 
 export const diaryEntryPtBR = {
