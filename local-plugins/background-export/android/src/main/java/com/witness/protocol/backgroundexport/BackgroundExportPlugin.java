@@ -18,24 +18,36 @@ public class BackgroundExportPlugin extends Plugin {
 
     @PluginMethod
     public void start(PluginCall call) {
-        // Best-effort permission request: on Android 13+, request
-        // POST_NOTIFICATIONS directly via ActivityCompat (fire-and-forget,
-        // does NOT wait for the result) rather than Capacitor's
-        // requestPermissionForAlias bridge, whose callback was hanging
-        // indefinitely and blocking every export. If the user denies it
-        // (or it's never granted), the service still starts and simply
-        // shows no visible notification -- it never blocks.
-        if (Build.VERSION.SDK_INT >= 33) {
-            boolean granted = ActivityCompat.checkSelfPermission(
-                getContext(), Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED;
-            if (!granted && getActivity() != null) {
-                ActivityCompat.requestPermissions(
-                    getActivity(),
-                    new String[] { Manifest.permission.POST_NOTIFICATIONS },
-                    9821
-                );
+        // Best-effort permission request, fully isolated with its own
+        // try/catch and dispatched to the UI thread: PluginMethod calls
+        // run on a background thread by default, and ActivityCompat.
+        // requestPermissions() can throw if called off the main thread.
+        // An earlier version let that exception propagate, which
+        // silently aborted this whole method BEFORE the foreground
+        // service was ever started -- meaning no notification, no
+        // protected process, nothing -- with no visible error anywhere.
+        // This must never be able to stop the service from starting.
+        try {
+            if (Build.VERSION.SDK_INT >= 33 && getActivity() != null) {
+                boolean granted = ActivityCompat.checkSelfPermission(
+                    getContext(), Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED;
+                if (!granted) {
+                    getActivity().runOnUiThread(() -> {
+                        try {
+                            ActivityCompat.requestPermissions(
+                                getActivity(),
+                                new String[] { Manifest.permission.POST_NOTIFICATIONS },
+                                9821
+                            );
+                        } catch (Exception inner) {
+                            // ignore -- never block the service below
+                        }
+                    });
+                }
             }
+        } catch (Exception outer) {
+            // ignore -- never block the service below
         }
 
         String title = call.getString("title", "Witness Protocol");
