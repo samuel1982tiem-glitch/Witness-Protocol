@@ -113,6 +113,8 @@ interface VaultContextValue {
   removeDiaryEntry: (id: string) => Promise<void>
   getDiaryRecordsRaw: () => Promise<import("@/lib/db").DiaryRecord[]>
   decryptDiaryRaw: (record: import("@/lib/db").DiaryRecord) => Promise<{ text: string | null; audioBytes: Uint8Array; mimeType: string }>
+  includeDiaryInPackage: boolean
+  setIncludeDiaryInPackage: (value: boolean) => void
 }
 
 
@@ -135,6 +137,21 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
   const [busy, setBusy] = React.useState(false)
   const [profile, setProfile] = React.useState<any>(null)
   const [diaryEntries, setDiaryEntries] = React.useState<DiaryEntry[]>([])
+  const [includeDiaryInPackage, setIncludeDiaryInPackageState] = React.useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem("wp_include_diary_in_package")
+      return stored === null ? true : stored === "true"
+    } catch {
+      return true
+    }
+  })
+
+  const setIncludeDiaryInPackage = React.useCallback((value: boolean) => {
+    setIncludeDiaryInPackageState(value)
+    try {
+      localStorage.setItem("wp_include_diary_in_package", String(value))
+    } catch {}
+  }, [])
 
   const keyRef = React.useRef<CryptoKey | null>(null)
   const lockTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -680,6 +697,8 @@ const importBackup = React.useCallback(
     removeDiaryEntry,
     getDiaryRecordsRaw,
     decryptDiaryRaw,
+    includeDiaryInPackage,
+    setIncludeDiaryInPackage,
   }
 
   return <VaultContext.Provider value={value}>{children}</VaultContext.Provider>

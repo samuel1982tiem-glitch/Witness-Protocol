@@ -39,6 +39,9 @@ export default function IncidentsPage() {
     decryptEvidenceRaw,
     profile,
     logAudit,
+    getDiaryRecordsRaw,
+    decryptDiaryRaw,
+    includeDiaryInPackage,
   } = useVault()
   const { t, language } = useI18n()
   const [filters, setFilters] = React.useState<IncidentFilters>(EMPTY_FILTERS)
@@ -213,6 +216,7 @@ export default function IncidentsPage() {
     setPackaging(true)
     setPackageProgress({ current: 0, total: incidents.length })
     try {
+      const diaryRecords = includeDiaryInPackage ? await getDiaryRecordsRaw() : []
       const uri = await generateIncidentsPackage(
         incidents,
         profile,
@@ -220,6 +224,8 @@ export default function IncidentsPage() {
         decryptEvidenceRaw,
         (p) => setPackageProgress({ current: p.processed, total: p.total }),
         language,
+        diaryRecords,
+        decryptDiaryRaw,
       )
       const { Share } = await import("@capacitor/share")
       try {
