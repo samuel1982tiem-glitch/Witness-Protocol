@@ -121,6 +121,28 @@ export async function saveEvidence(
 // Diary (Quick Capture)
 // ---------------------------------------------------------------------------
 
+/** Fetch all raw diary records (still encrypted), for package export etc. */
+export async function getDiaryRecords(): Promise<DiaryRecord[]> {
+  return getAll<DiaryRecord>(STORES.diary)
+}
+
+/**
+ * Decrypt a diary record's full payload (audio bytes + text) without
+ * creating an object URL -- suitable for embedding raw bytes into a
+ * zip package rather than for <audio> playback.
+ */
+export async function decryptDiaryEntryRaw(
+  key: CryptoKey,
+  record: DiaryRecord,
+): Promise<{ text: string | null; audioBytes: Uint8Array; mimeType: string }> {
+  const plaintext = await decryptJSON<DiaryPlaintext>(key, toCipherPayload(record))
+  return {
+    text: plaintext.text ?? null,
+    audioBytes: new Uint8Array(plaintext.audioBytes),
+    mimeType: plaintext.audioMimeType || "audio/m4a",
+  }
+}
+
 export interface DiaryEntry {
   id: string
   createdAt: number
