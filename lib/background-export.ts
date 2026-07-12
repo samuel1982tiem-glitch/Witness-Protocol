@@ -1,8 +1,8 @@
 // Thin, safe wrapper around the native BackgroundExport plugin (foreground
 // service + progress notification). Every function is a no-op that never
-// throws if the plugin isn't available (e.g. web preview) or any call
-// fails -- a notification glitch should NEVER interrupt or fail an export
-// that is otherwise working correctly.
+// throws AND NEVER HANGS if the plugin isn't available or misbehaves --
+// a notification glitch (including the native permission-request bridge
+// call never resolving) must never block or delay the actual export work.
 
 import { Capacitor } from "@capacitor/core"
 
@@ -25,26 +25,49 @@ function isNativeAndroid(): boolean {
   }
 }
 
-/** Starts the foreground service + shows an initial progress notification. */
-export async function startExportProgress(title: string, text: string): Promise<void> {
-  if (!isNativeAndroid()) {
-    alert("[WP-DEBUG] not native android, skipping notification")
-    return
-  }
-  try {
-    const plugin = await getPlugin()
-    if (!plugin) {
-      alert("[WP-DEBUG] BackgroundExport plugin failed to load (null)")
-      return
-    }
-    const result = await plugin.start({ title, text, indeterminate: true })
-    alert("[WP-DEBUG] start() result: " + JSON.stringify(result))
-  } catch (err) {
-    alert("[WP-DEBUG] start() threw: " + String(err))
-  }
+/**
+ * Runs a promise-returning function but gives up after `ms` if it never
+ * settles, so a hung native bridge call (e.g. a stuck permission-request
+ * callback) can never block the caller indefinitely.
+ */
+function withTimeout<T>(fn: () => Promise<T>, ms: number): Promise<T | null> {
+  return new Promise((resolve) => {
+    let done = false
+    const timer = setTimeout(() => {
+      if (!done) {
+        done = true
+        resolve(null)
+      }
+    }, ms)
+    fn()
+      .then((v) => {
+        if (!done) {
+          done = true
+          clearTimeout(timer)
+          resolve(v)
+        }
+      })
+      .catch(() => {
+        if (!done) {
+          done = true
+          clearTimeout(timer)
+          resolve(null)
+        }
+      })
+  })
 }
 
-/** Updates the notification with a specific progress count. */
+const NATIVE_CALL_TIMEOUT_MS = 3000
+
+export async function startExportProgress(title: string, text: string): Promise<void> {
+  if (!isNativeAndroid()) return
+  await withTimeout(async () => {
+    const plugin = await getPlugin()
+    if (!plugin) return null
+    return plugin.start({ title, text, indeterminate: true })
+  }, NATIVE_CALL_TIMEOUT_MS)
+}
+
 export async function updateExportProgress(
   title: string,
   text: string,
@@ -52,29 +75,24 @@ export async function updateExportProgress(
   total: number,
 ): Promise<void> {
   if (!isNativeAndroid()) return
-  try {
+  await withTimeout(async () => {
     const plugin = await getPlugin()
-    if (!plugin) return
-    await plugin.update({
+    if (!plugin) return null
+    return plugin.update({
       title,
       text,
       progress: current,
       max: Math.max(total, 1),
       indeterminate: total <= 0,
     })
-  } catch (err) {
-    console.error("updateExportProgress failed (non-fatal):", err)
-  }
+  }, NATIVE_CALL_TIMEOUT_MS)
 }
 
-/** Stops the foreground service and removes the notification. ALWAYS call this in a finally block. */
 export async function stopExportProgress(): Promise<void> {
   if (!isNativeAndroid()) return
-  try {
+  await withTimeout(async () => {
     const plugin = await getPlugin()
-    if (!plugin) return
-    await plugin.stop()
-  } catch (err) {
-    console.error("stopExportProgress failed (non-fatal):", err)
-  }
+    if (!plugin) return null
+    return plugin.stop()
+  }, NATIVE_CALL_TIMEOUT_MS)
 }
