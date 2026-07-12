@@ -7,13 +7,11 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ServiceInfo;
 import android.os.Build;
 import android.os.IBinder;
 
 import androidx.core.app.NotificationCompat;
-import androidx.core.content.pm.ServiceInfoCompat;
-
-import com.witness.protocol.MainActivity;
 
 public class ExportForegroundService extends Service {
 
@@ -54,7 +52,7 @@ public class ExportForegroundService extends Service {
                 startForeground(
                     NOTIFICATION_ID,
                     notification,
-                    ServiceInfoCompat.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
                 );
             } else {
                 startForeground(NOTIFICATION_ID, notification);
@@ -70,13 +68,20 @@ public class ExportForegroundService extends Service {
     private Notification buildNotification(String title, String text, int progress, int max, boolean indeterminate) {
         createChannelIfNeeded();
 
-        Intent openIntent = new Intent(this, MainActivity.class);
-        openIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            flags |= PendingIntent.FLAG_IMMUTABLE;
+        // Reopen the app's launcher activity when the notification is tapped.
+        // Looked up dynamically via PackageManager rather than referencing
+        // MainActivity directly -- this plugin is a separate library module
+        // and cannot depend on classes in the app module that uses it.
+        Intent openIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
+        PendingIntent pendingIntent = null;
+        if (openIntent != null) {
+            openIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                flags |= PendingIntent.FLAG_IMMUTABLE;
+            }
+            pendingIntent = PendingIntent.getActivity(this, 0, openIntent, flags);
         }
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, openIntent, flags);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_download)
@@ -84,8 +89,11 @@ public class ExportForegroundService extends Service {
             .setContentText(text != null ? text : "")
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_LOW);
+
+        if (pendingIntent != null) {
+            builder.setContentIntent(pendingIntent);
+        }
 
         if (indeterminate) {
             builder.setProgress(0, 0, true);
