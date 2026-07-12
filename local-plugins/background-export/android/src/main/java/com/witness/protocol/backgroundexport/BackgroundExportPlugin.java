@@ -1,54 +1,43 @@
 package com.witness.protocol.backgroundexport;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Build;
 
+import androidx.core.app.ActivityCompat;
+
 import com.getcapacitor.JSObject;
-import com.getcapacitor.PermissionState;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
-import com.getcapacitor.annotation.Permission;
-import com.getcapacitor.annotation.PermissionCallback;
 
-@CapacitorPlugin(
-    name = "BackgroundExport",
-    permissions = {
-        @Permission(alias = "notifications", strings = { "android.permission.POST_NOTIFICATIONS" })
-    }
-)
+@CapacitorPlugin(name = "BackgroundExport")
 public class BackgroundExportPlugin extends Plugin {
-
-    private PluginCall pendingStartCall;
 
     @PluginMethod
     public void start(PluginCall call) {
-        // POST_NOTIFICATIONS is a runtime permission on Android 13+ (API 33+).
-        // Declaring it in the manifest alone does NOT grant it -- without
-        // this request, startForeground() still runs (the process is
-        // protected) but the notification itself is silently suppressed,
-        // which looked like "nothing happens at all".
-        if (Build.VERSION.SDK_INT >= 33 && getPermissionState("notifications") != PermissionState.GRANTED) {
-            pendingStartCall = call;
-            requestPermissionForAlias("notifications", call, "handleNotificationPermission");
-            return;
+        // Best-effort permission request: on Android 13+, request
+        // POST_NOTIFICATIONS directly via ActivityCompat (fire-and-forget,
+        // does NOT wait for the result) rather than Capacitor's
+        // requestPermissionForAlias bridge, whose callback was hanging
+        // indefinitely and blocking every export. If the user denies it
+        // (or it's never granted), the service still starts and simply
+        // shows no visible notification -- it never blocks.
+        if (Build.VERSION.SDK_INT >= 33) {
+            boolean granted = ActivityCompat.checkSelfPermission(
+                getContext(), Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED;
+            if (!granted && getActivity() != null) {
+                ActivityCompat.requestPermissions(
+                    getActivity(),
+                    new String[] { Manifest.permission.POST_NOTIFICATIONS },
+                    9821
+                );
+            }
         }
-        doStart(call);
-    }
 
-    @PermissionCallback
-    private void handleNotificationPermission(PluginCall call) {
-        if (pendingStartCall != null) {
-            PluginCall saved = pendingStartCall;
-            pendingStartCall = null;
-            // Proceed either way -- if denied, the foreground service still
-            // protects the process, it just won't show a visible notification.
-            doStart(saved);
-        }
-    }
-
-    private void doStart(PluginCall call) {
         String title = call.getString("title", "Witness Protocol");
         String text = call.getString("text", "Exporting…");
         Boolean indeterminate = call.getBoolean("indeterminate", true);
