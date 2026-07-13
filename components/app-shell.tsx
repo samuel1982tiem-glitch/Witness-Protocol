@@ -16,6 +16,8 @@ import * as React from "react"
 import { InstallPrompt } from "@/components/install-prompt"
 import { useVault } from "@/components/vault-provider"
 import { useDiaryRecording } from "@/components/diary-recording-provider"
+import { useExportProgress } from "@/components/export-progress-provider"
+import { Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/components/i18n-provider"
 
@@ -30,6 +32,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { lock } = useVault()
   const { t } = useI18n()
   const { isRecording, elapsed, error, toggleRecording, clearError } = useDiaryRecording()
+  const { active: exportActive } = useExportProgress()
   const NAV = [
     { href: "/incidents", label: t("nav.records"), icon: ScrollText },
     { href: "/patterns", label: t("nav.patterns"), icon: Activity },
@@ -47,14 +50,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             Witness Protocol
           </span>
         </Link>
-        <button
-          type="button"
-          onClick={lock}
-          className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-border"
-        >
-          <Lock className="size-3.5" aria-hidden="true" />
-          Lock
-        </button>
+        <div className="flex items-center gap-2">
+          {exportActive ? (
+            <span
+              className="flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary"
+              title={exportActive.text}
+            >
+              <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+              {exportActive.total > 0
+                ? `${exportActive.current}/${exportActive.total}`
+                : "…"}
+            </span>
+          ) : null}
+          <button
+            type="button"
+            onClick={lock}
+            className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-border"
+          >
+            <Lock className="size-3.5" aria-hidden="true" />
+            Lock
+          </button>
+        </div>
       </header>
 
       <main className="flex-1 px-5 pb-28 pt-5">

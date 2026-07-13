@@ -9,7 +9,7 @@ import { useVault } from "@/components/vault-provider"
 import { useI18n } from "@/components/i18n-provider"
 import { CATEGORIES, categoryName } from "@/lib/categories"
 import { buildReportData, generateReportText, generateReportHtml } from "@/lib/report"
-import { startExportProgress, stopExportProgress } from "@/lib/background-export"
+import { useExportProgress } from "@/components/export-progress-provider"
 import { fromDateTimeLocal } from "@/lib/format"
 import type { CategoryId } from "@/lib/types"
 
@@ -17,6 +17,7 @@ type ReportFormat = "text" | "html"
 
 export function ReportGenerator({ onClose }: { onClose?: () => void }) {
   const { incidents, profile, logAudit } = useVault()
+  const { begin: beginExport, end: endExport } = useExportProgress()
   const { t } = useI18n()
 
   const [dateFrom, setDateFrom] = React.useState("")
@@ -43,7 +44,7 @@ export function ReportGenerator({ onClose }: { onClose?: () => void }) {
   async function handleGenerate() {
     setError(null)
     setGenerating(true)
-    await startExportProgress(t("report.generate"), t("report.generating"))
+    await beginExport(t("report.generate"), t("report.generating"))
     try {
       const categories = allCategoriesSelected ? null : Array.from(selectedCategories)
 
@@ -107,19 +108,19 @@ export function ReportGenerator({ onClose }: { onClose?: () => void }) {
           setError(t("report.generateFailed", { error: (err as Error).message }))
         } finally {
           setGenerating(false)
-          await stopExportProgress()
+          await endExport()
         }
       }
       reader.onerror = async () => {
         setError(t("report.generateFailed", { error: "Could not read report blob" }))
         setGenerating(false)
-        await stopExportProgress()
+        await endExport()
       }
       reader.readAsDataURL(blob)
     } catch (err) {
       setError(t("report.generateFailed", { error: (err as Error).message }))
       setGenerating(false)
-      await stopExportProgress()
+      await endExport()
     }
   }
 

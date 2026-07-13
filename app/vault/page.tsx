@@ -27,9 +27,10 @@ import { SUPPORTED_LANGUAGES, type LanguagePreference } from "@/lib/i18n"
 import { Globe } from "lucide-react"
 import { formatBytes } from "@/lib/media"
 import { isShareCancelled } from "@/lib/share-utils"
-import { startExportProgress, updateExportProgress, stopExportProgress } from "@/lib/background-export"
+import { useExportProgress } from "@/components/export-progress-provider"
 
 export default function VaultPage() {
+  const { begin: beginExport, progress: reportExportProgress, end: endExport } = useExportProgress()
   const {
     status,
     incidents,
@@ -195,7 +196,7 @@ export default function VaultPage() {
   const [includeIdDocOnRestore, setIncludeIdDocOnRestore] = React.useState(false)
 
   async function handleExport() {
-    await startExportProgress(t("backup.exportBackup"), t("backup.exporting"))
+    await beginExport(t("backup.exportBackup"), t("backup.exporting"))
     try {
       const fileName = await exportBackup(includeIdDocOnExport)
       alert(t("backup.backupSaved", { fileName }))
@@ -203,19 +204,19 @@ export default function VaultPage() {
       console.error(err)
       alert(String(err))
     } finally {
-      await stopExportProgress()
+      await endExport()
     }
   }
 
   React.useEffect(() => {
     if (!exportProgress) return
-    void updateExportProgress(
+    reportExportProgress(
       t("backup.exportBackup"),
       exportProgress.currentName || t("backup.exporting"),
       exportProgress.percent ?? 0,
       100,
     )
-  }, [exportProgress, t])
+  }, [exportProgress, t, reportExportProgress])
 
   const unsealedCount = incidents.filter((i) => !i.sealed).length
 

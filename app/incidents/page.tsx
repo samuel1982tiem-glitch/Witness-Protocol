@@ -18,7 +18,7 @@ import { useI18n } from "@/components/i18n-provider"
 import { CATEGORIES, categoryDescription, categoryName } from "@/lib/categories"
 import { generateBulkIncidentsPdf } from "@/lib/pdf-export"
 import { generateIncidentsPackage } from "@/lib/package-export"
-import { startExportProgress, updateExportProgress, stopExportProgress } from "@/lib/background-export"
+import { useExportProgress } from "@/components/export-progress-provider"
 import Link from "next/link"
 import { isShareCancelled } from "@/lib/share-utils"
 import type { IncidentFilters } from "@/lib/types"
@@ -34,6 +34,7 @@ const EMPTY_FILTERS: IncidentFilters = {
 
 export default function IncidentsPage() {
   const router = useRouter()
+  const { begin: beginExport, progress: reportExportProgress, end: endExport } = useExportProgress()
   const {
     incidents,
     getEvidenceRecords,
@@ -154,7 +155,7 @@ export default function IncidentsPage() {
 
   async function handleExportAllPdf() {
     setExportingAll(true)
-    await startExportProgress(t("recordsPage.exportAllPdf"), t("recordsPage.exportingAllPdf"))
+    await beginExport(t("recordsPage.exportAllPdf"), t("recordsPage.exportingAllPdf"))
     // Split into batches so each jsPDF document (and its embedded images)
     // is generated, written, shared, and discarded before the next batch
     // starts. A single 100+ incident PDF held everything in memory at
@@ -171,7 +172,7 @@ export default function IncidentsPage() {
     try {
       for (let i = 0; i < batches.length; i++) {
         setExportBatchProgress({ current: i + 1, total: totalBatches })
-        await updateExportProgress(
+        reportExportProgress(
           t("recordsPage.exportAllPdf"),
           t("recordsPage.exportingAllPdfProgress", { current: i + 1, total: totalBatches }),
           i + 1,
@@ -217,14 +218,14 @@ export default function IncidentsPage() {
     } finally {
       setExportingAll(false)
       setExportBatchProgress(null)
-      await stopExportProgress()
+      await endExport()
     }
   }
 
   async function handlePackageAll() {
     setPackaging(true)
     setPackageProgress({ current: 0, total: incidents.length })
-    await startExportProgress(t("recordsPage.packageAll"), t("recordsPage.packagingAll"))
+    await beginExport(t("recordsPage.packageAll"), t("recordsPage.packagingAll"))
     try {
       const diaryRecords = includeDiaryInPackage ? await getDiaryRecordsRaw() : []
       const uri = await generateIncidentsPackage(
@@ -234,7 +235,7 @@ export default function IncidentsPage() {
         decryptEvidenceRaw,
         (p) => {
           setPackageProgress({ current: p.processed, total: p.total })
-          void updateExportProgress(
+          reportExportProgress(
             t("recordsPage.packageAll"),
             t("recordsPage.packagingAllProgress", { current: p.processed, total: p.total }),
             p.processed,
@@ -260,7 +261,7 @@ export default function IncidentsPage() {
     } finally {
       setPackaging(false)
       setPackageProgress(null)
-      await stopExportProgress()
+      await endExport()
     }
   }
 

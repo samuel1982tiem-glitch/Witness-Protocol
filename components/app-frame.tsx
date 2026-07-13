@@ -8,6 +8,7 @@ import { PwaRegister } from "@/components/pwa-register"
 import { VaultGate } from "@/components/vault-gate"
 import { VaultProvider } from "@/components/vault-provider"
 import { DiaryRecordingProvider } from "@/components/diary-recording-provider"
+import { ExportProgressProvider } from "@/components/export-progress-provider"
 
 export function AppFrame({ children }: { children: React.ReactNode }) {
   return (
@@ -15,9 +16,11 @@ export function AppFrame({ children }: { children: React.ReactNode }) {
       <VaultProvider>
         <PwaRegister />
         <VaultGate>
-          <DiaryRecordingProvider>
-            <AppShell>{children}</AppShell>
-          </DiaryRecordingProvider>
+          <ExportProgressProvider>
+            <DiaryRecordingProvider>
+              <AppShell>{children}</AppShell>
+            </DiaryRecordingProvider>
+          </ExportProgressProvider>
         </VaultGate>
       </VaultProvider>
     </I18nProvider>
