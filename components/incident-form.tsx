@@ -432,7 +432,7 @@ function addVoice(blob: Blob) {
 
           <div className="col-span-6">
             <Label>{t("incidentForm.gps")}</Label>
-            <Card className="flex min-h-[42px] items-center justify-between gap-2 px-3 py-2">
+            <div className="flex min-h-[42px] items-center justify-between gap-2 py-2">
               {location ? (
                 <button
                   type="button"
@@ -440,7 +440,7 @@ function addVoice(blob: Blob) {
                   className="min-w-0 flex-1 text-left"
                   aria-label="Open location in maps"
                 >
-                  <p className="truncate text-sm font-medium text-primary underline-offset-2 hover:underline">
+                  <p className="text-sm font-medium text-primary underline-offset-2 hover:underline">
                     {location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}
                   </p>
                   <p className="text-[11px] text-muted-foreground">
@@ -473,7 +473,7 @@ function addVoice(blob: Blob) {
                   <Crosshair className="size-4" />
                 </button>
               </div>
-            </Card>
+            </div>
           </div>
         </div>
 
