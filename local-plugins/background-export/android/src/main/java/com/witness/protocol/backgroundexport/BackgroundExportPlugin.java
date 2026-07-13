@@ -18,18 +18,6 @@ public class BackgroundExportPlugin extends Plugin {
 
     @PluginMethod
     public void start(PluginCall call) {
-        // TEMP DIAGNOSTIC -- confirms native code is reached at all,
-        // independent of notification permission (Toast needs none).
-        try {
-            if (getActivity() != null) {
-                getActivity().runOnUiThread(() ->
-                    android.widget.Toast.makeText(getContext(), "WP-DEBUG native start() reached", android.widget.Toast.LENGTH_LONG).show()
-                );
-            }
-        } catch (Throwable t) {
-            // ignore
-        }
-
         // ENTIRE method wrapped: any uncaught exception here previously
         // left the JS-side promise hanging forever (neither resolve nor
         // reject called), which was indistinguishable from a slow/stuck
