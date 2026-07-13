@@ -60,10 +60,10 @@ function withTimeout<T>(fn: () => Promise<T>, ms: number): Promise<T | null> {
 const NATIVE_CALL_TIMEOUT_MS = 3000
 
 export async function startExportProgress(title: string, text: string): Promise<void> {
+  // TEMP DIAGNOSTIC -- fires synchronously, cannot hang, proves this
+  // function was even called at all.
+  alert("[WP-DEBUG] startExportProgress CALLED, isNativeAndroid=" + isNativeAndroid())
   if (!isNativeAndroid()) return
-  // TEMP DIAGNOSTIC -- no timeout wrapper here, and errors are surfaced
-  // directly, so we can see whether the native call resolves, rejects
-  // with a real error, or genuinely never returns at all.
   try {
     const plugin = await getPlugin()
     if (!plugin) {
