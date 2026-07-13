@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { startExportProgress, updateExportProgress, stopExportProgress } from "@/lib/background-export"
+import { useVault } from "@/components/vault-provider"
 
 interface ExportProgressContextValue {
   /** Non-null while any export is running -- survives navigation since this is app-wide state. */
@@ -23,12 +24,18 @@ export function useExportProgress(): ExportProgressContextValue {
 }
 
 export function ExportProgressProvider({ children }: { children: React.ReactNode }) {
+  const { suspendAutoLock, resumeAutoLock } = useVault()
   const [active, setActive] = React.useState<ExportProgressContextValue["active"]>(null)
 
   const begin = React.useCallback(async (title: string, text: string) => {
+    // Suspend the vault's inactivity auto-lock for the duration of the
+    // export -- otherwise a long export that outlives the auto-lock
+    // timeout while backgrounded would have its decrypt calls start
+    // failing partway through once the vault key clears.
+    suspendAutoLock()
     setActive({ title, text, current: 0, total: 0 })
     await startExportProgress(title, text)
-  }, [])
+  }, [suspendAutoLock])
 
   const progress = React.useCallback(
     (title: string, text: string, current: number, total: number) => {
@@ -41,7 +48,8 @@ export function ExportProgressProvider({ children }: { children: React.ReactNode
   const end = React.useCallback(async () => {
     setActive(null)
     await stopExportProgress()
-  }, [])
+    resumeAutoLock()
+  }, [resumeAutoLock])
 
   const value: ExportProgressContextValue = { active, begin, progress, end }
 

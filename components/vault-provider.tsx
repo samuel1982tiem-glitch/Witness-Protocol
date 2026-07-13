@@ -91,6 +91,10 @@ interface VaultContextValue {
   decryptEvidenceRaw: (record: EvidenceRecord) => Promise<{ name: string; raw: Uint8Array }>
   loadSampleData: () => Promise<void>
   registerActivity: () => void
+  /** While true, the inactivity auto-lock timer is suspended (e.g. a long export is running). */
+  suspendAutoLock: () => void
+  /** Resumes the auto-lock timer and immediately restarts the countdown. */
+  resumeAutoLock: () => void
   exportBackup: (includeIdDocument?: boolean) => Promise<string>
   /** Live progress during export (null when not exporting). */
   exportProgress: ExportProgress | null
@@ -155,6 +159,13 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
 
   const keyRef = React.useRef<CryptoKey | null>(null)
   const lockTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  // While true (e.g. a long export is running), registerActivity() below
+  // is a no-op -- the inactivity timer never fires. Without this, a
+  // Package/PDF export that outlives the auto-lock duration while the
+  // app is backgrounded (protected by the foreground service, but the
+  // vault key clearing on lock() still runs) would have its decrypt
+  // calls start failing partway through with "Vault is locked."
+  const autoLockSuspended = React.useRef(false)
 
   // Determine whether a vault has been initialized on this device.
 React.useEffect(() => {
@@ -210,7 +221,18 @@ React.useEffect(() => {
     setStatus((s) => (s === "uninitialized" ? s : "locked"))
   }, [clearMemory])
 
+  const suspendAutoLock = React.useCallback(() => {
+    autoLockSuspended.current = true
+    if (lockTimer.current) clearTimeout(lockTimer.current)
+  }, [])
+
+  const resumeAutoLock = React.useCallback(() => {
+    autoLockSuspended.current = false
+    registerActivity()
+  }, [])
+
   const registerActivity = React.useCallback(() => {
+    if (autoLockSuspended.current) return
     if (status !== "unlocked") return
     if (lockTimer.current) clearTimeout(lockTimer.current)
     lockTimer.current = setTimeout(() => lock(), autoLockMs)
@@ -679,6 +701,8 @@ const importBackup = React.useCallback(
     decryptEvidenceRaw,
     loadSampleData,
     registerActivity,
+    suspendAutoLock,
+    resumeAutoLock,
     exportBackup,
     exportProgress,
     importBackup,
