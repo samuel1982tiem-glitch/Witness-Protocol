@@ -28,6 +28,9 @@ import { Globe } from "lucide-react"
 import { formatBytes } from "@/lib/media"
 import { isShareCancelled } from "@/lib/share-utils"
 import { useExportProgress } from "@/components/export-progress-provider"
+import { QRCodeSVG } from "qrcode.react"
+
+const GITHUB_REPO_URL = "https://github.com/samuel1982tiem-glitch/Witness-Protocol"
 
 export default function VaultPage() {
   const { begin: beginExport, progress: reportExportProgress, end: endExport } = useExportProgress()
@@ -321,20 +324,33 @@ async function runImport(passcode: string) {
               <p className="font-medium">{t("vault.language")}</p>
             </div>
 
-            <div className="relative">
-              <select
-                value={preference}
-                onChange={(e) => setLanguage(e.target.value as LanguagePreference)}
-                className="w-full appearance-none rounded-xl border border-border bg-background px-3 py-3 pr-10 text-sm outline-none"
+            <div className="flex items-center gap-3">
+              <div className="relative min-w-0 flex-1">
+                <select
+                  value={preference}
+                  onChange={(e) => setLanguage(e.target.value as LanguagePreference)}
+                  className="w-full appearance-none rounded-xl border border-border bg-background px-3 py-3 pr-10 text-sm outline-none"
+                >
+                  <option value="system">{t("vault.systemLanguage")}</option>
+                  {SUPPORTED_LANGUAGES.map((l) => (
+                    <option key={l.code} value={l.code}>
+                      {l.nativeName}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              </div>
+
+              <a
+                href={GITHUB_REPO_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="flex shrink-0 flex-col items-center gap-1 rounded-xl border border-border p-2"
+                aria-label="GitHub"
               >
-                <option value="system">{t("vault.systemLanguage")}</option>
-                {SUPPORTED_LANGUAGES.map((l) => (
-                  <option key={l.code} value={l.code}>
-                    {l.nativeName}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <QRCodeSVG value={GITHUB_REPO_URL} size={64} level="M" />
+                <span className="text-[9px] leading-none text-muted-foreground">GitHub</span>
+              </a>
             </div>
           </CardBody>
         </Card>
