@@ -18,55 +18,55 @@ public class BackgroundExportPlugin extends Plugin {
 
     @PluginMethod
     public void start(PluginCall call) {
-        // Best-effort permission request, fully isolated with its own
-        // try/catch and dispatched to the UI thread: PluginMethod calls
-        // run on a background thread by default, and ActivityCompat.
-        // requestPermissions() can throw if called off the main thread.
-        // An earlier version let that exception propagate, which
-        // silently aborted this whole method BEFORE the foreground
-        // service was ever started -- meaning no notification, no
-        // protected process, nothing -- with no visible error anywhere.
-        // This must never be able to stop the service from starting.
+        // ENTIRE method wrapped: any uncaught exception here previously
+        // left the JS-side promise hanging forever (neither resolve nor
+        // reject called), which was indistinguishable from a slow/stuck
+        // call. Now every path either resolves or rejects with the real
+        // error message, so the actual cause becomes visible.
         try {
-            if (Build.VERSION.SDK_INT >= 33 && getActivity() != null) {
-                boolean granted = ActivityCompat.checkSelfPermission(
-                    getContext(), Manifest.permission.POST_NOTIFICATIONS
-                ) == PackageManager.PERMISSION_GRANTED;
-                if (!granted) {
-                    getActivity().runOnUiThread(() -> {
-                        try {
-                            ActivityCompat.requestPermissions(
-                                getActivity(),
-                                new String[] { Manifest.permission.POST_NOTIFICATIONS },
-                                9821
-                            );
-                        } catch (Exception inner) {
-                            // ignore -- never block the service below
-                        }
-                    });
+            try {
+                if (Build.VERSION.SDK_INT >= 33 && getActivity() != null) {
+                    boolean granted = ActivityCompat.checkSelfPermission(
+                        getContext(), Manifest.permission.POST_NOTIFICATIONS
+                    ) == PackageManager.PERMISSION_GRANTED;
+                    if (!granted) {
+                        getActivity().runOnUiThread(() -> {
+                            try {
+                                ActivityCompat.requestPermissions(
+                                    getActivity(),
+                                    new String[] { Manifest.permission.POST_NOTIFICATIONS },
+                                    9821
+                                );
+                            } catch (Exception inner) {
+                                // ignore -- never block the service below
+                            }
+                        });
+                    }
                 }
+            } catch (Exception outer) {
+                // ignore -- never block the service below
             }
-        } catch (Exception outer) {
-            // ignore -- never block the service below
+
+            String title = call.getString("title", "Witness Protocol");
+            String text = call.getString("text", "Exporting…");
+            Boolean indeterminate = call.getBoolean("indeterminate", true);
+
+            Intent intent = new Intent(getContext(), ExportForegroundService.class);
+            intent.setAction(ExportForegroundService.ACTION_START);
+            intent.putExtra(ExportForegroundService.EXTRA_TITLE, title);
+            intent.putExtra(ExportForegroundService.EXTRA_TEXT, text);
+            intent.putExtra(ExportForegroundService.EXTRA_PROGRESS, 0);
+            intent.putExtra(ExportForegroundService.EXTRA_MAX, 100);
+            intent.putExtra(ExportForegroundService.EXTRA_INDETERMINATE, indeterminate != null && indeterminate);
+
+            startForegroundServiceCompat(intent);
+
+            JSObject ret = new JSObject();
+            ret.put("started", true);
+            call.resolve(ret);
+        } catch (Throwable t) {
+            call.reject("native start() failed: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
-
-        String title = call.getString("title", "Witness Protocol");
-        String text = call.getString("text", "Exporting…");
-        Boolean indeterminate = call.getBoolean("indeterminate", true);
-
-        Intent intent = new Intent(getContext(), ExportForegroundService.class);
-        intent.setAction(ExportForegroundService.ACTION_START);
-        intent.putExtra(ExportForegroundService.EXTRA_TITLE, title);
-        intent.putExtra(ExportForegroundService.EXTRA_TEXT, text);
-        intent.putExtra(ExportForegroundService.EXTRA_PROGRESS, 0);
-        intent.putExtra(ExportForegroundService.EXTRA_MAX, 100);
-        intent.putExtra(ExportForegroundService.EXTRA_INDETERMINATE, indeterminate != null && indeterminate);
-
-        startForegroundServiceCompat(intent);
-
-        JSObject ret = new JSObject();
-        ret.put("started", true);
-        call.resolve(ret);
     }
 
     @PluginMethod

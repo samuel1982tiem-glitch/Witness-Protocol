@@ -61,14 +61,20 @@ const NATIVE_CALL_TIMEOUT_MS = 3000
 
 export async function startExportProgress(title: string, text: string): Promise<void> {
   if (!isNativeAndroid()) return
-  const result = await withTimeout(async () => {
+  // TEMP DIAGNOSTIC -- no timeout wrapper here, and errors are surfaced
+  // directly, so we can see whether the native call resolves, rejects
+  // with a real error, or genuinely never returns at all.
+  try {
     const plugin = await getPlugin()
-    if (!plugin) return { __diag: "plugin was null" }
+    if (!plugin) {
+      alert("[WP-DEBUG] plugin is null (failed to import)")
+      return
+    }
     const r = await plugin.start({ title, text, indeterminate: true })
-    return { __diag: "resolved", ...r }
-  }, NATIVE_CALL_TIMEOUT_MS)
-  // TEMP DIAGNOSTIC -- remove once notification issue is confirmed fixed
-  alert("[WP-DEBUG] startExportProgress result: " + JSON.stringify(result))
+    alert("[WP-DEBUG] start() resolved: " + JSON.stringify(r))
+  } catch (err) {
+    alert("[WP-DEBUG] start() rejected: " + String(err))
+  }
 }
 
 export async function updateExportProgress(
