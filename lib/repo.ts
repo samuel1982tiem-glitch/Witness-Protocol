@@ -604,14 +604,18 @@ export async function exportMetadataOnly(): Promise<{
   seals: any[]
   diary: any[]
 }> {
-  const [incidents, alerts, users, userProfile, seals, diary] =
+  // Diary is intentionally excluded here -- it can contain audio, and
+  // bundling it into this single JSON blob (like evidence used to be)
+  // caused a freeze/crash on export once enough audio accumulated.
+  // Diary is streamed into the zip one entry at a time instead, same
+  // treatment evidence already gets.
+  const [incidents, alerts, users, userProfile, seals] =
     await Promise.all([
       getAll<IncidentRecord>(STORES.incidents),
       getAll(STORES.patternAlerts),
       getAll(STORES.users),
       getAll(STORES.userProfile),
       getAll<SealRecord>(STORES.evidenceSeals),
-      getAll<DiaryRecord>(STORES.diary),
     ])
 
   return {
@@ -622,7 +626,7 @@ export async function exportMetadataOnly(): Promise<{
     users: users.map(serializeRecord),
     userProfile: userProfile.map(serializeRecord),
     seals,
-    diary: diary.map(serializeRecord),
+    diary: [],
   }
 }
 

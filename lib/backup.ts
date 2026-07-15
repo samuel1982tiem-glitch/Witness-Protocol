@@ -36,6 +36,7 @@ import {
   decryptEvidenceRaw,
   mergeIncidentRecords,
   mergeDiaryRecords,
+  getDiaryRecords,
   type VaultBackup,
   type MergeProgress,
   type MergeResult,
@@ -656,13 +657,43 @@ async function parseVaultBackupV4(
     } as EvidenceRecord)
   }
 
+  const diaryFromMeta = reviveDiaryBuffers((meta as any).diary ?? []) as any[]
+  const diaryFromStream: any[] = []
+  const diaryPaths = Object.keys(files).filter(
+    (p) => p.startsWith("diary/") && p.endsWith(".enc"),
+  )
+  for (const path of diaryPaths) {
+    const id = path.slice("diary/".length, path.length - ".enc".length)
+    const sidecarBytes = files[`diary/${id}.json`]
+    if (!sidecarBytes) continue
+    let sidecar: { id: string; createdAt: number }
+    try {
+      sidecar = JSON.parse(new TextDecoder().decode(sidecarBytes))
+    } catch {
+      continue
+    }
+    const blob = files[path]
+    if (!blob || blob.byteLength < 13) continue
+    const iv = blob.slice(0, 12)
+    const ciphertext = blob.slice(12)
+    diaryFromStream.push({
+      id: sidecar.id,
+      createdAt: sidecar.createdAt,
+      iv,
+      data: ciphertext.buffer.slice(
+        ciphertext.byteOffset,
+        ciphertext.byteOffset + ciphertext.byteLength,
+      ),
+    })
+  }
+
   return {
     sourceKey,
     incidents: (meta.incidents ?? []) as unknown as IncidentRecord[],
     evidence: evidenceRecords,
     seals: (meta.seals ?? []) as unknown as SealRecord[],
     userProfile: reviveUserProfileBuffers((meta.userProfile ?? []) as any[]),
-    diary: reviveDiaryBuffers((meta as any).diary ?? []) as any[],
+    diary: [...diaryFromMeta, ...diaryFromStream] as any[],
   }
 }
 
@@ -956,6 +987,32 @@ export async function exportVaultBackupV4Streaming(
       percent: total > 0 ? Math.round(20 + (processed / total) * 70) : 90,
       etaSeconds,
     })
+  }
+
+  // --- Diary section: one entry at a time, raw ciphertext copy. No
+  // decrypt/re-encrypt needed -- diary is already encrypted under this
+  // same export key in IndexedDB. Fixes the freeze/crash that happened
+  // when diary audio was bundled into the single metadata JSON blob.
+  const diaryRecordsToStream = await getDiaryRecords()
+  for (const record of diaryRecordsToStream) {
+    if (zipError) throw zipError
+
+    const combined = new Uint8Array(record.iv.length + record.data.byteLength)
+    combined.set(record.iv, 0)
+    combined.set(new Uint8Array(record.data), record.iv.length)
+
+    const diaryEntry = new ZipPassThrough(`diary/${record.id}.enc`)
+    zip.add(diaryEntry)
+    diaryEntry.push(combined, true)
+
+    const diarySidecar = new ZipPassThrough(`diary/${record.id}.json`)
+    zip.add(diarySidecar)
+    diarySidecar.push(
+      new TextEncoder().encode(
+        JSON.stringify({ id: record.id, createdAt: record.createdAt }),
+      ),
+      true,
+    )
   }
 
   onProgress?.({
