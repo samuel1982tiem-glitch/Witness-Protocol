@@ -22,11 +22,15 @@ import {
   ArrowLeft,
   Crosshair,
   FileDown,
+  FileText,
+  Image as ImageIcon,
   Lock,
   MapPin,
+  Mic,
   Pencil,
   ShieldCheck,
   Trash2,
+  Video,
   X,
 } from "lucide-react"
 import Link from "next/link"
@@ -52,14 +56,23 @@ import { useVault } from "@/components/vault-provider"
 import { CATEGORIES, categoryDescription, categoryName } from "@/lib/categories"
 import { fromDateTimeLocal, toDateTimeLocal } from "@/lib/format"
 import { formatCoords, formatDateTime, shortHash } from "@/lib/format"
+import { formatBytes } from "@/lib/media"
 import type { CategoryId, GeoLocation } from "@/lib/types"
 
 export default function IncidentDetailPage() {
  const searchParams = useSearchParams()
 const incidentId = searchParams.get("id")
   const router = useRouter()
-  const { incidents, sealIncident, removeIncident, updateIncident, profile, logAudit, busy, decryptEvidenceRaw, getEvidenceRecords } =
+  const { incidents, sealIncident, removeIncident, updateIncident, profile, logAudit, busy, decryptEvidenceRaw, getEvidenceRecords, deleteEvidence } =
     useVault()
+
+  function evidenceKindIcon(kind: string) {
+    const cls = "size-4 shrink-0 text-muted-foreground"
+    if (kind === "photo" || kind === "screenshot") return <ImageIcon className={cls} aria-hidden="true" />
+    if (kind === "video") return <Video className={cls} aria-hidden="true" />
+    if (kind === "voice") return <Mic className={cls} aria-hidden="true" />
+    return <FileText className={cls} aria-hidden="true" />
+  }
   const { t, language } = useI18n()
   const [working, setWorking] = React.useState(false)
   const [confirmDelete, setConfirmDelete] = React.useState(false)
@@ -67,6 +80,7 @@ const incidentId = searchParams.get("id")
   const [editing, setEditing] = React.useState(false)
   const [geoStatus, setGeoStatus] = React.useState<string | null>(null)
   const [exportingPdf, setExportingPdf] = React.useState(false)
+  const [previewEvidenceId, setPreviewEvidenceId] = React.useState<string | null>(null)
 
   const incident = incidents.find((i) => i.id === incidentId)
 
@@ -316,53 +330,9 @@ const incidentId = searchParams.get("id")
       </header>
 
       {editing ? (
+        <>
         <Card>
           <CardBody className="space-y-4">
-            <div>
-              <Label>{t("categories.categoryLabel")}</Label>
-              <div className="grid grid-cols-2 gap-2">
-                {CATEGORIES.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => setDraftCategory(c.id)}
-                    className={`rounded-xl border px-3 py-3 text-left transition-colors ${
-                      draftCategory === c.id
-                        ? "border-primary bg-primary/10"
-                        : "border-border bg-background hover:bg-muted"
-                    }`}
-                  >
-                    <span
-                      className={`block text-sm font-medium ${
-                        draftCategory === c.id ? "text-primary" : "text-foreground"
-                      }`}
-                    >
-                      {categoryName(c.id, t)}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="edit-title">Title</Label>
-              <Input
-                id="edit-title"
-                value={draftTitle}
-                onChange={(e) => setDraftTitle(e.target.value)}
-                maxLength={120}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="edit-description">Description</Label>
-              <Textarea
-                id="edit-description"
-                value={draftDescription}
-                onChange={(e) => setDraftDescription(e.target.value)}
-              />
-            </div>
-
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label htmlFor="edit-occurredAt">Date and time</Label>
@@ -419,6 +389,64 @@ const incidentId = searchParams.get("id")
               </div>
             </div>
 
+            <div>
+              <Label htmlFor="edit-category">{t("categories.categoryLabel")}</Label>
+              <select
+                id="edit-category"
+                value={draftCategory ?? ""}
+                onChange={(e) => setDraftCategory(e.target.value as CategoryId)}
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+              >
+                {CATEGORIES.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {categoryName(c.id, t)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <Label htmlFor="edit-title">Title</Label>
+              <Input
+                id="edit-title"
+                value={draftTitle}
+                onChange={(e) => setDraftTitle(e.target.value)}
+                maxLength={120}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea
+                id="edit-description"
+                value={draftDescription}
+                onChange={(e) => setDraftDescription(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Label>{t("incidentRecord.evidence")}</Label>
+              {incident.evidence.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t("incidentRecord.noAttachments")}</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {incident.evidence.map((ev) => (
+                    <button
+                      key={ev.id}
+                      type="button"
+                      onClick={() => setPreviewEvidenceId(ev.id)}
+                      className="flex w-full items-center gap-3 rounded-xl border border-border bg-background px-3 py-2.5 text-left hover:bg-muted"
+                    >
+                      {evidenceKindIcon(ev.kind)}
+                      <span className="min-w-0 flex-1 truncate text-sm">
+                        {formatBytes(ev.size)} · {formatDateTime(ev.createdAt)}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
             <div className="flex gap-2 pt-1">
@@ -440,6 +468,54 @@ const incidentId = searchParams.get("id")
             </div>
           </CardBody>
         </Card>
+
+        {previewEvidenceId ? (
+          <div
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+            onClick={() => setPreviewEvidenceId(null)}
+          >
+            <Card className="w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+              <CardBody className="space-y-3">
+                {(() => {
+                  const ev = incident.evidence.find((e) => e.id === previewEvidenceId)
+                  if (!ev) return null
+                  return (
+                    <>
+                      <div className="flex items-center gap-3">
+                        {evidenceKindIcon(ev.kind)}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium">{formatBytes(ev.size)}</p>
+                          <p className="text-xs text-muted-foreground">{formatDateTime(ev.createdAt)}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => setPreviewEvidenceId(null)}
+                        >
+                          {t("common.close")}
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          className="flex-1"
+                          onClick={async () => {
+                            await deleteEvidence(ev.id)
+                            setPreviewEvidenceId(null)
+                          }}
+                        >
+                          <Trash2 className="size-4" aria-hidden="true" />
+                          {t("incidentFormExtra.removeAttachment")}
+                        </Button>
+                      </div>
+                    </>
+                  )
+                })()}
+              </CardBody>
+            </Card>
+          </div>
+        ) : null}
+        </>
       ) : (
         <Card>
           <CardBody className="space-y-4">

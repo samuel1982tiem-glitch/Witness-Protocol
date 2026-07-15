@@ -368,6 +368,10 @@ async function evidenceMetaFor(incidentId: string): Promise<EvidenceMeta[]> {
     .sort((a, b) => a.createdAt - b.createdAt)
 }
 
+export async function deleteEvidenceFile(evidenceId: string): Promise<void> {
+  await deleteRecord(STORES.evidenceFiles, evidenceId)
+}
+
 /** Decrypt all incidents into in-memory domain objects. */
 export async function loadAllIncidents(key: CryptoKey): Promise<Incident[]> {
   const [records, seals] = await Promise.all([

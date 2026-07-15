@@ -73,6 +73,7 @@ import {
   loadDiaryAudioUrl,
   deleteDiaryEntry as repoDeleteDiaryEntry,
   type DiaryEntry,
+  deleteEvidenceFile as repoDeleteEvidenceFile,
 } from "@/lib/repo"
 import { buildSampleIncidents } from "@/lib/sample-data"
 import type {
@@ -99,6 +100,7 @@ interface VaultContextValue {
   ) => Promise<string>
   updateIncident: (incidentId: string, input: IncidentInput) => Promise<void>
   removeIncident: (incidentId: string) => Promise<void>
+  deleteEvidence: (evidenceId: string) => Promise<void>
   sealIncident: (incidentId: string) => Promise<void>
   runAnalysis: () => Promise<PatternAlert[]>
   getEvidenceRecords: (incidentId: string) => Promise<EvidenceRecord[]>
@@ -698,7 +700,17 @@ const importBackup = React.useCallback(
   [refreshIncidents, loadStoredAlerts, loadProfile, refreshDiaryEntries, registerActivity],
 )
 
-  const value: VaultContextValue = {
+  const deleteEvidence = React.useCallback(
+    async (evidenceId: string) => {
+      const key = keyRef.current
+      if (!key) throw new Error("Vault is locked.")
+      await repoDeleteEvidenceFile(evidenceId)
+      await refreshIncidents()
+    },
+    [refreshIncidents],
+  )
+
+const value: VaultContextValue = {
     status,
     incidents,
     alerts,
@@ -711,6 +723,7 @@ const importBackup = React.useCallback(
     addIncident,
     updateIncident,
     removeIncident,
+    deleteEvidence,
     sealIncident,
     runAnalysis,
     getEvidenceRecords,
