@@ -32,6 +32,22 @@
 export type LanguageCode = "en" | "pt-BR" | "es"
 export type LanguagePreference = "system" | LanguageCode
 
+export interface OnboardingDict {
+  skip: string
+  next: string
+  getStarted: string
+  welcomeTitle: string
+  welcomeBody: string
+  recordsTitle: string
+  recordsBody: string
+  diaryTitle: string
+  diaryBody: string
+  patternsTitle: string
+  patternsBody: string
+  vaultTitle: string
+  vaultBody: string
+}
+
 export interface Dictionary {
   evidenceHint: EvidenceHintDict
   categories: CategoryDict
@@ -47,6 +63,7 @@ export interface Dictionary {
   pdfExport: PdfExportDict
   report: ReportDict
   heatMap: HeatMapDict
+  onboarding: OnboardingDict
 
   common: {
     save: string

@@ -52,6 +52,22 @@ export const incidentFormExtraPtBR = {
   cancel: "Cancelar",
 }
 
+export const onboardingPtBR = {
+  skip: "Pular",
+  next: "Próximo",
+  getStarted: "Começar",
+  welcomeTitle: "Privado e Criptografado",
+  welcomeBody: "Tudo que você registra permanece neste dispositivo, criptografado antes de ser salvo. Nada é enviado para lugar nenhum.",
+  recordsTitle: "Registre Incidentes",
+  recordsBody: "Documente o que aconteceu com fotos, vídeo, áudio e documentos. A localização GPS é capturada automaticamente quando disponível.",
+  diaryTitle: "Diário de Captura Rápida",
+  diaryBody: "Toque no botão vermelho redondo a qualquer momento para gravar uma nota de voz rápida. Adicione texto depois, ou deixe como está.",
+  patternsTitle: "Identifique Padrões",
+  patternsBody: "O app procura horários, localizações e categorias repetidas nos seus registros, tudo neste dispositivo.",
+  vaultTitle: "Mantenha o Controle",
+  vaultBody: "Configure um bloqueio automático, exporte backups criptografados, ou empacote evidências para compartilhar, tudo na tela do Cofre.",
+}
+
 export const recordsPagePtBR = {
   title: "Registros", searchPlaceholder: "Buscar título ou descrição",
   toggleFilters: "Alternar filtros", category: "Categoria", allCategories: "Todas as categorias",
@@ -138,6 +154,7 @@ export const ptBR: Dictionary = {
   miscUi: miscUiPtBR,
   recordsPage: recordsPagePtBR,
   diaryPage: diaryPagePtBR,
+  onboarding: onboardingPtBR,
   diaryEntry: diaryEntryPtBR,
   incidentForm: incidentFormPtBR,
   incidentRecord: incidentRecordPtBR,

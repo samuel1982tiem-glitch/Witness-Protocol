@@ -18,7 +18,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ShieldCheck } from "lucide-react"
+import { ShieldCheck, ScrollText, Mic, Activity, Lock } from "lucide-react"
 import * as React from "react"
 import { useVault } from "@/components/vault-provider"
 import { useI18n } from "@/components/i18n-provider"
@@ -96,6 +96,93 @@ function DialPad({
         )
       })}
     </div>
+  )
+}
+
+function OnboardingCarousel({ onDone }: { onDone: () => void }) {
+  const { t } = useI18n()
+  const scrollerRef = React.useRef<HTMLDivElement>(null)
+  const [index, setIndex] = React.useState(0)
+
+  const slides = [
+    { Icon: Lock, title: t("onboarding.welcomeTitle"), body: t("onboarding.welcomeBody") },
+    { Icon: ScrollText, title: t("onboarding.recordsTitle"), body: t("onboarding.recordsBody") },
+    { Icon: Mic, title: t("onboarding.diaryTitle"), body: t("onboarding.diaryBody") },
+    { Icon: Activity, title: t("onboarding.patternsTitle"), body: t("onboarding.patternsBody") },
+    { Icon: ShieldCheck, title: t("onboarding.vaultTitle"), body: t("onboarding.vaultBody") },
+  ]
+
+  function handleScroll() {
+    const el = scrollerRef.current
+    if (!el) return
+    const i = Math.round(el.scrollLeft / el.clientWidth)
+    setIndex(Math.max(0, Math.min(slides.length - 1, i)))
+  }
+
+  function goTo(i: number) {
+    const el = scrollerRef.current
+    if (!el) return
+    el.scrollTo({ left: i * el.clientWidth, behavior: "smooth" })
+  }
+
+  const isLast = index === slides.length - 1
+
+  return (
+    <Shell>
+      <div className="mb-2 flex justify-end">
+        <button
+          type="button"
+          onClick={onDone}
+          className="text-sm font-medium text-muted-foreground hover:text-foreground"
+        >
+          {t("onboarding.skip")}
+        </button>
+      </div>
+
+      <div
+        ref={scrollerRef}
+        onScroll={handleScroll}
+        className="flex snap-x snap-mandatory overflow-x-auto scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {slides.map((s, i) => (
+          <div key={i} className="w-full shrink-0 snap-center px-1">
+            <div className="flex flex-col items-center text-center">
+              <div className="mb-6 flex size-20 items-center justify-center rounded-3xl bg-primary/10 text-primary">
+                <s.Icon className="size-10" aria-hidden="true" />
+              </div>
+              <h2 className="mb-2 text-lg font-semibold">{s.title}</h2>
+              <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
+                {s.body}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-8">
+        <Dots length={slides.length} filled={index + 1} />
+      </div>
+
+      <div className="mt-4">
+        {isLast ? (
+          <button
+            type="button"
+            onClick={onDone}
+            className="w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground"
+          >
+            {t("onboarding.getStarted")}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => goTo(index + 1)}
+            className="w-full rounded-full bg-muted py-3 text-sm font-semibold text-foreground"
+          >
+            {t("onboarding.next")}
+          </button>
+        )}
+      </div>
+    </Shell>
   )
 }
 
@@ -247,6 +334,7 @@ function UnlockForm() {
   export function VaultGate({ children }: { children: React.ReactNode }) {
   const { status } = useVault()
   const router = useRouter()
+  const [introDismissed, setIntroDismissed] = React.useState(false)
 
   React.useEffect(() => {
     if (status === "unlocked" && window.location.pathname === "/") {
@@ -265,7 +353,12 @@ function UnlockForm() {
     )
   }
 
-  if (status === "uninitialized") return <SetupForm />
+  if (status === "uninitialized") {
+    if (!introDismissed) {
+      return <OnboardingCarousel onDone={() => setIntroDismissed(true)} />
+    }
+    return <SetupForm />
+  }
   if (status === "locked") return <UnlockForm />
 
   return <>{children}</>

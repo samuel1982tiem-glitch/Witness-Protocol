@@ -55,6 +55,22 @@ export const incidentFormExtraEn = {
   cancel: "Cancel",
 }
 
+export const onboardingEn = {
+  skip: "Skip",
+  next: "Next",
+  getStarted: "Get Started",
+  welcomeTitle: "Private & Encrypted",
+  welcomeBody: "Everything you record stays on this device, encrypted before it's ever written to storage. Nothing is sent anywhere.",
+  recordsTitle: "Log Incidents",
+  recordsBody: "Document what happened with photos, video, audio, and documents. GPS location is captured automatically when available.",
+  diaryTitle: "Quick Capture Diary",
+  diaryBody: "Tap the round red button anytime to record a quick voice note. Add text later, or leave it as-is.",
+  patternsTitle: "Spot Patterns",
+  patternsBody: "The app looks for repeated times, locations, and categories across your records, entirely on this device.",
+  vaultTitle: "Stay in Control",
+  vaultBody: "Set an auto-lock timer, export encrypted backups, or package evidence to share, all from the Vault screen.",
+}
+
 export const recordsPageEn = {
   title: "Records", searchPlaceholder: "Search title or description",
   toggleFilters: "Toggle filters", category: "Category", allCategories: "All categories",
@@ -141,6 +157,7 @@ export const en: Dictionary = {
   miscUi: miscUiEn,
   recordsPage: recordsPageEn,
   diaryPage: diaryPageEn,
+  onboarding: onboardingEn,
   diaryEntry: diaryEntryEn,
   incidentForm: incidentFormEn,
   incidentRecord: incidentRecordEn,
