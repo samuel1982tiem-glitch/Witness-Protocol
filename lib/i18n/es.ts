@@ -112,6 +112,7 @@ export const recordsPageEs = {
   exportingAllPdf: "Exportando incidentes…",
   exportingAllPdfProgress: "Exportando lote {current} de {total}…",
   exportAllPdfFailed: "Error al exportar el PDF: {error}",
+  encryptedIncidentsCount: "{count} incidente{plural} cifrado{plural} en este dispositivo.",
   packageAll: "Paquete",
   packagingAll: "Empaquetando incidentes…",
   packagingAllProgress: "Empaquetando {current} de {total}…",

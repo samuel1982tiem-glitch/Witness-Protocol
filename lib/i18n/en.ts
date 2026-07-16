@@ -83,6 +83,7 @@ export const recordsPageEn = {
   exportingAllPdf: "Exporting incidents…",
   exportingAllPdfProgress: "Exporting batch {current} of {total}…",
   exportAllPdfFailed: "PDF export failed: {error}",
+  encryptedIncidentsCount: "{count} encrypted incident{plural} on this device.",
   packageAll: "Package",
   packagingAll: "Packaging incidents…",
   packagingAllProgress: "Packaging {current} of {total}…",

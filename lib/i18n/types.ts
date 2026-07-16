@@ -248,6 +248,7 @@ export interface RecordsPageDict {
   exportingAllPdf: string
   exportingAllPdfProgress: string
   exportAllPdfFailed: string
+  encryptedIncidentsCount: string
   packageAll: string
   packagingAll: string
   packagingAllProgress: string

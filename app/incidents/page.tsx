@@ -287,9 +287,10 @@ export default function IncidentsPage() {
     <div className="space-y-5">
       <SectionTitle
         title={t("recordsPage.title")}
-        description={`${incidents.length} encrypted ${
-          incidents.length === 1 ? "incident" : "incidents"
-        } on this device.`}
+        description={t("recordsPage.encryptedIncidentsCount", {
+          count: incidents.length,
+          plural: incidents.length === 1 ? "" : "s",
+        })}
       />
 
       {incidents.length > 0 ? (

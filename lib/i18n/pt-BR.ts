@@ -80,6 +80,7 @@ export const recordsPagePtBR = {
   exportingAllPdf: "Exportando incidentes…",
   exportingAllPdfProgress: "Exportando lote {current} de {total}…",
   exportAllPdfFailed: "Falha ao exportar o PDF: {error}",
+  encryptedIncidentsCount: "{count} incidente{plural} criptografado{plural} neste dispositivo.",
   packageAll: "Pacote",
   packagingAll: "Empacotando incidentes…",
   packagingAllProgress: "Empacotando {current} de {total}…",
