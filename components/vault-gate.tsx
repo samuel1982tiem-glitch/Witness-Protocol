@@ -266,7 +266,7 @@ function SetupForm() {
 
        <div className={shake ? "animate-shake" : ""}>
   <p className="mb-3 text-center text-sm font-medium text-muted-foreground">
-    {confirming ? "Confirm your passcode" : "Create your passcode"}
+    {confirming ? t("vault.confirmPasscode") : t("vault.createPasscode")}
   </p>
 
   <Dots
@@ -275,7 +275,7 @@ function SetupForm() {
   />
 </div>
 
-        {localError && <p className="text-sm text-destructive">{localError}</p>}
+        {localError && <p className="text-center text-sm text-destructive">{localError}</p>}
 
         <DialPad onPress={onPress} onDelete={onDelete} />
 
