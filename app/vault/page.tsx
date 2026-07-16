@@ -784,6 +784,17 @@ async function runImport(passcode: string) {
         onSubmit={runImport}
         onCancel={() => setPendingImportFile(null)}
       />
+
+      <div className="pb-4 pt-2 text-center">
+        <a
+          href={GITHUB_REPO_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="text-sm text-primary underline-offset-2 hover:underline"
+        >
+          Version 1.0.2
+        </a>
+      </div>
     </div>
   )
 }
