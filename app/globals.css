@@ -58,13 +58,37 @@
   --radius: 0.75rem;
 }
 
+.dark {
+  color-scheme: dark;
+  /* Same hues as light mode, inverted lightness -- keeps the calming
+     blue-gray character instead of a generic near-black theme. */
+  --background: oklch(0.19 0.02 256);
+  --foreground: oklch(0.94 0.006 247);
+  --card: oklch(0.23 0.02 256);
+  --card-foreground: oklch(0.94 0.006 247);
+  --popover: oklch(0.23 0.02 256);
+  --popover-foreground: oklch(0.94 0.006 247);
+  --primary: oklch(0.68 0.13 250);
+  --primary-foreground: oklch(0.15 0.02 256);
+  --secondary: oklch(0.27 0.015 256);
+  --secondary-foreground: oklch(0.9 0.006 247);
+  --muted: oklch(0.26 0.015 256);
+  --muted-foreground: oklch(0.65 0.015 250);
+  --accent: oklch(0.3 0.03 250);
+  --accent-foreground: oklch(0.85 0.05 250);
+  --destructive: oklch(0.62 0.19 25);
+  --destructive-foreground: oklch(0.97 0.005 25);
+  --border: oklch(0.32 0.015 256);
+  --input: oklch(0.32 0.015 256);
+  --ring: oklch(0.68 0.13 250);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   html {
     @apply font-sans;
-    color-scheme: light;
   }
   body {
     @apply bg-background text-foreground;

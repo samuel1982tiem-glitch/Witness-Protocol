@@ -33,6 +33,7 @@ import {
   Download,
   Trash2,
   ChevronDown,
+  Moon,
 } from "lucide-react"
 import * as React from "react"
 
@@ -42,6 +43,8 @@ import { Card, CardBody } from "@/components/ui/primitives"
 import { useVault } from "@/components/vault-provider"
 import { useI18n } from "@/components/i18n-provider"
 import { SUPPORTED_LANGUAGES, type LanguagePreference } from "@/lib/i18n"
+import { useTheme } from "@/components/theme-provider"
+import type { ThemePreference } from "@/lib/theme"
 import { Globe } from "lucide-react"
 import { formatBytes } from "@/lib/media"
 import { isShareCancelled } from "@/lib/share-utils"
@@ -71,6 +74,7 @@ export default function VaultPage() {
   } = useVault()
 
   const { t, language, preference, setLanguage } = useI18n()
+  const { preference: themePreference, setTheme } = useTheme()
 
   const autoLockMin = Math.round(autoLockMs / 60000)
 
@@ -369,6 +373,28 @@ async function runImport(passcode: string) {
                 <QRCodeSVG value={GITHUB_REPO_URL} size={64} level="M" />
                 <span className="text-[9px] leading-none text-muted-foreground">GitHub</span>
               </a>
+            </div>
+          </CardBody>
+        </Card>
+
+        <Card className="h-full">
+          <CardBody className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Moon className="size-4 text-primary" />
+              <p className="font-medium">{t("vault.theme")}</p>
+            </div>
+
+            <div className="relative">
+              <select
+                value={themePreference}
+                onChange={(e) => setTheme(e.target.value as ThemePreference)}
+                className="w-full appearance-none rounded-xl border border-border bg-background px-3 py-3 pr-10 text-sm outline-none"
+              >
+                <option value="system">{t("vault.themeSystem")}</option>
+                <option value="light">{t("vault.themeLight")}</option>
+                <option value="dark">{t("vault.themeDark")}</option>
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             </div>
           </CardBody>
         </Card>

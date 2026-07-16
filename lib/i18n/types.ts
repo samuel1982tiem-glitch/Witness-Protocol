@@ -96,6 +96,10 @@ export interface Dictionary {
     unlocked: string
     lockNow: string
     systemLanguage: string
+    theme: string
+    themeSystem: string
+    themeLight: string
+    themeDark: string
     minuteSingular: string
     minutesPlural: string
     createPasscode: string
